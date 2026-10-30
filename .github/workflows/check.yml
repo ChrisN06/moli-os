@@ -4,7 +4,7 @@ name: check
 
 on:
   push:
-    branches: [main]
+    branches: [main, personal/main]
   pull_request:
 
 permissions:
@@ -38,6 +38,8 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
+      - run: python3 scripts/prepare-personal-dev.py --self-test
+      - run: node scripts/pwa-check.mjs
       - run: node scripts/i18n-check.mjs
       - run: node --test src/maison/lib/voice/*.test.js
         working-directory: web

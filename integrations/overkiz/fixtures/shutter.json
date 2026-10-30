@@ -1,0 +1,9 @@
+{
+  "deviceURL": "io://0000-0000-0000/1000001",
+  "label": "Volet témoin",
+  "uiClass": "RollerShutter",
+  "controllableName": "io:RollerShutterGenericIOComponent",
+  "available": true,
+  "definition": {"commands": [{"commandName": "open", "nparams": 0}, {"commandName": "close", "nparams": 0}, {"commandName": "stop", "nparams": 1}]},
+  "states": [{"name": "core:ClosureState", "value": 25}, {"name": "core:TemperatureState", "value": 20.5}]
+}

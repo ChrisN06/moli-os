@@ -128,3 +128,39 @@ async fn orders_are_obeyed_and_ripple() {
     assert_eq!(hub.state(&lamp_on).unwrap().value, Value::Bool(true));
     cancel.cancel();
 }
+
+#[tokio::test]
+async fn a_demo_shutter_reports_position_without_controlling_a_printer() {
+    let fixture =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../demo/personal/devices.json");
+    let driver = Demo::new(Config {
+        fixture,
+        tick_s: 15,
+        timezone: "Europe/Paris".into(),
+    })
+    .unwrap();
+    let hub = Hub::new(HubOptions::default()).unwrap();
+    let cancel = CancellationToken::new();
+    let task = spawn_driver(
+        &hub,
+        InstanceId::from("demo"),
+        Arc::new(driver),
+        cancel.clone(),
+    );
+    let position = PointId::from("demo:volet/percent_control");
+    wait(&hub, &position).await;
+    for (order, expected) in [("close", 0.0), ("stop", 0.0), ("open", 100.0)] {
+        hub.command(
+            &PointId::from("demo:volet/control"),
+            Value::from(order),
+            Origin::Ui,
+            None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(hub.state(&position).unwrap().value.as_f64(), Some(expected));
+        assert!(hub.state(&PointId::from("demo:volet/printing")).is_none());
+    }
+    cancel.cancel();
+    task.await.unwrap();
+}

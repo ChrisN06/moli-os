@@ -418,6 +418,11 @@ impl World {
                 let state = if *b { "playing" } else { "paused" };
                 Self::set(ctx, live, "state", Value::Text(state.into()));
             }
+            ("control", Value::Text(order)) if live.has("percent_control") => match &**order {
+                "open" => Self::set(ctx, live, "percent_control", Value::Int(100)),
+                "close" => Self::set(ctx, live, "percent_control", Value::Int(0)),
+                _ => (),
+            },
             ("control", Value::Text(t)) => {
                 let t = t.to_ascii_lowercase();
                 if t.contains("pause") {

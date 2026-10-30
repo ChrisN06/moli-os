@@ -41,6 +41,9 @@ pub struct Config {
     pub serial: String,
     #[serde(default)]
     pub name: Option<String>,
+    /// Refuse physical writes at both the point specification and MQTT boundary.
+    #[serde(default)]
+    pub read_only: bool,
 }
 
 #[derive(Debug)]
@@ -196,7 +199,7 @@ fn device(ctx: &DriverCtx, config: &Config) -> Device {
         "light",
         &moli_i18n::tr!("pilotes.bambu.lumiere"),
         Kind::Binary,
-        true,
+        !config.read_only,
         None,
     ));
     let mut control = spec(
@@ -205,7 +208,7 @@ fn device(ctx: &DriverCtx, config: &Config) -> Device {
         Kind::Enum {
             values: CONTROLS.iter().map(|c| (*c).into()).collect(),
         },
-        true,
+        !config.read_only,
         None,
     );
     control.semantic = Semantic::Control;
@@ -428,7 +431,7 @@ async fn follow(
                 command = ctx.next_command() => {
                     let Some(command) = command else { return Ok(()) };
                     if connected {
-                        reply(&client, &request_topic, command);
+                        reply(&client, &request_topic, command, config.read_only);
                     } else {
                         // Queued now, sent when the printer comes back: refuse.
                         command.reply(Err(moli_i18n::tr!("pilotes.bambu.injoignable")));
@@ -561,30 +564,125 @@ fn print_order(order: &str) -> Option<Json> {
         .then(|| json!({"print": {"sequence_id": "0", "command": order, "param": ""}}))
 }
 
-fn reply(client: &AsyncClient, topic: &str, command: CommandRequest) {
-    let result = match (&*command.key, &command.value) {
-        ("control", Value::Text(order)) => match print_order(order) {
-            Some(payload) => client
-                .try_publish(topic, QoS::AtMostOnce, false, payload.to_string())
-                .map_err(|e| e.to_string()),
-            None => Err(moli_i18n::tr!("pilotes.bambu.ordre_inconnu", order = order)),
-        },
+fn command_payload(read_only: bool, key: &str, value: &Value) -> Result<Json, String> {
+    if read_only {
+        return Err(moli_i18n::tr!("pilotes.bambu.lecture_seule", point = key));
+    }
+    match (key, value) {
+        ("control", Value::Text(order)) => print_order(order)
+            .ok_or_else(|| moli_i18n::tr!("pilotes.bambu.ordre_inconnu", order = order)),
         ("light", Value::Bool(on)) => {
-            let payload = json!({"system": {"sequence_id": "0", "command": "ledctrl",
-                "led_node": "chamber_light", "led_mode": if *on { "on" } else { "off" },
-                "led_on_time": 500, "led_off_time": 500, "loop_times": 0, "interval_time": 0}});
-            client
-                .try_publish(topic, QoS::AtMostOnce, false, payload.to_string())
-                .map_err(|e| e.to_string())
+            Ok(json!({"system": {"sequence_id": "0", "command": "ledctrl",
+            "led_node": "chamber_light", "led_mode": if *on { "on" } else { "off" },
+            "led_on_time": 500, "led_off_time": 500, "loop_times": 0, "interval_time": 0}}))
         }
         (key, _) => Err(moli_i18n::tr!("pilotes.bambu.lecture_seule", point = key)),
-    };
+    }
+}
+
+fn reply(client: &AsyncClient, topic: &str, command: CommandRequest, read_only: bool) {
+    if command.abandoned() {
+        return;
+    }
+    let result = command_payload(read_only, &command.key, &command.value).and_then(|payload| {
+        client
+            .try_publish(topic, QoS::AtMostOnce, false, payload.to_string())
+            .map_err(|e| e.to_string())
+    });
     command.reply(result);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct ReadOnlyPrinter;
+    impl Driver for ReadOnlyPrinter {
+        fn kind(&self) -> &'static str {
+            "test-bambu"
+        }
+        fn run<'a>(&'a self, ctx: &'a mut DriverCtx) -> BoxFuture<'a, anyhow::Result<()>> {
+            Box::pin(async move {
+                let config = Config {
+                    host: "192.168.1.x".into(),
+                    serial: "TEST".into(),
+                    name: None,
+                    read_only: true,
+                };
+                ctx.upsert_device(device(ctx, &config));
+                ctx.ready();
+                assert!(
+                    ctx.next_command().await.is_none(),
+                    "a read-only command reached the printer"
+                );
+                Ok(())
+            })
+        }
+    }
+
+    #[tokio::test]
+    async fn every_origin_is_refused_by_the_hub_in_read_only_mode() {
+        use moli_core::{InstanceId, Origin, PointId};
+        use moli_runtime::{CommandError, Hub, HubOptions, spawn_driver};
+        let hub = Hub::new(HubOptions::default()).unwrap();
+        let cancel = tokio_util::sync::CancellationToken::new();
+        let task = spawn_driver(
+            &hub,
+            InstanceId::from("printer"),
+            Arc::new(ReadOnlyPrinter),
+            cancel.clone(),
+        );
+        for _ in 0..100 {
+            if hub.stats().drivers_running == 1 {
+                break;
+            }
+            tokio::time::sleep(Duration::from_millis(5)).await;
+        }
+        assert_eq!(hub.stats().drivers_running, 1);
+        for origin in [
+            Origin::Ui,
+            Origin::Household,
+            Origin::Api,
+            Origin::Mcp,
+            Origin::Automation,
+            Origin::System,
+        ] {
+            for (key, value) in [
+                ("control", Value::from("stop")),
+                ("light", Value::Bool(true)),
+            ] {
+                let result = hub
+                    .command(
+                        &PointId::from(format!("printer:TEST/{key}")),
+                        value,
+                        origin,
+                        None,
+                    )
+                    .await;
+                assert_eq!(result, Err(CommandError::ReadOnly));
+            }
+        }
+        cancel.cancel();
+        task.await.unwrap();
+    }
+
+    #[test]
+    fn read_only_refuses_every_physical_order_before_mqtt() {
+        for order in CONTROLS {
+            assert!(command_payload(true, "control", &Value::from(order)).is_err());
+            assert!(command_payload(false, "control", &Value::from(order)).is_ok());
+        }
+        for on in [false, true] {
+            assert!(command_payload(true, "light", &Value::Bool(on)).is_err());
+            assert!(command_payload(false, "light", &Value::Bool(on)).is_ok());
+        }
+        let config: Config =
+            serde_json::from_value(json!({"host":"192.168.1.x","serial":"TEST"})).unwrap();
+        assert!(
+            !config.read_only,
+            "existing installations retain their explicit capabilities"
+        );
+    }
 
     #[test]
     fn a_refused_access_code_is_told_apart() {
