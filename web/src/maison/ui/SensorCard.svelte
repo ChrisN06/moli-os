@@ -2,7 +2,7 @@
   import { device, nameOf, reachable, since, relative, home, num } from '../lib/home.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
-  import { visibleReadings } from '../lib/readings.js';
+  import { visibleReadings, readingWord } from '../lib/readings.js';
 
   /** Any device shown by its readings, in words. */
   let { id, name = null } = $props();
@@ -28,6 +28,8 @@
 
   function say(p, v) {
     if (v == null) return null;
+    const word = typeof v === 'string' ? readingWord(p.key, v) : null;
+    if (word) return t(word);
     if (WORDS[p.key] && (typeof v === 'boolean' || typeof v === 'string')) return WORDS[p.key](v);
     if (typeof v === 'boolean') return v ? t('commun.oui') : t('commun.non');
     if (typeof v === 'number') return `${num(v, Math.abs(v) < 10 && !Number.isInteger(v) ? 1 : 0)}${p.unit ? ` ${p.unit}` : ''}`;
