@@ -5,6 +5,8 @@
   import LightTile from './LightTile.svelte';
   import ClimateCard from './ClimateCard.svelte';
   import CoverTile from './CoverTile.svelte';
+  import SensorCard from './SensorCard.svelte';
+  import { hasReadOnlyDetails } from '../lib/readings.js';
   import AmbiancePicker from './AmbiancePicker.svelte';
   import { phase, PHASES } from '../lib/printers.js';
 
@@ -282,6 +284,10 @@
 
   {#each room.covers as d (d.id)}
     <CoverTile id={d.id} />
+  {/each}
+
+  {#each room.sensors.filter(hasReadOnlyDetails) as d (d.id)}
+    <SensorCard id={d.id} />
   {/each}
 
   {#each room.climates as d (d.id)}

@@ -4,7 +4,7 @@ Pilote natif Rust, désactivé tant qu'aucune instance n'est configurée. Lectur
 défaut. Session historique `login`/`JSESSIONID` sur le serveur Somfy Europe uniquement.
 **Les comptes Somfy récents utilisant OAuth ou le parcours multi-site ne sont pas pris en
 charge.** Valider le parcours du compte avant d'activer cette intégration ; ne pas tenter
-plusieurs modes de connexion automatiquement. Aucune preuve matérielle TaHoma V1 à ce jour.
+plusieurs modes de connexion automatiquement. Une connexion legacy a été vérifiée ; la génération matérielle exacte reste non confirmée.
 
 - Écoute des événements toutes les 10 secondes ; minimum 5 secondes. Après échec : appareils
   hors ligne et attente de cinq minutes avant reconnexion, sans commande mise en attente.
@@ -14,9 +14,18 @@ plusieurs modes de connexion automatiquement. Aucune preuve matérielle TaHoma V
   paramètre par le serveur. `read_only = false` exige une validation humaine préalable.
 - Position : `core:ClosureState` inversé en ouverture %, nombre JSON ou texte numérique
   compris entre 0 et 100. Aucune position inventée.
-- Autres états scalaires exposés sous `raw.<nom>` sans unité supposée. Pas de consigne
-  thermostat ni d'énergie configurée automatiquement. Les états découverts ultérieurement
-  nécessitent un redémarrage pour obtenir de nouveaux points.
+- Alias en lecture seule pour les modèles identifiés : sondes Somfy Thermostat (`temperature`
+  °C, `humidity` %), capteur io Light (`illuminance` lx), cinq modèles de compteurs io
+  (`energy` Wh). Les index sont cumulés : le premier relevé sert de référence, jamais de
+  consommation du jour. Les sous-index tarifaires ne sont pas additionnés à l'index complet.
+- Thermostat : consigne **rapportée**, distincte de la consigne effective d'une dérogation,
+  et mode. Zones Atlantic : niveau demandé, pas une preuve de chauffe réelle. Chauffe-eau :
+  état Somfy de marche forcée, sans déduction sur sa consommation. Télécommande io : dernière
+  touche reçue, sans exécuter un scénario. Ces alias restent non inscriptibles même si les
+  commandes de volets sont activées.
+- Tous les états scalaires restent sous `raw.<nom>` sans unité supposée. Un modèle inconnu
+  ne reçoit aucun alias physique. Les états découverts ultérieurement nécessitent un
+  redémarrage pour obtenir de nouveaux points.
 - `last_received` date la réception, pas la mesure par l'appareil. Un cloud joignable ne
   garantit pas une mesure récente. Aucun rafraîchissement radio forcé.
 - Aucun ancien historique énergétique récupéré. Aucun cookie ni corps d'erreur journalisé.
@@ -25,3 +34,6 @@ plusieurs modes de connexion automatiquement. Aucune preuve matérielle TaHoma V
 Références protocolaires :
 https://github.com/iMicknl/python-overkiz-api
 https://github.com/Somfy-Developer/Somfy-TaHoma-Developer-Mode
+
+Unités des états Overkiz et exceptions :
+https://github.com/home-assistant/core/blob/dev/homeassistant/components/overkiz/sensor.py

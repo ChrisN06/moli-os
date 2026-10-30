@@ -126,6 +126,12 @@ impl Equipment {
                 }
             })
             .collect();
+        points.splice(
+            0..0,
+            crate::readings::normalized(self.model.as_deref(), &self.states)
+                .into_iter()
+                .map(|(spec, _)| spec),
+        );
         if !self.controls.is_empty() {
             points.push(PointSpec {
                 key: "control".into(),
@@ -171,6 +177,9 @@ impl Equipment {
     pub fn publish(&self, ctx: &DriverCtx, id: &DeviceId) {
         for (key, value) in self.values() {
             ctx.set_state(id, &key, value);
+        }
+        for (spec, value) in crate::readings::normalized(self.model.as_deref(), &self.states) {
+            ctx.set_state(id, &spec.key, value);
         }
         let seconds = SystemTime::now()
             .duration_since(UNIX_EPOCH)
