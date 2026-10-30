@@ -2,6 +2,7 @@
 //! Protocol reference: python-overkiz-api and Somfy's enduser API schemas.
 //! No response body, cookie, login or native URL is ever included in errors.
 mod model;
+mod readings;
 
 use std::collections::HashMap;
 use std::time::{Duration, Instant};

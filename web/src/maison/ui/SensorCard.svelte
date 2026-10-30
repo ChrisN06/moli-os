@@ -2,6 +2,7 @@
   import { device, nameOf, reachable, since, relative, home, num } from '../lib/home.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
+  import { visibleReadings } from '../lib/readings.js';
 
   /** Any device shown by its readings, in words. */
   let { id, name = null } = $props();
@@ -34,7 +35,7 @@
   }
 
   const rows = $derived(
-    (d?.points ?? [])
+    visibleReadings(d)
       .map((p) => ({ p, text: say(p, d.state?.[p.key]?.value) }))
       .filter((r) => r.text != null && !/^(linkquality|update|identify|countdown|cycle_time|random_time|switch_inching|relay_status|light_mode|child_lock)/.test(r.p.key))
       .slice(0, 6),
