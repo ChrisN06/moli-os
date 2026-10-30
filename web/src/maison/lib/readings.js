@@ -18,5 +18,5 @@ export function readingWord(key, value) {
     manualMode: 'manuel', auto: 'auto', autoMode: 'auto', atHome: 'present', atHomeMode: 'present',
     awayMode: 'absent', sleepingMode: 'nuit', on: 'actif', off: 'inactif', up: 'montee', down: 'descente', stop: 'arret',
   }[value];
-  return word ? 'pilotes.overkiz.' + word : null;
+  return typeof word === 'string' ? 'pilotes.overkiz.' + word : null;
 }

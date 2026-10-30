@@ -12,7 +12,7 @@ secrets = ["username", "password"]
 options = []
 
 [origin]
-reused = "Protocol schemas from Somfy Developer Mode and python-overkiz-api; independent implementation. Synthetic fixtures only; no hardware validation."
+reused = "Protocol schemas from Somfy Developer Mode and python-overkiz-api; units cross-checked with Home Assistant. Independent implementation and synthetic fixtures. Legacy cloud reads and shutter feedback checked on one installation; exact gateway generation and physical commands remain unverified."
 author = "agent"
 
 # Synthetic protocol fixture; not a capture from a real gateway.

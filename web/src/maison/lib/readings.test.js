@@ -31,4 +31,6 @@ test('mode translation leaves unknown and unrelated protocol values literal', ()
   assert.equal(readingWord('last_button', 'down'), 'pilotes.overkiz.descente');
   assert.equal(readingWord('heating_level', 'future-mode'), null);
   assert.equal(readingWord('unrelated', 'eco'), null);
+  assert.equal(readingWord('heating_mode', '__proto__'), null);
+  assert.equal(readingWord('heating_mode', 'constructor'), null);
 });
