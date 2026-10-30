@@ -8,6 +8,7 @@ plusieurs modes de connexion automatiquement. Aucune preuve matérielle TaHoma V
 
 - Écoute des événements toutes les 10 secondes ; minimum 5 secondes. Après échec : appareils
   hors ligne et attente de cinq minutes avant reconnexion, sans commande mise en attente.
+  Un login refusé attend une intervention humaine et un redémarrage, sans retenter le mot de passe.
 - Identité dérivée de l'URL native encodée sans ambiguïté, jamais du nom.
 - Volets `io://`, classe `RollerShutter` uniquement : ouvrir/fermer/arrêter si déclarés sans
   paramètre par le serveur. `read_only = false` exige une validation humaine préalable.

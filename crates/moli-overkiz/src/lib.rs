@@ -66,6 +66,11 @@ impl Driver for Overkiz {
                     ctx.set_availability(&id, false);
                 }
                 ctx.wait_for(error.to_string());
+                if error.is::<LoginRefused>() {
+                    // A bad password or an unsupported login flow must not lock the account.
+                    ctx.cancelled().await;
+                    return Ok(());
+                }
                 // Cloud failures must not turn the supervisor's backoff into a login storm.
                 let until = tokio::time::sleep(Duration::from_secs(300));
                 tokio::pin!(until);
@@ -83,6 +88,15 @@ impl Driver for Overkiz {
         })
     }
 }
+
+#[derive(Debug)]
+struct LoginRefused;
+impl std::fmt::Display for LoginRefused {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&moli_i18n::tr!("pilotes.overkiz.authentification"))
+    }
+}
+impl std::error::Error for LoginRefused {}
 
 // No Debug: a session contains a credential even if it has no password.
 #[derive(Clone, Copy)]
@@ -127,15 +141,16 @@ impl Session {
         )
         .await
         .map_err(|_| anyhow::anyhow!(moli_i18n::tr!("pilotes.overkiz.indisponible")))?;
+        if matches!(status, StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN) {
+            return Err(LoginRefused.into());
+        }
         check_status(status)?;
         if status != StatusCode::NO_CONTENT {
             let value: Json = serde_json::from_slice(&bytes)
                 .context(moli_i18n::tr!("pilotes.overkiz.reponse"))?;
-            anyhow::ensure!(
-                value["success"] == true,
-                "{}",
-                moli_i18n::tr!("pilotes.overkiz.authentification")
-            );
+            if value["success"] != true {
+                return Err(LoginRefused.into());
+            }
         }
         let cookie = headers
             .get_all(http::header::SET_COOKIE)
@@ -146,7 +161,7 @@ impl Session {
                     .next()
                     .filter(|s| s.starts_with("JSESSIONID=") && s.len() > 11)
             })
-            .context(moli_i18n::tr!("pilotes.overkiz.authentification"))?
+            .ok_or(LoginRefused)?
             .to_owned();
         Ok(Self { cookie, endpoint })
     }
@@ -429,6 +444,7 @@ mod http_tests {
             .await
             .unwrap_err();
         assert!(!error.to_string().contains("never disclose"));
+        assert!(!error.is::<LoginRefused>());
         let received = requests.await.unwrap();
         assert!(
             received[0].contains("userId=user%40example.com&userPassword=fictitious%2B%26password")
@@ -471,5 +487,20 @@ mod http_tests {
                 .is_err()
         );
         assert_eq!(requests.await.unwrap().len(), 1);
+    }
+    #[tokio::test]
+    async fn rejected_login_requires_a_person_instead_of_repeated_password_attempts() {
+        for (status, body) in [
+            (401, r#"{"error":"synthetic"}"#),
+            (200, r#"{"success":false}"#),
+        ] {
+            let (endpoint, requests) = mock(vec![(status, "", body)]).await;
+            let Err(error) = Session::login_at(endpoint, "user@example.com", "synthetic").await
+            else {
+                panic!("rejected credentials must not open a session");
+            };
+            assert!(error.is::<LoginRefused>());
+            assert_eq!(requests.await.unwrap().len(), 1);
+        }
     }
 }
