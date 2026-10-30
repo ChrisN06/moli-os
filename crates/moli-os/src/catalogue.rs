@@ -498,10 +498,10 @@ fn replay(compiled: &Compiled, answers: &HashMap<String, Answer>, row: &mut Row)
         .points
         .iter()
         .filter(|p| {
-            !answers
+            answers
                 .get(&p.request)
                 .and_then(|answer| p.read(answer))
-                .is_some_and(|v| !matches!(v, Value::Null))
+                .is_none_or(|v| matches!(v, Value::Null))
         })
         .map(|p| &*p.spec.key)
         .collect();

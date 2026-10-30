@@ -28,6 +28,7 @@ moli-hermes = { path = "crates/moli-hermes" }
 moli-reolink = { path = "crates/moli-reolink" }
 moli-sonos = { path = "crates/moli-sonos" }
 moli-bambu = { path = "crates/moli-bambu" }
+moli-overkiz = { path = "crates/moli-overkiz" }
 moli-frigate = { path = "crates/moli-frigate" }
 moli-philips = { path = "crates/moli-philips" }
 moli-tapo = { path = "crates/moli-tapo" }

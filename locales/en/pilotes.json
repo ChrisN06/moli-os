@@ -532,5 +532,16 @@
   "pilotes.solarman.lecture_seule": "the inverter is read only, it takes no orders",
   "pilotes.solarman.fuseau_inconnu": "unknown time zone: \"{timezone}\" (for example Europe/Paris)",
   "pilotes.solarman.numero_inconnu": "the logger's serial number is unknown: {host} does not answer discovery (at night the inverter sleeps); give it in the \"serial\" option (logger sticker or Solarman app)",
-  "pilotes.solarman.pas_un_micro": "the device behind this logger is not a Deye micro-inverter: not supported yet"
+  "pilotes.solarman.pas_un_micro": "the device behind this logger is not a Deye micro-inverter: not supported yet",
+  "pilotes.overkiz.identifiants": "Overkiz credentials missing from the vault (username, password).",
+  "pilotes.overkiz.indisponible": "Overkiz cloud unavailable. Retrying in five minutes.",
+  "pilotes.overkiz.authentification": "Overkiz session refused or expired. Check the account and authentication mode.",
+  "pilotes.overkiz.reponse": "Invalid Overkiz response.",
+  "pilotes.overkiz.refus": "Overkiz operation refused. No command replay.",
+  "pilotes.overkiz.limite": "Overkiz rate limit reached. Waiting five minutes.",
+  "pilotes.overkiz.inventaire": "Overkiz inventory changed. Reconnection required.",
+  "pilotes.overkiz.lecture_seule": "Overkiz command unavailable or read-only.",
+  "pilotes.overkiz.position": "Opening",
+  "pilotes.overkiz.commande": "Shutter command",
+  "pilotes.overkiz.reception": "Last cloud reception (not the measurement time)"
 }
