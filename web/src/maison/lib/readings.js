@@ -9,3 +9,14 @@ export function visibleReadings(device) {
 export function hasReadOnlyDetails(device) {
   return visibleReadings(device).some((p) => ['config', 'energy'].includes(p.semantic) && p.access?.read && !p.access?.write);
 }
+
+/** Translate at the surface, never in the hub's stable state values. */
+export function readingWord(key, value) {
+  if (!['heating_level', 'heating_mode', 'force_heating', 'last_button'].includes(key)) return null;
+  const word = {
+    eco: 'eco', comfort: 'confort', freeze: 'hors_gel', frostprotection: 'hors_gel', freezeMode: 'hors_gel',
+    manualMode: 'manuel', auto: 'auto', autoMode: 'auto', atHome: 'present', atHomeMode: 'present',
+    awayMode: 'absent', sleepingMode: 'nuit', on: 'actif', off: 'inactif', up: 'montee', down: 'descente', stop: 'arret',
+  }[value];
+  return word ? 'pilotes.overkiz.' + word : null;
+}

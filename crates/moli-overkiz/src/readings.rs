@@ -111,26 +111,10 @@ fn setting(model: Option<&str>, states: &BTreeMap<String, Json>) -> Option<(Poin
     if let Some((state, key, label)) = setting
         && let Some(value) = states.get(state).and_then(Json::as_str)
     {
-        let word = match value {
-            "eco" => Some("pilotes.overkiz.eco"),
-            "comfort" => Some("pilotes.overkiz.confort"),
-            "freeze" | "frostprotection" | "freezeMode" => Some("pilotes.overkiz.hors_gel"),
-            "manualMode" => Some("pilotes.overkiz.manuel"),
-            "auto" | "autoMode" => Some("pilotes.overkiz.auto"),
-            "atHome" | "atHomeMode" => Some("pilotes.overkiz.present"),
-            "awayMode" => Some("pilotes.overkiz.absent"),
-            "sleepingMode" => Some("pilotes.overkiz.nuit"),
-            "on" => Some("pilotes.overkiz.actif"),
-            "off" => Some("pilotes.overkiz.inactif"),
-            "up" => Some("pilotes.overkiz.montee"),
-            "down" => Some("pilotes.overkiz.descente"),
-            "stop" => Some("pilotes.overkiz.arret"),
-            _ => None,
-        };
         // Unknown native modes remain visible; never infer an active heating demand.
         return Some((
             spec(key, label, Kind::Text, None, Semantic::Config),
-            Value::Text(word.map_or_else(|| value.to_owned(), moli_i18n::tr).into()),
+            Value::from(value),
         ));
     }
     None
@@ -232,9 +216,7 @@ mod tests {
             let result = normalized(Some("io:AtlanticElectricalHeaterIOComponent"), &states);
             assert_eq!(result[0].0.semantic, Semantic::Config);
             assert!(!result[0].0.access.write);
-            if mode == "future-mode" {
-                assert_eq!(result[0].1, Value::from(mode));
-            }
+            assert_eq!(result[0].1, Value::from(mode));
         }
     }
 }

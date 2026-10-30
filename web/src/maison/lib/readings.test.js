@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { visibleReadings, hasReadOnlyDetails } from './readings.js';
+import { visibleReadings, hasReadOnlyDetails, readingWord } from './readings.js';
 
 test('typed readings take precedence without duplicating raw index or receipt time', () => {
   const device = { points: [
@@ -22,4 +22,13 @@ test('read-only settings show a card without treating writable controls as telem
   assert.equal(hasReadOnlyDetails({ points: [{ ...point, access: { read: true, write: true } }] }), false);
   assert.equal(hasReadOnlyDetails({ points: [{ ...point, semantic: 'temperature' }] }), false);
   assert.equal(hasReadOnlyDetails(null), false);
+});
+
+test('mode translation leaves unknown and unrelated protocol values literal', () => {
+  assert.equal(readingWord('heating_level', 'eco'), 'pilotes.overkiz.eco');
+  assert.equal(readingWord('heating_mode', 'freezeMode'), 'pilotes.overkiz.hors_gel');
+  assert.equal(readingWord('force_heating', 'off'), 'pilotes.overkiz.inactif');
+  assert.equal(readingWord('last_button', 'down'), 'pilotes.overkiz.descente');
+  assert.equal(readingWord('heating_level', 'future-mode'), null);
+  assert.equal(readingWord('unrelated', 'eco'), null);
 });
