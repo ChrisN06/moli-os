@@ -12,7 +12,8 @@ plusieurs modes de connexion automatiquement. Aucune preuve matérielle TaHoma V
 - Identité dérivée de l'URL native encodée sans ambiguïté, jamais du nom.
 - Volets `io://`, classe `RollerShutter` uniquement : ouvrir/fermer/arrêter si déclarés sans
   paramètre par le serveur. `read_only = false` exige une validation humaine préalable.
-- Position : `core:ClosureState` inversé en ouverture %. Aucune position inventée.
+- Position : `core:ClosureState` inversé en ouverture %, nombre JSON ou texte numérique
+  compris entre 0 et 100. Aucune position inventée.
 - Autres états scalaires exposés sous `raw.<nom>` sans unité supposée. Pas de consigne
   thermostat ni d'énergie configurée automatiquement. Les états découverts ultérieurement
   nécessitent un redémarrage pour obtenir de nouveaux points.

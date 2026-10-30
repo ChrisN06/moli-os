@@ -84,7 +84,11 @@ impl Equipment {
         if let Some(closure) = self
             .states
             .get("core:ClosureState")
-            .and_then(Json::as_f64)
+            .and_then(|value| {
+                value
+                    .as_f64()
+                    .or_else(|| value.as_str()?.parse::<f64>().ok())
+            })
             .filter(|n| (0.0..=100.0).contains(n))
         {
             values.push(("percent_control".into(), Value::Float(100.0 - closure)));
@@ -240,6 +244,33 @@ mod tests {
                 .unit
                 .is_none()
         );
+    }
+    #[test]
+    fn string_closure_deltas_update_position_and_reject_invalid_values() {
+        let mut equipment = Equipment::parse(&shutter()).unwrap();
+        for (closure, opening) in [("0", 100.0), ("100", 0.0), ("25.5", 74.5)] {
+            equipment.merge(&json!([{"name":"core:ClosureState","value":closure}]));
+            let values: BTreeMap<_, _> = equipment.values().into_iter().collect();
+            assert_eq!(values["percent_control"], Value::Float(opening));
+            assert_eq!(values["raw.core:ClosureState"], Value::from(closure));
+        }
+        for invalid in [
+            json!("-1"),
+            json!("101"),
+            json!("NaN"),
+            json!("inf"),
+            json!(""),
+            json!("closed"),
+            json!(true),
+        ] {
+            equipment.merge(&json!([{"name":"core:ClosureState","value":invalid}]));
+            assert!(
+                !equipment
+                    .values()
+                    .iter()
+                    .any(|(key, _)| key == "percent_control")
+            );
+        }
     }
     #[test]
     fn only_declared_io_shutter_commands_can_act() {
