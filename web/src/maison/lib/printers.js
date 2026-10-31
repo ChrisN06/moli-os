@@ -20,7 +20,10 @@ const STATES = {
   idle: 'idle',
 };
 
-export const phase = (raw) => STATES[String(raw ?? '').toLowerCase()] ?? 'idle';
+export const phase = (raw, fallback = 'idle') => {
+  const state = STATES[String(raw ?? '').toLowerCase()];
+  return typeof state === 'string' ? state : fallback;
+};
 
 // `label` is read at each use (a getter): the house's language arrives after
 // this module is loaded.

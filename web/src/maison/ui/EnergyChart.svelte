@@ -11,6 +11,7 @@
 
   const RANGES = {
     hour: { step: 'hour', count: 24 },
+    week: { step: 'day', count: 7 },
     day: { step: 'day', count: 30 },
     month: { step: 'month', count: 12 },
   };
@@ -94,6 +95,7 @@
   function tick(ts, i) {
     const d = new Date(ts);
     if (range === 'hour') return i % 4 === 0 ? `${d.toLocaleTimeString(locale(), { hour: '2-digit', timeZone: tz })}` : '';
+    if (range === 'week') return d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', timeZone: tz });
     if (range === 'day') return i % 6 === 0 ? d.toLocaleDateString(locale(), { day: 'numeric', month: 'short', timeZone: tz }) : '';
     return d.toLocaleDateString(locale(), { month: 'short', timeZone: tz }).replace('.', '');
   }
@@ -102,7 +104,7 @@
     const s =
       range === 'hour'
         ? d.toLocaleString(locale(), { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: tz })
-        : range === 'day'
+        : range === 'day' || range === 'week'
           ? d.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz })
           : d.toLocaleDateString(locale(), { month: 'long', year: 'numeric', timeZone: tz });
     return s.charAt(0).toUpperCase() + s.slice(1);

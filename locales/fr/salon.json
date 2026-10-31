@@ -196,5 +196,7 @@
   "salon.apercu_aide": "Une image par seconde, prise seulement pendant qu’elle est affichée.",
   "salon.apercu_veille": "La télé est en veille : rien à montrer.",
   "salon.apercu_montrer": "Afficher",
-  "salon.apercu_masquer": "Masquer"
+  "salon.apercu_masquer": "Masquer",
+  "salon.eclairage_description": "Les éclairages du salon.",
+  "salon.eclairage_vide": "Aucun éclairage connecté configuré pour le moment."
 }

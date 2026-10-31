@@ -196,5 +196,7 @@
   "salon.apercu_aide": "One image a second, taken only while it is on screen.",
   "salon.apercu_veille": "The TV is in standby: nothing to show.",
   "salon.apercu_montrer": "Show",
-  "salon.apercu_masquer": "Hide"
+  "salon.apercu_masquer": "Hide",
+  "salon.eclairage_description": "Living room lighting.",
+  "salon.eclairage_vide": "No connected light configured yet."
 }

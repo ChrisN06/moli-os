@@ -219,6 +219,7 @@
   let by = $state('devices');
   const RANGES = [
     ['hour', 'energie.range.hour'],
+    ['week', 'energie.range.week'],
     ['day', 'energie.range.day'],
     ['month', 'energie.range.month'],
   ];

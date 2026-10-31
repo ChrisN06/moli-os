@@ -114,10 +114,6 @@
     return list;
   });
 
-  const tv = $derived(cfg.salon?.tv);
-  const speaker = $derived(cfg.salon?.speaker);
-  const tvOn = $derived(value(tv, 'power') === true);
-  const playing = $derived(value(speaker, 'playing') === true);
   const aqi = $derived(value(out.air, 'aqi'));
   const aqiWord = $derived(
     aqi == null
@@ -227,14 +223,11 @@
       </section>
     {/if}
 
-    <a class="card remote" href="#/salon">
-      <span class="tv-object" aria-hidden="true">
-        <span class="screen" class:lit={tvOn}></span>
-        <span class="stand"></span>
-      </span>
-      <span class="remote-text">
-        <strong>{t('maison.accueil.telecommande')}</strong>
-        <span class="muted">{tvOn ? t('maison.accueil.tele_allumee') : t('maison.accueil.tele_veille')}{playing ? ` · ${t('maison.accueil.son_joue')}` : ''}</span>
+    <a class="card living-room" href="#/salon">
+      <Icon name="light-group" size={40} />
+      <span class="living-room-text">
+        <strong>{t('salon.titre')}</strong>
+        <span class="muted">{t('salon.eclairage_description')}</span>
       </span>
       <span class="go"><Icon name="arrow-top-right" size={20} /></span>
     </a>
@@ -339,7 +332,7 @@
     grid-row: span 2;
   }
 
-  .remote {
+  .living-room {
     grid-column: span 3;
   }
 
@@ -422,7 +415,7 @@
     margin-top: 10px;
   }
 
-  .remote {
+  .living-room {
     display: grid;
     grid-template-columns: 1fr auto;
     gap: 14px;
@@ -433,47 +426,20 @@
     transition: transform 0.2s var(--ease);
   }
 
-  .remote:hover,
+  .living-room:hover,
   .outside:hover {
     transform: translateY(-2px);
   }
 
-  .tv-object {
-    grid-column: 1 / -1;
-    display: grid;
-    justify-items: center;
-  }
-
-  .screen {
-    width: 96px;
-    height: 56px;
-    border-radius: 8px;
-    background: #171c28;
-    box-shadow: inset 0 0 0 3px #2a3142;
-    transition: background 0.4s;
-  }
-
-  .screen.lit {
-    background: linear-gradient(135deg, #5fb4f0, #8f8cf5 55%, #f0a53a);
-    box-shadow: inset 0 0 0 3px #2a3142, 0 8px 26px -6px #8f8cf5aa;
-  }
-
-  .stand {
-    width: 30px;
-    height: 6px;
-    border-radius: 0 0 6px 6px;
-    background: #2a3142;
-  }
-
-  .remote-text {
+  .living-room-text {
     display: grid;
   }
 
-  .remote-text strong {
+  .living-room-text strong {
     font-size: 18px;
   }
 
-  .remote-text span {
+  .living-room-text span {
     font-size: 13px;
   }
 
@@ -532,7 +498,7 @@
 
     /* Out of a grid, a card that is a link turns inline again and loses its
        background. Block it, with no specificity, so a card that declares its
-       own display (the remote) keeps it. */
+       own display (the living room card) keeps it. */
     :where(.grid:not(:has(.climate))) > :where(a) {
       display: block;
     }
@@ -550,7 +516,7 @@
       grid-row: auto;
     }
 
-    .remote,
+    .living-room,
     .outside {
       grid-column: span 6;
     }

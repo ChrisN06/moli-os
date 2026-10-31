@@ -42,10 +42,9 @@
   const NAV = [
     { path: '', label: 'commun.nav.accueil', icon: 'home' },
     { path: 'moli', name: 'Moli', orb: true },
-    { path: 'salon', label: 'commun.nav.salon', icon: 'remote' },
-    { path: 'pieces', label: 'commun.nav.pieces', icon: 'light-group' },
+    { path: 'salon', label: 'commun.nav.salon', icon: 'sofa' },
+    { path: 'pieces', label: 'commun.nav.pieces', icon: 'rooms' },
     { path: 'plan', label: 'commun.nav.plan', icon: 'home-roof' },
-    { path: 'carte', label: 'commun.nav.carte', icon: 'map' },
     { path: 'cameras', label: 'commun.nav.cameras', icon: 'cctv' },
     { path: 'parler', label: 'commun.nav.parler', icon: 'talk' },
     { path: 'energie', label: 'commun.nav.energie', icon: 'bolt' },
@@ -153,9 +152,7 @@
       <Pieces />
     {:else if page === 'plan'}
       <Plan />
-    {:else if page === 'carte'}
-      <!-- The map (Leaflet): loaded only when visited. -->
-      {#await import('./pages/Carte.svelte') then { default: Carte }}<Carte />{/await}
+
     {:else if page === 'cameras'}
       <Cameras />
     {:else if page === 'parler'}

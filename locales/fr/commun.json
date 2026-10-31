@@ -34,7 +34,6 @@
   "commun.nav.salon": "Salon",
   "commun.nav.pieces": "Pièces",
   "commun.nav.plan": "Plan",
-  "commun.nav.carte": "Carte",
   "commun.nav.cameras": "Caméras",
   "commun.nav.energie": "Énergie",
   "commun.nav.impression": "Impression",
@@ -241,5 +240,16 @@
   "commun.code.raison_configuration": "Un changement de la maison : elle demande que ce soit bien toi.",
   "commun.volet.indisponible": "Équipement indisponible",
   "commun.volet.reception": "Reçu du cloud {age} · mesure possiblement antérieure",
-  "commun.volet.commande_envoyee": "Commande envoyée · position à confirmer"
+  "commun.volet.commande_envoyee": "Commande envoyée · position à confirmer",
+  "commun.atelier.retour": "Retour à l’accueil",
+  "commun.atelier.description": "Appareils, mesures et diagnostic de la maison.",
+  "commun.atelier.rechercher": "Rechercher un appareil",
+  "commun.atelier.disponibilite": "Disponibilité",
+  "commun.atelier.tous": "Tous les appareils",
+  "commun.atelier.en_ligne": "En ligne",
+  "commun.atelier.hors_ligne": "Hors ligne",
+  "commun.atelier.resultats": "{count} / {total} appareils",
+  "commun.atelier.aucun_resultat": "Aucun appareil ne correspond à ces filtres.",
+  "commun.atelier.diagnostic": "Journal et diagnostic",
+  "commun.atelier.imprimante": "État de l’imprimante 3D"
 }

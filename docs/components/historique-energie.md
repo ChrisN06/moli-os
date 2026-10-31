@@ -111,3 +111,13 @@ daily_minutes = 120                      # au moins, par cycle, complété en he
   de la pince : comportement « heures creuses ». Un relais bougé à la main recommence la
   durée minimale. Une charge dont le relais commande la bobine d'un contacteur (sur « Auto »)
   convient telle quelle.
+
+## Préparation CSV TaHoma
+
+Voir [le convertisseur et ses limites](../../tools/somfy/README.md). Il prévisualise
+les exports réels sans écriture ni connexion. La production JSONL exige un fuseau
+explicite et une convention de date quotidienne ; le CSV ne les indique pas.
+L’écriture future réutilise l’import existant et ses protections contre les
+doublons et les chevauchements avec la collecte en direct. Aucune modification
+du collecteur, du schéma SQLite ou des données existantes. Les heures issues
+d’index quotidiens seraient des estimations au prorata, à distinguer des mesures.

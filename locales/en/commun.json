@@ -36,7 +36,6 @@
   "commun.nav.salon": "Living room",
   "commun.nav.pieces": "Rooms",
   "commun.nav.plan": "Plan",
-  "commun.nav.carte": "Map",
   "commun.nav.cameras": "Cameras",
   "commun.nav.energie": "Energy",
   "commun.nav.impression": "Printing",
@@ -253,5 +252,16 @@
   "commun.code.raison_configuration": "A change to the house: it wants to be sure it’s you.",
   "commun.volet.indisponible": "Device unavailable",
   "commun.volet.reception": "Received from cloud {age} · measurement may be older",
-  "commun.volet.commande_envoyee": "Command sent · position awaiting confirmation"
+  "commun.volet.commande_envoyee": "Command sent · position awaiting confirmation",
+  "commun.atelier.retour": "Back to home",
+  "commun.atelier.description": "Home devices, readings and diagnostics.",
+  "commun.atelier.rechercher": "Search devices",
+  "commun.atelier.disponibilite": "Availability",
+  "commun.atelier.tous": "All devices",
+  "commun.atelier.en_ligne": "Online",
+  "commun.atelier.hors_ligne": "Offline",
+  "commun.atelier.resultats": "{count} / {total} devices",
+  "commun.atelier.aucun_resultat": "No devices match these filters.",
+  "commun.atelier.diagnostic": "Journal and diagnostics",
+  "commun.atelier.imprimante": "3D printer status"
 }
