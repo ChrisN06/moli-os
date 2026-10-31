@@ -178,7 +178,7 @@
   /** The pads: lights, then TV and speakers, then plugs. */
   const pads = $derived([
     ...room.lights.map((d) => ({ d, point: null })),
-    ...room.media.map((d) => ({ d, point: deviceKind(d) === 'tv' ? 'power' : null, link: deviceKind(d) === 'speaker' ? '#/salon' : null })),
+    ...room.media.map((d) => ({ d, point: deviceKind(d) === 'tv' ? 'power' : null, link: deviceKind(d) === 'speaker' ? '#/atelier' : null })),
     ...room.plugs.flatMap(plugPads),
   ]);
 

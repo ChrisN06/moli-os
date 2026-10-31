@@ -110,7 +110,7 @@
   "energie.histo.tarif": "Tarif",
   "energie.histo.note_appareils": "Chaque barre empile ce qui a consommé : les circuits, les appareils mesurés, les lumières (≈, estimées), le reste de la maison. Touche une barre pour le détail.",
   "energie.histo.note_tarif": "Ce que le compteur Linky facture, en heures pleines et creuses.",
-  "energie.histo.avant_moli": "Avant Moli, l’historique vient de Home Assistant.",
+  "energie.histo.avant_moli": "Les historiques importés apparaissent ici. Des index espacés donnent une répartition horaire estimée.",
   "energie.carte.titre": "Électricité",
   "energie.carte.detail": "Électricité : voir le détail",
   "energie.carte.kwh_aujourdhui": "kWh aujourd’hui",
@@ -343,5 +343,6 @@
   "energie.solaire.reglages.pas_de_temps_texte": "une heure : les pointes plus courtes (bouilloire, four) ne se voient pas, ce qui flatte un peu l’autoconsommation.",
   "energie.solaire.reglages.abonnement": "Abonnement",
   "energie.solaire.reglages.abonnement_texte": "inchangé : seules les consommations évitées et le surplus vendu comptent.",
-  "energie.solaire.reglages.reset": "Revenir aux réglages de départ"
+  "energie.solaire.reglages.reset": "Revenir aux réglages de départ",
+  "energie.range.week": "7 jours"
 }

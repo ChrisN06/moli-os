@@ -11,8 +11,13 @@
   import BenchPanel from './components/BenchPanel.svelte';
   import EnergyStrip from './components/EnergyStrip.svelte';
   import EnergyPanel from './components/EnergyPanel.svelte';
+  import Icon from './maison/ui/Icon.svelte';
+  import { filterDevices } from './lib/atelier.js';
 
   let energyOpen = $state(false);
+  let query = $state('');
+  let availability = $state('all');
+  const visible = $derived(filterDevices(Object.values(hub.devices), query, availability));
 
   // Same rule as the server: case, spaces and accents don't count.
   const norm = (s) =>
@@ -27,7 +32,7 @@
 
   const rooms = $derived.by(() => {
     const groups = new Map();
-    const devices = Object.values(hub.devices).sort((a, b) =>
+    const devices = [...visible].sort((a, b) =>
       deviceName(a).localeCompare(deviceName(b), locale()),
     );
     for (const d of devices) {
@@ -42,6 +47,10 @@
   });
 </script>
 
+<div class="atelier-heading">
+  <a class="back" href="#/"><Icon name="arrow-left" size={20} />{t('commun.atelier.retour')}</a>
+  <div><h1>{t('commun.nav.atelier')}</h1><p>{t('commun.atelier.description')}</p></div>
+</div>
 <Header />
 <Approvals />
 
@@ -58,10 +67,19 @@
 <main>
   <section class="home" aria-label={t('commun.atelier.maison')}>
     <EnergyStrip onopen={() => (energyOpen = true)} />
+    <div class="tools">
+      <label>{t('commun.atelier.rechercher')}<input type="search" bind:value={query} /></label>
+      <label>{t('commun.atelier.disponibilite')}<select bind:value={availability}>
+        <option value="all">{t('commun.atelier.tous')}</option>
+        <option value="online">{t('commun.atelier.en_ligne')}</option>
+        <option value="offline">{t('commun.atelier.hors_ligne')}</option>
+      </select></label>
+      <span class="result-count">{t('commun.atelier.resultats', { count: visible.length, total: Object.keys(hub.devices).length })}</span>
+    </div>
     {#if !hub.connected && rooms.length === 0}
       <p class="empty">{t('commun.atelier.connexion')}</p>
     {:else if rooms.length === 0}
-      <p class="empty">{t('commun.atelier.aucun_appareil')}</p>
+      <p class="empty">{Object.keys(hub.devices).length ? t('commun.atelier.aucun_resultat') : t('commun.atelier.aucun_appareil')}</p>
     {/if}
     {#each rooms as [room, devices] (room)}
       <section class="room">
@@ -77,7 +95,7 @@
       </section>
     {/each}
   </section>
-  <Journal />
+  <aside class="diagnostics"><details open><summary>{t('commun.atelier.diagnostic')}</summary><Journal /></details></aside>
 </main>
 
 {#if hub.chart}
@@ -97,6 +115,18 @@
 </div>
 
 <style>
+  .atelier-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 20px; max-width: 1440px; margin: 0 auto; padding: 20px 28px; }
+  .atelier-heading h1 { margin: 0; font-size: 26px; }
+  .atelier-heading p { margin: 4px 0 0; color: var(--ink-2); }
+  .back { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 8px 14px; border: var(--stroke) solid var(--line); border-radius: var(--radius); color: var(--ink); text-decoration: none; background: var(--card); font-weight: 700; }
+  .back:focus-visible { outline: 3px solid var(--copper); outline-offset: 3px; }
+  .tools { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 20px 0; }
+  .tools label { display: grid; gap: 6px; font-size: 13px; font-weight: 650; flex: 1 1 180px; }
+  .tools input, .tools select { min-height: 44px; min-width: 0; width: 100%; font: inherit; font-size: 16px; padding: 8px 12px; border: var(--stroke) solid var(--line); border-radius: var(--radius); background: var(--card); color: var(--ink); }
+  .result-count { color: var(--ink-2); padding-bottom: 12px; font-size: 13px; }
+  .home, .diagnostics { min-width: 0; }
+  .diagnostics summary { min-height: 44px; padding: 10px 0; font-weight: 700; cursor: pointer; }
+  .diagnostics :global(aside) { width: 100%; }
   main {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 320px;
@@ -138,7 +168,7 @@
   }
   .grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
     gap: 14px;
   }
   .empty {
