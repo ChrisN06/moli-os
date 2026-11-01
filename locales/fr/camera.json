@@ -1,0 +1,23 @@
+{
+  "camera.account.wait": "Saisissez le compte caméra dans la page Caméras.",
+  "camera.account.unknown": "Caméra non configurée sur cette installation.",
+  "camera.account.invalid": "Identifiant ou mot de passe caméra invalide.",
+  "camera.account.failed": "Connexion impossible. Vérifiez le compte caméra local, le réseau et le mode confidentialité Tapo.",
+  "camera.account.storage": "Impossible de conserver le compte dans le coffre chiffré.",
+  "camera.account.title": "Comptes caméra Tapo",
+  "camera.account.note": "Utilisez le compte caméra local créé dans Tapo, pas votre compte cloud. Le compte est vérifié puis conservé dans le coffre chiffré de Moli.",
+  "camera.account.camera": "Caméra",
+  "camera.account.username": "Identifiant du compte caméra",
+  "camera.account.password": "Mot de passe du compte caméra",
+  "camera.account.configured": "Compte enregistré",
+  "camera.account.testing": "Vérification…",
+  "camera.account.save": "Vérifier et connecter",
+  "camera.account.saved": "Caméra connectée. Le compte est enregistré dans le coffre chiffré.",
+  "camera.account.load_failed": "Impossible de charger les caméras configurées.",
+  "camera.video.protected": "Connectez-vous comme membre du foyer pour voir cette pièce protégée.",
+  "camera.video.failed": "Vidéo indisponible. Réessayez ou vérifiez le compte caméra.",
+  "camera.video.play": "Voir en direct",
+  "camera.video.stop": "Arrêter le direct",
+  "camera.account.owner": "Un propriétaire doit autoriser la connexion des caméras.",
+  "camera.account.owner_failed": "Connexion propriétaire impossible. Vérifiez votre code et ouvrez l’adresse directe de Moli."
+}

@@ -1,0 +1,23 @@
+{
+  "camera.account.wait": "Enter the camera account on the Cameras page.",
+  "camera.account.unknown": "Camera not configured on this installation.",
+  "camera.account.invalid": "Invalid camera username or password.",
+  "camera.account.failed": "Connection failed. Check the local camera account, network and Tapo privacy mode.",
+  "camera.account.storage": "Unable to save the account in the encrypted vault.",
+  "camera.account.title": "Tapo camera accounts",
+  "camera.account.note": "Use the local camera account created in Tapo, not your cloud account. It is verified then saved in Moli’s encrypted vault.",
+  "camera.account.camera": "Camera",
+  "camera.account.username": "Camera account username",
+  "camera.account.password": "Camera account password",
+  "camera.account.configured": "Account saved",
+  "camera.account.testing": "Checking…",
+  "camera.account.save": "Verify and connect",
+  "camera.account.saved": "Camera connected. The account is saved in the encrypted vault.",
+  "camera.account.load_failed": "Unable to load configured cameras.",
+  "camera.video.protected": "Sign in as a household member to view this protected room.",
+  "camera.video.failed": "Video unavailable. Retry or check the camera account.",
+  "camera.video.play": "Watch live",
+  "camera.video.stop": "Stop live video",
+  "camera.account.owner": "An owner must authorize camera connections.",
+  "camera.account.owner_failed": "Owner sign-in failed. Check your code and open Moli’s direct address."
+}

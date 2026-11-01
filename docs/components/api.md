@@ -848,3 +848,23 @@ propriétaire reconnue par les contrôles existants. Refus 403 sinon, 400 pour u
 invalide ou une configuration à périodes tarifaires. Le prix est en devise configurée par
 kWh, entre 0 et 10 inclus, fini. `/api/energy` expose `fixed_price`, `fixed_price_since`
 quand définis, ainsi que `max_power_kw`. Les anciens coûts restent inchangés.
+
+### Caméras Tapo et vidéo locale
+
+- `GET /api/cameras/accounts` : modèles, adresses déclarées et indicateur de compte
+  enregistré ; jamais un identifiant de compte. Les invités sont refusés.
+- `PUT /api/cameras/{instance}/account` : propriétaire authentifié uniquement, JSON
+  `{ "username": "…", "password": "…" }`, corps limité à 4 Kio. Lecture RTSP de
+  vérification puis stockage atomique dans le coffre. La cible est fixée dans la
+  configuration serveur ; aucun hôte ou URL ne vient du navigateur.
+- `GET /api/devices/{id}/video/stream.m3u8` puis `video/hls/playlist.m3u8`,
+  `video/hls/init.mp4` et `video/hls/segment.m4s` : relais HLS borné. Les fichiers
+  enfants portent `id` et éventuellement `n` ; l’identifiant de session doit
+  appartenir à cette caméra et ne pas être périmé. Le hub publie `video: true` et
+  `camera: true` ; une caméra vidéo seule n’a pas nécessairement d’instantané JPEG.
+
+Les médias suivent les restrictions des instantanés : invités refusés, pièce
+protégée réservée à une session humaine. Les réponses ne contiennent aucun URL
+RTSP, message brut du relais ou secret. Les fichiers font au plus 4 Mio, la lecture
+amont est limitée à 12 secondes ; aucun proxy réseau générique n’est exposé.
+Voir `integrations/tapo-camera/` pour l’exploitation du relais isolé.

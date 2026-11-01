@@ -97,6 +97,7 @@ pub fn render_prompt(house_json: &str) -> anyhow::Result<HousePrompt> {
             online: d.online,
             state: d.state,
             camera: d.camera,
+            video: false,
             printer: d.printer,
         })
         .collect();

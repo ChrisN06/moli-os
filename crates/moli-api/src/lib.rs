@@ -19,6 +19,7 @@ mod assets;
 mod assistant;
 mod automations;
 mod caller;
+mod cameras;
 mod directory;
 mod guard;
 mod integrations;
@@ -136,6 +137,8 @@ pub struct Options {
     /// The house's time zone (IANA), as resolved at start: shown in
     /// `/api/system`.
     pub timezone: Option<String>,
+    /// Tapo cameras declared by the installation, never arbitrary browser targets.
+    pub cameras: Vec<(String, moli_tapo_camera::Config)>,
 }
 
 /// Builds the complete HTTP application. Live streams end when `shutdown`
@@ -342,6 +345,7 @@ pub fn router(hub: Hub, shutdown: CancellationToken, options: &Options) -> Route
         .route("/api/home", get(rest::home))
         .merge(house_routes(&humans, options))
         .route("/api/system", get(system::system))
+        .merge(cameras::routes(options.cameras.clone()))
         .route("/api/energy", get(rest::energy))
         .route("/api/energy/price", put(rest::energy_price))
         .route("/api/energy/series", get(rest::energy_series))
