@@ -847,6 +847,39 @@ pub(crate) async fn print(
 #[derive(Clone)]
 pub(crate) struct Metered(pub(crate) Option<moli_energy::Energy>);
 
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct EnergyPrice {
+    price: f64,
+}
+
+pub(crate) async fn energy_price(
+    Extension(Metered(energy)): Extension<Metered>,
+    Extension(humans): Humans,
+    Extension(persons): Extension<Arc<People>>,
+    caller: Caller,
+    headers: HeaderMap,
+    Json(body): Json<EnergyPrice>,
+) -> Response {
+    if !crate::people_api::is_owner(&caller, &humans, &persons, &headers) {
+        return error(
+            StatusCode::FORBIDDEN,
+            &moli_i18n::tr!("energie.price.owner"),
+        );
+    }
+    let Some(energy) = energy else {
+        return error(StatusCode::NOT_FOUND, "no energy configured");
+    };
+    match energy.set_fixed_price(body.price).await {
+        Ok(()) => Json(json!({"ok":true})).into_response(),
+        Err(moli_energy::EnergyError::Invalid(_)) => error(
+            StatusCode::BAD_REQUEST,
+            &moli_i18n::tr!("energie.price.invalid"),
+        ),
+        Err(e) => error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
 pub(crate) async fn energy(Extension(Metered(energy)): Extension<Metered>) -> Response {
     let Some(energy) = energy else {
         return error(StatusCode::NOT_FOUND, "no [energy] meters configured");

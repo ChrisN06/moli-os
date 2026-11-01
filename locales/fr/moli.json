@@ -189,5 +189,6 @@
   "moli.correction.tous": "Tout cocher",
   "moli.correction.aucun": "Tout décocher",
   "moli.correction.pour_les": "Pour les {count} appareil(s) cochés",
-  "moli.correction.rien_en_commun": "Ces appareils n’ont aucune commande en commun."
+  "moli.correction.rien_en_commun": "Ces appareils n’ont aucune commande en commun.",
+  "moli.historique.releve": "Relevé à {time}"
 }

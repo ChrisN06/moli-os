@@ -6,7 +6,7 @@ export const energy = $state({ summary: null, missing: false });
 let timer = null;
 let users = 0;
 
-async function refresh() {
+export async function refreshEnergy() {
   try {
     const res = await fetch('/api/energy');
     if (res.status === 404) {
@@ -23,8 +23,8 @@ async function refresh() {
 export function useEnergy() {
   users += 1;
   if (users === 1) {
-    refresh();
-    timer = setInterval(refresh, 60_000);
+    refreshEnergy();
+    timer = setInterval(refreshEnergy, 60_000);
   }
   return () => {
     users -= 1;
@@ -34,6 +34,7 @@ export function useEnergy() {
 
 /** The month's bill at this pace, subscription included (null on its first day). */
 export function billOf(s) {
+  if (s?.fixed_price_since > s?.month?.from) return null;
   const cost = s?.month_projection?.cost;
   return cost == null ? null : cost + (s.monthly_fee ?? 0);
 }

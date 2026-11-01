@@ -251,5 +251,9 @@
   "commun.atelier.resultats": "{count} / {total} appareils",
   "commun.atelier.aucun_resultat": "Aucun appareil ne correspond à ces filtres.",
   "commun.atelier.diagnostic": "Journal et diagnostic",
-  "commun.atelier.imprimante": "État de l’imprimante 3D"
+  "commun.atelier.imprimante": "État de l’imprimante 3D",
+  "commun.volet.regler": "Régler l’ouverture de {name}",
+  "commun.volet.cible": "Cible : {pct} % · position réelle : {actual} %",
+  "commun.volet.inconnue": "Position inconnue",
+  "commun.volet.position_non_supportee": "Position intermédiaire non disponible"
 }

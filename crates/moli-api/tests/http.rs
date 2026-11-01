@@ -1397,3 +1397,16 @@ async fn an_invited_person_reaches_the_house_from_the_internet() {
     assert_eq!(status, 401);
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[tokio::test]
+async fn fixed_energy_price_requires_an_owner_session() {
+    let (addr, _) = server().await;
+    let (status, _) = request(
+        &addr,
+        "PUT",
+        "/api/energy/price",
+        Some(&json!({"price":0.2})),
+    )
+    .await;
+    assert_eq!(status, 403);
+}

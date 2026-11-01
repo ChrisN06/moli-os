@@ -23,6 +23,7 @@ pub(crate) struct Equipment {
     name: String,
     model: Option<String>,
     controls: Vec<String>,
+    position_command: bool,
     states: BTreeMap<String, Json>,
     online: bool,
 }
@@ -34,6 +35,14 @@ impl Equipment {
         }
         // A gateway may also expose a garage, lock or group: never infer shutter writes from generic commands.
         let shutter = raw["uiClass"] == "RollerShutter" && url.starts_with("io://");
+        let position_command = shutter
+            && raw["definition"]["commands"]
+                .as_array()
+                .is_some_and(|commands| {
+                    commands
+                        .iter()
+                        .any(|c| c["commandName"] == "setClosure" && c["nparams"] == 1)
+                });
         let controls = raw["definition"]["commands"]
             .as_array()
             .into_iter()
@@ -53,6 +62,7 @@ impl Equipment {
             model: raw["controllableName"].as_str().map(str::to_owned),
             url,
             controls,
+            position_command,
             states: BTreeMap::new(),
             online: raw["available"].as_bool().unwrap_or(false),
         };
@@ -111,15 +121,15 @@ impl Equipment {
                     kind: match value {
                         Value::Bool(_) => Kind::Binary,
                         Value::Int(_) | Value::Float(_) => Kind::Numeric {
-                            min: None,
-                            max: None,
-                            step: None,
+                            min: percent.then_some(0.0),
+                            max: percent.then_some(100.0),
+                            step: percent.then_some(1.0),
                         },
                         _ => Kind::Text,
                     },
                     access: Access {
                         read: true,
-                        write: false,
+                        write: percent && self.position_command && !read_only,
                     },
                     unit: percent.then_some(Unit::Percent),
                     semantic: Semantic::Other,
@@ -208,6 +218,20 @@ impl Equipment {
         }
     }
     pub fn order(&self, read_only: bool, key: &str, value: &Value) -> Option<Json> {
+        if read_only || !self.online {
+            return None;
+        }
+        if key == "percent_control" && self.position_command {
+            let opening = value.as_f64()?;
+            if !(0.0..=100.0).contains(&opening) || opening.fract() != 0.0 {
+                return None;
+            }
+            #[allow(clippy::cast_possible_truncation)]
+            // Finite integer already bounded to 0..100 above.
+            let closure = 100 - opening as i64;
+            return Some(json!({"label":"Moli OS", "actions":[{"deviceURL":self.url,
+                "commands":[{"name":"setClosure","parameters":[closure]}]}]}));
+        }
         let Value::Text(order) = value else {
             return None;
         };
@@ -227,6 +251,76 @@ impl Equipment {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn positions_require_declared_capability_and_invert_opening_once() {
+        let mut raw = shutter();
+        let equipment = Equipment::parse(&raw).unwrap();
+        assert!(
+            equipment
+                .order(false, "percent_control", &Value::Int(50))
+                .is_none()
+        );
+        raw["definition"]["commands"]
+            .as_array_mut()
+            .unwrap()
+            .push(json!({"commandName":"setClosure","nparams":1}));
+        let equipment = Equipment::parse(&raw).unwrap();
+        for opening in [0, 25, 50, 100] {
+            let payload = equipment
+                .order(false, "percent_control", &Value::Int(opening))
+                .unwrap();
+            assert_eq!(
+                payload["actions"][0]["commands"][0]["parameters"],
+                json!([100 - opening])
+            );
+        }
+        for value in [
+            Value::Int(-1),
+            Value::Int(101),
+            Value::Float(1.5),
+            Value::Float(f64::NAN),
+            Value::from("50"),
+        ] {
+            assert!(equipment.order(false, "percent_control", &value).is_none());
+        }
+        assert!(
+            equipment
+                .order(true, "percent_control", &Value::Int(50))
+                .is_none()
+        );
+        let id = DeviceId::from("test:shutter");
+        let instance = InstanceId::from("test");
+        assert!(
+            equipment
+                .device(&id, &instance, false)
+                .points
+                .iter()
+                .any(|p| p.key.as_ref() == "percent_control" && p.access.write)
+        );
+        assert!(
+            equipment
+                .device(&id, &instance, true)
+                .points
+                .iter()
+                .all(|p| !p.access.write)
+        );
+        raw["available"] = json!(false);
+        assert!(
+            Equipment::parse(&raw)
+                .unwrap()
+                .order(false, "percent_control", &Value::Int(50))
+                .is_none()
+        );
+        raw["available"] = json!(true);
+        raw["uiClass"] = json!("GarageDoor");
+        assert!(
+            Equipment::parse(&raw)
+                .unwrap()
+                .order(false, "percent_control", &Value::Int(50))
+                .is_none()
+        );
+    }
     fn shutter() -> Json {
         serde_json::from_str(include_str!(
             "../../../integrations/overkiz/fixtures/shutter.json"

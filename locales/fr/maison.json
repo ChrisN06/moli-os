@@ -212,5 +212,12 @@
   "maison.meteo.legende_pluie": "Pluie",
   "maison.meteo.legende_nuages": "Nuages",
   "maison.meteo.legende_vent": "Vent (faible → fort)",
-  "maison.meteo.credit": "Prévisions Open-Meteo. Le point orange, c’est la maison."
+  "maison.meteo.credit": "Prévisions Open-Meteo. Le point orange, c’est la maison.",
+  "maison.dehors.air_model": "Estimation régionale CAMS, pas une mesure au domicile.",
+  "maison.dehors.sun_sensor": "Capteur d’ensoleillement",
+  "maison.dehors.sun_unit": "Éclairement mesuré en lux, pas une puissance solaire en W/m².",
+  "maison.dehors.sun_history": "Éclairement · dernières 24 h",
+  "maison.air.fair": "Acceptable",
+  "maison.air.very_poor": "Très mauvais",
+  "maison.air.extreme": "Extrêmement mauvais"
 }

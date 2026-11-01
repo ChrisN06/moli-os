@@ -263,5 +263,9 @@
   "commun.atelier.resultats": "{count} / {total} devices",
   "commun.atelier.aucun_resultat": "No devices match these filters.",
   "commun.atelier.diagnostic": "Journal and diagnostics",
-  "commun.atelier.imprimante": "3D printer status"
+  "commun.atelier.imprimante": "3D printer status",
+  "commun.volet.regler": "Set opening of {name}",
+  "commun.volet.cible": "Target: {pct}% · actual position: {actual}%",
+  "commun.volet.inconnue": "Unknown position",
+  "commun.volet.position_non_supportee": "Intermediate position unavailable"
 }

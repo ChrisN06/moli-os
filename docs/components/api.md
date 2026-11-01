@@ -839,3 +839,12 @@ Restent ouverts (non urgents) :
 - le commentaire de `crates/moli-api/src/lib.rs` ne liste ni `/api/system`, ni
   `/api/home`, `/api/bench`, `/api/history`, `/api/devices/{id}/snapshot` ; la plupart des
   handlers de `rest.rs` et `automations.rs` n'ont pas de commentaire de documentation.
+
+
+### Tarif fixe
+
+`PUT /api/energy/price`, corps `{"price": 0.20}` (exemple fictif), requiert une session
+propriétaire reconnue par les contrôles existants. Refus 403 sinon, 400 pour un prix
+invalide ou une configuration à périodes tarifaires. Le prix est en devise configurée par
+kWh, entre 0 et 10 inclus, fini. `/api/energy` expose `fixed_price`, `fixed_price_since`
+quand définis, ainsi que `max_power_kw`. Les anciens coûts restent inchangés.
