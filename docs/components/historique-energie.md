@@ -121,3 +121,17 @@ L’écriture future réutilise l’import existant et ses protections contre le
 doublons et les chevauchements avec la collecte en direct. Aucune modification
 du collecteur, du schéma SQLite ou des données existantes. Les heures issues
 d’index quotidiens seraient des estimations au prorata, à distinguer des mesures.
+
+### Tarif fixe choisi dans le dashboard
+
+Sans période tarifaire configurée, Énergie affiche « Mon tarif fixe » (prix TTC par kWh).
+`PUT /api/energy/price` exige une session propriétaire ; valeur finie entre 0 et 10.
+Le tarif et ses dates d'effet sont persistés dans `energy.db` (table additive `fixed_price`),
+inclus dans les sauvegardes SQLite et lisibles sans changer les fichiers de configuration.
+Les périodes HP/HC restent disponibles uniquement quand un point tarifaire existe.
+
+Les nouveaux intervalles sont valorisés au prix applicable, avec pondération temporelle
+si le prix change pendant un intervalle. Une tranche horaire commençant avant le premier tarif
+reste sans coût : aucun prix historique n'est inventé. Les anciens coûts et kWh ne sont
+jamais modifiés. Les coûts d'une période peuvent être partiels ; le dashboard le précise
+et ne projette pas une facture mensuelle à partir d'un premier tarif saisi en cours de mois.

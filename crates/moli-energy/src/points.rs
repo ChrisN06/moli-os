@@ -318,6 +318,9 @@ mod tests {
 
     fn summary(month_from: u64, projection: Option<Amount>) -> Summary {
         Summary {
+            max_power_kw: 36.0,
+            fixed_price: None,
+            fixed_price_since: None,
             currency: "€".into(),
             timezone: "Europe/Paris".into(),
             since: Some(0),

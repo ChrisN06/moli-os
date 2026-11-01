@@ -1,4 +1,6 @@
 <script>
+  import CounterPower from '../ui/CounterPower.svelte';
+  import FixedPrice from '../ui/FixedPrice.svelte';
   import { onMount } from 'svelte';
   import { home, hub, value, isOn, nameOf, deviceKind, doorOpen, act } from '../lib/home.svelte.js';
   import { energy, useEnergy, euros, kwh, watts, power, liveLook, billOf } from '../lib/energy-live.svelte.js';
@@ -248,7 +250,9 @@
           </div>
           <span class="muted small">{t(now != null ? 'energie.now.detail_fine' : 'energie.now.detail', { level: look.word, plan: power(s.live.max, s.live.unit), fine: watts(now) })}</span>
         {:else}
-          <strong class="big num">{watts(now)}</strong>
+          {#if now != null}<strong class="big num">{watts(now)}</strong>
+          {:else if total?.point}<CounterPower point={total.point} />
+          {:else}<strong class="big num">—</strong>{/if}
         {/if}
         <div class="row">
           {#if s.period}<span class="chip {isHc ? 'cool' : 'warm'}">{isHc ? t('energie.hc') : t('energie.hp')}</span>{/if}
@@ -261,6 +265,7 @@
         <strong class="big num">{kwh(s.today.total.kwh)} <small>kWh</small></strong>
         <div class="row">
           <b class="num">{euros(s.today.total.cost, cur)}</b>
+          {#if s.fixed_price_since > s.today.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
           {#if vsYesterday != null}
             <span class="chip {vsYesterday > 10 ? 'warm' : vsYesterday < -10 ? 'good' : ''}">
               {t('energie.vs_hier', { n: `${vsYesterday > 0 ? '+' : ''}${vsYesterday}` })}
@@ -272,6 +277,7 @@
       <section class="card">
         <span class="eyebrow">{t('energie.mois.titre')}</span>
         <strong class="big num">{euros(s.month.total.cost, cur)}</strong>
+        {#if s.fixed_price_since > s.month.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
         <div class="row">
           {#if s.month_projection}
             <span class="muted num small">
@@ -383,7 +389,7 @@
       </section>
     </div>
 
-    <TariffPie {windows} />
+    {#if s.period_point}<TariffPie {windows} />{:else}<FixedPrice />{/if}
 
     {#if profile}
       <section class="card">
@@ -400,7 +406,7 @@
         <h2><Icon name="tune" size={18} />{t('energie.histo.titre')}</h2>
         <div class="seg" role="group" aria-label={t('energie.histo.empile')}>
           <button class:on={by === 'devices'} onclick={() => (by = 'devices')}>{t('energie.histo.appareils')}</button>
-          <button class:on={by === 'tariff'} onclick={() => (by = 'tariff')}>{t('energie.histo.tarif')}</button>
+          {#if s.period_point}<button class:on={by === 'tariff'} onclick={() => (by = 'tariff')}>{t('energie.histo.tarif')}</button>{/if}
         </div>
         <div class="seg" role="group" aria-label={t('energie.periode')}>
           {#each RANGES as [key, label] (key)}

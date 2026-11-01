@@ -13,11 +13,22 @@
   let failed = $state(false);
 
   $effect(() => {
+    const url = `/api/history?point=${encodeURIComponent(point)}&hours=${hours}&points=120`;
+    const controller = new AbortController();
+    series = null;
     failed = false;
-    fetch(`/api/history?point=${encodeURIComponent(point)}&hours=${hours}&points=120`)
-      .then((r) => (r.ok ? r.json() : Promise.reject()))
-      .then((s) => (series = s))
-      .catch(() => (failed = true));
+    const refresh = async () => {
+      try {
+        const r = await fetch(url, { signal: controller.signal });
+        if (!r.ok) throw new Error();
+        const next = await r.json();
+        if (!controller.signal.aborted) series = next;
+        failed = false;
+      } catch { if (!controller.signal.aborted) failed = true; }
+    };
+    refresh();
+    const timer = setInterval(refresh, 60_000);
+    return () => { clearInterval(timer); controller.abort(); };
   });
 
   // Numbers: averages per bucket when bucketed, else the raw changes.
@@ -35,7 +46,11 @@
   const stats = $derived.by(() => {
     if (!numeric) return null;
     const vs = pts.map((p) => p[1]);
-    return { min: Math.min(...vs), max: Math.max(...vs), last: vs.at(-1) };
+    return {
+      min: series.buckets?.length ? Math.min(...series.buckets.map((b) => b.min)) : Math.min(...vs),
+      max: series.buckets?.length ? Math.max(...series.buckets.map((b) => b.max)) : Math.max(...vs),
+      last: typeof series.last?.[1] === 'number' ? series.last[1] : vs.at(-1),
+    };
   });
   const path = $derived.by(() => {
     if (!numeric) return '';
@@ -64,8 +79,9 @@
       <path d="{path} L{W},{H} L0,{H} Z" class="area" />
       <path d={path} class="line" />
     </svg>
+    <div class="axis muted"><span>{clock(series.from)}</span><span>{clock(series.to)}</span></div>
     <div class="stats">
-      <span><small>{t('moli.historique.maintenant')}</small><b class="num">{num(stats.last, 1)}{unit}</b></span>
+      <span><small>{t('moli.historique.releve', { time: clock(series.last?.[0] ?? series.before?.[0] ?? series.to) })}</small><b class="num">{num(stats.last, 1)}{unit}</b></span>
       <span><small>{t('moli.historique.min')}</small><b class="num">{num(stats.min, 1)}{unit}</b></span>
       <span><small>{t('moli.historique.max')}</small><b class="num">{num(stats.max, 1)}{unit}</b></span>
     </div>
@@ -81,6 +97,7 @@
 </section>
 
 <style>
+  .axis { display: flex; justify-content: space-between; font-size: 11px; margin-top: 5px; }
   svg {
     width: 100%;
     height: 90px;

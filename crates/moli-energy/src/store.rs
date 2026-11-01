@@ -40,6 +40,10 @@ pub struct Store {
 const SCHEMA: &str = "
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous = NORMAL;
+    CREATE TABLE IF NOT EXISTS fixed_price (
+        ts INTEGER PRIMARY KEY,
+        price REAL NOT NULL CHECK(price >= 0 AND price <= 10)
+    ) STRICT;
     CREATE TABLE IF NOT EXISTS meter_last (
         meter TEXT PRIMARY KEY,
         kwh   REAL NOT NULL,
@@ -76,6 +80,61 @@ fn unms(v: i64) -> u64 {
 }
 
 impl Store {
+    pub fn set_fixed_price(&self, at: u64, price: f64) -> Result<(), EnergyError> {
+        if !price.is_finite() || !(0.0..=10.0).contains(&price) {
+            return Err(EnergyError::Invalid(
+                "price must be between 0 and 10 per kWh".into(),
+            ));
+        }
+        self.conn().execute("INSERT INTO fixed_price(ts,price) VALUES (?1,?2) ON CONFLICT(ts) DO UPDATE SET price=excluded.price",params![ms(at),price])?;
+        Ok(())
+    }
+
+    /// Initial activation time and latest chosen price (changes keep the coverage boundary).
+    pub fn fixed_price(&self) -> Result<Option<(u64, f64)>, EnergyError> {
+        Ok(self
+            .conn()
+            .query_row(
+                "SELECT (SELECT min(ts) FROM fixed_price),price FROM fixed_price ORDER BY ts DESC LIMIT 1",
+                [],
+                |r| Ok((unms(r.get(0)?), r.get(1)?)),
+            )
+            .optional()?)
+    }
+
+    /// Unknown before the first chosen price; later changes are weighted within the slice.
+    #[allow(clippy::cast_precision_loss)] // Millisecond durations below 2^52.
+    pub fn fixed_cost(&self, from: u64, to: u64, kwh: f64) -> Result<Option<f64>, EnergyError> {
+        if to <= from {
+            return Ok(None);
+        }
+        let conn = self.conn();
+        let Some(mut price) = conn
+            .query_row(
+                "SELECT price FROM fixed_price WHERE ts<=?1 ORDER BY ts DESC LIMIT 1",
+                [ms(from)],
+                |r| r.get::<_, f64>(0),
+            )
+            .optional()?
+        else {
+            return Ok(None);
+        };
+        let mut stmt =
+            conn.prepare("SELECT ts,price FROM fixed_price WHERE ts>?1 AND ts<?2 ORDER BY ts")?;
+        let changes = stmt.query_map(params![ms(from), ms(to)], |r| {
+            Ok((unms(r.get(0)?), r.get::<_, f64>(1)?))
+        })?;
+        let (mut start, mut weighted) = (from, 0.0);
+        for change in changes {
+            let (at, next) = change?;
+            weighted += (at - start) as f64 * price;
+            start = at;
+            price = next;
+        }
+        weighted += (to - start) as f64 * price;
+        Ok(Some(kwh * weighted / (to - from) as f64))
+    }
+
     pub fn open(path: &Path) -> Result<Self, EnergyError> {
         if let Some(dir) = path.parent() {
             std::fs::create_dir_all(dir)
@@ -233,6 +292,50 @@ mod tests {
             kwh,
             cost,
         }
+    }
+
+    #[test]
+    fn chosen_base_price_survives_reopening() {
+        let path = std::env::temp_dir().join(format!(
+            "moli-price-{}-{}.db",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        {
+            let store = Store::open(&path).unwrap();
+            store.set_fixed_price(1000, 0.21).unwrap();
+        }
+        {
+            let store = Store::open(&path).unwrap();
+            assert_eq!(store.fixed_price().unwrap(), Some((1000, 0.21)));
+        }
+        std::fs::remove_file(path).unwrap();
+    }
+
+    #[test]
+    fn base_price_is_persistent_and_never_backdates_imported_costs() {
+        let store = Store::memory();
+        assert_eq!(store.fixed_price().unwrap(), None);
+        store
+            .import(&[HourRow {
+                meter: "total".into(),
+                hour: 0,
+                kwh: 2.0,
+                cost: None,
+            }])
+            .unwrap();
+        store.set_fixed_price(1000, 0.2).unwrap();
+        assert_eq!(store.fixed_cost(0, 2000, 1.0).unwrap(), None);
+        assert_eq!(store.fixed_cost(1000, 2000, 1.0).unwrap(), Some(0.2));
+        store.set_fixed_price(2000, 0.3).unwrap();
+        assert_eq!(store.fixed_cost(1000, 3000, 2.0).unwrap(), Some(0.5));
+        assert_eq!(store.fixed_price().unwrap(), Some((1000, 0.3)));
+        assert_eq!(store.hours(0, 3_600_000).unwrap()[0].cost, None);
+        assert!(store.set_fixed_price(3000, -1.0).is_err());
+        assert!(store.set_fixed_price(3000, f64::NAN).is_err());
     }
 
     #[test]

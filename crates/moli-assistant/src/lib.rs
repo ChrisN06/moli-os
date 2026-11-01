@@ -4083,6 +4083,9 @@ mod tests {
             solar: None,
         };
         let mut summary = moli_energy::Summary {
+            max_power_kw: 36.0,
+            fixed_price: None,
+            fixed_price_since: None,
             currency: "€".into(),
             timezone: "Europe/Paris".into(),
             since: None,

@@ -1,16 +1,18 @@
 <script>
-  import { home, value, num, isOn, reachable } from '../lib/home.svelte.js';
+  import { home, value, num, isOn, reachable, relative, since } from '../lib/home.svelte.js';
   import { weatherOf } from '../lib/icons.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
   import LightTile from '../ui/LightTile.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
+  import HistoryCard from '../moli/HistoryCard.svelte';
 
   const out = $derived(home.config?.outdoor ?? {});
   const w = $derived(out.weather);
   const air = $derived(out.air);
+  const sun = $derived(out.sun);
   const pool = $derived(out.pool);
-  const v = (id, key) => value(id, key);
+  const v = (id, key) => reachable(id) ? value(id, key) : null;
 
   const day = $derived(v(w, 'daylight') !== false);
   const sky = $derived(weatherOf(v(w, 'weather_code'), day));
@@ -21,14 +23,14 @@
     aqi == null
       ? '—'
       : aqi <= 20
-        ? t('maison.air.tres_bon')
+        ? t('maison.air.bon')
         : aqi <= 40
-          ? t('maison.air.bon')
+          ? t('maison.air.fair')
           : aqi <= 60
             ? t('maison.air.moyen')
             : aqi <= 80
               ? t('maison.air.mediocre')
-              : t('maison.air.mauvais'),
+              : aqi <= 100 ? t('maison.air.very_poor') : t('maison.air.extreme'),
   );
   const aqiTone = $derived(aqi == null ? '' : aqi <= 40 ? 'good' : aqi <= 60 ? 'warm' : 'alert');
   const uv = $derived(v(air, 'uv_index'));
@@ -92,8 +94,21 @@
         <div><small>UV</small><b class="num">{num(uv, 0)}</b><em class="muted">{uvWord}</em></div>
         <div><small>{t('maison.dehors.particules')}</small><b class="num">{num(v(air, 'pm2_5'), 1)} µg/m³</b></div>
         <div><small>{t('maison.dehors.ozone')}</small><b class="num">{num(v(air, 'ozone'))} µg/m³</b></div>
+        <div><small>PM10</small><b class="num">{num(v(air, 'pm10'), 1)} µg/m³</b></div>
+        <div><small>NO₂</small><b class="num">{num(v(air, 'no2'), 1)} µg/m³</b></div>
       </div>
+      <p class="muted small">{t('maison.dehors.air_model')}</p>
+      {#if since(air, 'aqi') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(since(air, 'aqi'), home.now) })}</p>{/if}
     </section>
+
+    {#if sun}
+      <section class="card">
+        <div class="card-head"><h2><Icon name="sun" size={18} />{t('maison.dehors.sun_sensor')}</h2></div>
+        <strong class="num">{num(reachable(sun) ? v(sun, 'illuminance') : null)} lx</strong>
+        {#if v(sun, 'last_received') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(v(sun, 'last_received') * 1000, home.now) })}</p>{/if}
+        <p class="muted small">{t('maison.dehors.sun_unit')}</p>
+      </section>
+    {/if}
 
     {#if pool}
       <section class="card">
@@ -136,6 +151,10 @@
     {/if}
   </div>
 
+  {#if sun}
+    <HistoryCard point={`${sun}/illuminance`} hours={24} title={t('maison.dehors.sun_history')} />
+  {/if}
+
   {#if outsideCams.length}
     <section class="cams">
       {#each outsideCams as cam (cam.id)}
@@ -146,7 +165,7 @@
 
   {#if w || air}
     <!-- CC BY 4.0: the weather and air data credit their source. -->
-    <p class="credit">{t('maison.dehors.credit')} <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+    <p class="credit">{t('maison.dehors.credit')} <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>{#if air} · <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">CAMS ENSEMBLE / Copernicus</a>{/if}</p>
   {/if}
 </div>
 

@@ -125,3 +125,23 @@ Atelier garde ses cartes et commandes, avec retour explicite à l’accueil, rec
 multi-mots et filtre de disponibilité. Le journal reste accessible et repliable.
 Les imprimantes réelles ont une synthèse état/progression/températures/temps
 restant et leurs emplacements AMS reçus ; les champs inconnus restent absents ou « — ».
+
+## Estimation, air et volets
+
+Sans point de puissance, Accueil et Énergie peuvent montrer la moyenne entre les deux
+changements récents du compteur total (`CounterPower`, `/api/history`, Wh ou kWh).
+Les heures énergétiques importées ne servent jamais à ce calcul. Durée et ancienneté sont
+visibles ; au-delà de 90 minutes sans changement, l'estimation est signalée ancienne.
+Réinitialisation, saut incohérent, agrégation ou intervalle supérieur à 24 heures : aucune
+estimation. La protection utilise le plafond configuré du collecteur (36 kW par défaut).
+
+Dehors réutilise le profil `open-meteo-air` pour les données régionales CAMS, créditées
+à Open-Meteo et CAMS ENSEMBLE. `outdoor.air` désigne son appareil ; `outdoor.sun` désigne le
+capteur d'éclairement (`illuminance`, lx). Sa courbe utilise l'historique local et se
+rafraîchit chaque minute. Lux et UV ne sont pas des mesures de puissance solaire.
+
+Les volets ont une représentation tactile de l'ouverture : 0 % fermé, 100 % ouvert.
+Le geste prépare une cible puis envoie un ordre unique après relâchement (clavier regroupé
+sur 300 ms). La position rapportée reste distincte de la cible et ne change que sur retour
+réel du pilote. Contrôles désactivés hors ligne, en lecture seule ou sans capacité annoncée.
+La garde et les confirmations existantes sont conservées.

@@ -37,3 +37,8 @@ https://github.com/Somfy-Developer/Somfy-TaHoma-Developer-Mode
 
 Unités des états Overkiz et exceptions :
 https://github.com/home-assistant/core/blob/dev/homeassistant/components/overkiz/sensor.py
+
+Position intermédiaire : `percent_control` devient inscriptible seulement si un volet io
+annonce `setClosure` à un paramètre et que la lecture seule est désactivée. Seuls les
+entiers de 0 à 100 sont acceptés ; ouverture convertie une seule fois en fermeture
+(`100 - ouverture`). Aucun autre type d'équipement ne gagne de commande.
