@@ -145,3 +145,18 @@ Le geste prépare une cible puis envoie un ordre unique après relâchement (cla
 sur 300 ms). La position rapportée reste distincte de la cible et ne change que sur retour
 réel du pilote. Contrôles désactivés hors ligne, en lecture seule ou sans capacité annoncée.
 La garde et les confirmations existantes sont conservées.
+
+### Caméras Tapo
+
+Le formulaire **Comptes caméra Tapo** de `#/cameras` liste les caméras déclarées
+par l’installation. Le propriétaire saisit lui-même leur compte caméra local,
+distinct du compte cloud Tapo. Après vérification, le formulaire efface les champs ;
+le coffre chiffré conserve le compte. Une connexion échouée ne remplace pas le
+compte existant.
+
+Les cartes vidéo s’ouvrent avec **Voir en direct**. Safari utilise HLS natif ;
+Chrome et les autres navigateurs MSE chargent hls.js light à la demande. La vidéo
+est muette, sur le sous-flux H.264, sans enregistrement ni transcodage. Fermer la
+vue ou masquer l’onglet arrête le lecteur ; le relais libère la source après son
+délai de cinq secondes sans segment demandé. Les caméras à instantanés existantes
+conservent leur comportement.

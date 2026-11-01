@@ -1,4 +1,5 @@
 <script>
+  import VideoTile from './VideoTile.svelte';
   import { onDestroy, onMount, untrack } from 'svelte';
   import { device, value, home, relative } from '../lib/home.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
@@ -26,7 +27,7 @@
   const every = $derived(!battery && refresh > 0 ? refresh * 1000 : 0);
 
   async function load(asked = false) {
-    if (loading || !visible) return;
+    if (device(id)?.video || loading || !visible) return;
     if (!asked && Date.now() - lastAt < MIN_GAP) return;
     lastAt = Date.now();
     loading = true;
@@ -70,6 +71,7 @@
     void camera;
     const ms = every;
     // Untracked: `load` reads and writes `loading`, which must not restart this.
+    if (device(camera)?.video) return;
     untrack(() => load(true));
     if (!ms) return;
     const timer = setInterval(() => load(), ms);
@@ -93,6 +95,9 @@
   const online = $derived(device(id)?.online !== false);
 </script>
 
+{#if device(id)?.video}
+  <VideoTile {id} {name} {big} {onopen} online={device(id)?.online === true} />
+{:else}
 <figure class="cam" class:big>
   <button class="frame" onclick={() => (onopen ? onopen(id) : load(true))} aria-label={t(onopen ? 'salon.camera.agrandir' : 'salon.camera.actualiser', { nom: name })}>
     {#if src}
@@ -114,6 +119,7 @@
     {#if loading && !src}<span class="spinner" aria-hidden="true"></span>{/if}
   </button>
 </figure>
+{/if}
 
 <style>
   .cam {

@@ -538,6 +538,7 @@ mod tests {
             online: None,
             state: BTreeMap::new(),
             camera: false,
+            video: false,
             printer: false,
         }
     }

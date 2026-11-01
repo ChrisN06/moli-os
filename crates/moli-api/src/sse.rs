@@ -170,6 +170,12 @@ impl View {
         {
             return Pass::Drop;
         }
+        // Device events carry the core device, not its live-video capability.
+        if let Event::DeviceUpserted { device } = event
+            && hub.device(&device.id).is_some_and(|view| view.video)
+        {
+            return Pass::Snapshot;
+        }
         let Some(guest) = &self.guest else {
             return Pass::Event;
         };

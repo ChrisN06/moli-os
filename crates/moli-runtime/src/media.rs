@@ -84,3 +84,27 @@ pub enum SnapshotError {
     #[error("image unavailable: {0}")]
     Failed(String),
 }
+
+/// A bounded HLS file; credentials and upstream addresses never reach viewers.
+pub struct VideoFile {
+    pub content_type: &'static str,
+    pub bytes: Vec<u8>,
+}
+
+impl std::fmt::Debug for VideoFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("VideoFile")
+            .field("content_type", &self.content_type)
+            .field("bytes", &self.bytes.len())
+            .finish()
+    }
+}
+
+/// A live camera supplies only its own playlist and short-lived segments.
+pub trait VideoSource: std::fmt::Debug + Send + Sync + 'static {
+    fn file<'a>(
+        &'a self,
+        resource: &'a str,
+        session: Option<&'a str>,
+    ) -> BoxFuture<'a, anyhow::Result<VideoFile>>;
+}

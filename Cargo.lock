@@ -1132,6 +1132,7 @@ dependencies = [
  "moli-net",
  "moli-phones",
  "moli-runtime",
+ "moli-tapo-camera",
  "moli-weather",
  "ring",
  "rmcp",
@@ -1546,6 +1547,7 @@ dependencies = [
  "moli-solarman",
  "moli-sonos",
  "moli-tapo",
+ "moli-tapo-camera",
  "moli-telegram",
  "moli-tuya",
  "moli-weather",
@@ -1751,6 +1753,22 @@ dependencies = [
  "serde_json",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "moli-tapo-camera"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "http",
+ "http-body-util",
+ "moli-core",
+ "moli-i18n",
+ "moli-net",
+ "moli-runtime",
+ "serde",
+ "serde_json",
+ "tokio",
 ]
 
 [[package]]

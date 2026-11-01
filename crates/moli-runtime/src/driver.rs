@@ -180,6 +180,13 @@ impl DriverCtx {
         }
     }
 
+    /// Declares live video for a device owned by this driver.
+    pub fn provide_video(&self, device: &DeviceId, source: Arc<dyn crate::media::VideoSource>) {
+        if self.owns(device) {
+            self.hub.provide_video(device, source);
+        }
+    }
+
     /// Declares that `device` (one of ours) prints documents.
     pub fn provide_printing(&self, device: &DeviceId, sink: Arc<dyn crate::media::PrintSink>) {
         if self.owns(device) {

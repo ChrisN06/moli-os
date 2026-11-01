@@ -193,6 +193,9 @@ pub struct DeviceView {
     /// Images on demand (`/api/devices/{id}/snapshot`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub camera: bool,
+    /// Live HLS video, in addition to or instead of still images.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub video: bool,
     /// Prints documents (`/api/devices/{id}/print`).
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub printer: bool,
@@ -274,6 +277,7 @@ struct Model {
     drivers: BTreeMap<InstanceId, DriverSlot>,
     labels: BTreeMap<DeviceId, Label>,
     snapshots: HashMap<DeviceId, Arc<dyn crate::media::SnapshotSource>>,
+    videos: HashMap<DeviceId, Arc<dyn crate::media::VideoSource>>,
     printers: HashMap<DeviceId, Arc<dyn crate::media::PrintSink>>,
 }
 
@@ -1461,6 +1465,7 @@ impl Hub {
             model.states.remove(id);
             model.availability.remove(id);
             model.snapshots.remove(id);
+            model.videos.remove(id);
             model.printers.remove(id);
             model.devices.remove(id).is_some()
         };
@@ -1480,6 +1485,30 @@ impl Hub {
         source: Arc<dyn crate::media::SnapshotSource>,
     ) {
         self.write().snapshots.insert(device.clone(), source);
+    }
+
+    pub(crate) fn provide_video(
+        &self,
+        device: &DeviceId,
+        source: Arc<dyn crate::media::VideoSource>,
+    ) {
+        self.write().videos.insert(device.clone(), source);
+    }
+
+    /// Gets one bounded video file without retaining the model lock.
+    pub async fn camera_video(
+        &self,
+        device: &DeviceId,
+        resource: &str,
+        session: Option<&str>,
+    ) -> anyhow::Result<crate::media::VideoFile> {
+        let source = self
+            .read()
+            .videos
+            .get(device)
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("video unavailable"))?;
+        tokio::time::timeout(Duration::from_secs(15), source.file(resource, session)).await?
     }
 
     pub(crate) fn provide_printing(
@@ -1718,7 +1747,8 @@ impl Model {
             label: self.labels.get(&device.id).cloned().unwrap_or_default(),
             online: self.availability.get(&device.id).copied(),
             state: self.states.get(&device.id).cloned().unwrap_or_default(),
-            camera: self.snapshots.contains_key(&device.id),
+            camera: self.snapshots.contains_key(&device.id) || self.videos.contains_key(&device.id),
+            video: self.videos.contains_key(&device.id),
             printer: self.printers.contains_key(&device.id),
         }
     }

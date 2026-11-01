@@ -414,6 +414,7 @@ async fn serve(config: Config, boot: Instant) -> anyhow::Result<()> {
         machines: gates.machines,
         weather: weather(&config),
         timezone: Some(config.zone.name.clone()),
+        cameras: camera_configs(&config)?,
     };
     // Client addresses matter: human sessions are bound to them.
     axum::serve(
@@ -934,6 +935,15 @@ fn start_history(
     Ok(Some(started))
 }
 
+fn camera_configs(config: &Config) -> anyhow::Result<Vec<(String, moli_tapo_camera::Config)>> {
+    config
+        .drivers
+        .iter()
+        .filter(|d| d.kind == "tapo-camera" && d.enabled != Some(false))
+        .map(|d| Ok((d.id.clone(), d.options.clone().try_into()?)))
+        .collect()
+}
+
 /// Every driver kind this binary builds (`[[driver]] kind`): what the
 /// catalogue checks packages against, without building anything. A kind
 /// missing here is unknown, whatever `build_driver`'s match says.
@@ -943,6 +953,7 @@ const KINDS: &[&str] = &[
     "dirigera",
     "igd",
     "tapo",
+    "tapo-camera",
     "shelly",
     "izypower",
     "solarman",
@@ -1107,6 +1118,9 @@ fn build_driver(
         "igd" => Arc::new(moli_igd::Igd::new(
             config.options.clone().try_into().with_context(context)?,
         )),
+        "tapo-camera" => Arc::new(moli_tapo_camera::Camera::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
         "tapo" => Arc::new(moli_tapo::Tapo::new(
             config.options.clone().try_into().with_context(context)?,
         )),
