@@ -47,6 +47,15 @@ Les logs du relais sont désactivés car les erreurs amont d'authentification ne
 garantissent pas une suppression de tous les secrets. Les erreurs Moli restent
 expurgées. Ne jamais placer le compte Xiaomi dans le YAML persistant.
 
+Si la découverte UDP répond depuis l'hôte mais expire depuis Docker, un essai
+réversible en `network_mode: host` peut être nécessaire. Ce mode retire l'isolation
+réseau du conteneur et doit être approuvé avant application. Pour garder le relais
+privé, faire écouter son API sur `127.0.0.1:1984`, désactiver ses écoutes RTSP/WebRTC
+et placer aussi Moli sur le réseau hôte, avec `relay_host = "127.0.0.1"`. Retirer
+les publications `ports` et choisir explicitement l'adresse LAN et le port HTTP
+de Moli, sans conflit avec les services existants. Vérifier les autres caméras
+et revenir au réseau précédent si l'essai ne produit aucune amélioration.
+
 Sources : [module Xiaomi go2rtc](https://github.com/AlexxIT/go2rtc/tree/v1.9.15/internal/xiaomi),
 [preuve de protocole pour hlc7](https://github.com/AlexxIT/go2rtc/issues/1982).
 Compatibilité du matériel non démontrée par ces seuls liens.
