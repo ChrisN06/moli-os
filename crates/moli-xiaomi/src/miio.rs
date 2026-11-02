@@ -3,7 +3,7 @@ use aes::{
     Aes128,
     cipher::{BlockDecrypt, BlockEncrypt, KeyInit, generic_array::GenericArray},
 };
-use anyhow::{anyhow, ensure};
+use anyhow::{Context as _, anyhow, ensure};
 use md5::{Digest, Md5};
 use serde_json::{Value, json};
 use std::{
@@ -132,7 +132,9 @@ impl Miio {
         socket.send(&hello).await?;
         // Only the header: discovery payloads must never become a token extraction path.
         let mut header = [0; 16];
-        let n = timeout(WAIT, socket.recv(&mut header)).await??;
+        let n = timeout(WAIT, socket.recv(&mut header))
+            .await
+            .context("miIO discovery timed out")??;
         ensure!(
             n == 16 && header[..4] == [0x21, 0x31, 0, 32],
             "miIO hello failed"
@@ -155,13 +157,20 @@ impl Miio {
         data.push(0);
         let now = self
             .time
-            .saturating_add(u32::try_from(self.opened.elapsed().as_secs()).unwrap_or(u32::MAX));
+            .saturating_add(u32::try_from(self.opened.elapsed().as_secs()).unwrap_or(u32::MAX))
+            // Legacy miIO expects the device clock advanced by one second.
+            .saturating_add(1);
         self.socket
             .send(&packet(&self.token, self.device, now, &data)?)
             .await?;
         let mut reply = vec![0; 65536];
-        let n = timeout(WAIT, self.socket.recv(&mut reply)).await??;
-        unpack(&self.token, self.device, &reply[..n], self.id)
+        let n = timeout(WAIT, self.socket.recv(&mut reply))
+            .await
+            .context("miIO authenticated reply timed out")??;
+        let result = unpack(&self.token, self.device, &reply[..n], self.id)?;
+        self.time = u32::from_be_bytes(reply[12..16].try_into()?);
+        self.opened = Instant::now();
+        Ok(result)
     }
 }
 impl std::fmt::Debug for Miio {
@@ -206,8 +215,9 @@ mod tests {
             hello[12..16].copy_from_slice(&123u32.to_be_bytes());
             socket.send_to(&hello, peer).await.unwrap();
             let mut methods = Vec::new();
-            for _ in 0..2 {
+            for (expected_time, reply_time) in [(124u32, 130u32), (131, 140)] {
                 let (n, peer) = socket.recv_from(&mut bytes).await.unwrap();
+                assert_eq!(&bytes[12..16], &expected_time.to_be_bytes());
                 let plain = crypt(&[7; 16], &bytes[32..n], true).unwrap();
                 assert_eq!(plain.last(), Some(&0));
                 let query: Value = serde_json::from_slice(&plain[..plain.len() - 1]).unwrap();
@@ -216,7 +226,7 @@ mod tests {
                     serde_json::to_vec(&json!({"id":query["id"],"result":[{"state":8}]})).unwrap();
                 socket
                     .send_to(
-                        &packet(&[7; 16], [1, 2, 3, 4], 123, &response).unwrap(),
+                        &packet(&[7; 16], [1, 2, 3, 4], reply_time, &response).unwrap(),
                         peer,
                     )
                     .await
