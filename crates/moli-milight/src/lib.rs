@@ -22,6 +22,8 @@ pub struct Config {
     pub port: u16,
     pub zones: Vec<u8>,
     #[serde(default)]
+    pub rgbcct: bool,
+    #[serde(default)]
     pub room: Option<String>,
 }
 fn port() -> u16 {
@@ -72,6 +74,75 @@ fn spec(
     }
 }
 
+fn points(rgbcct: bool) -> Vec<PointSpec> {
+    let mut extra = Vec::new();
+    if rgbcct {
+        extra.push(spec(
+            "color_temp",
+            tr!("pilotes.milight.white_temperature"),
+            Kind::Numeric {
+                min: Some(2700.0),
+                max: Some(6500.0),
+                step: Some(1.0),
+            },
+            Some(Unit::Other("K".into())),
+            Semantic::ColorTemp,
+            true,
+        ));
+        extra.push(spec(
+            "saturation",
+            tr!("pilotes.milight.saturation"),
+            Kind::Numeric {
+                min: Some(0.0),
+                max: Some(100.0),
+                step: Some(1.0),
+            },
+            Some(Unit::Percent),
+            Semantic::Other,
+            true,
+        ));
+    }
+    extra.extend(vec![
+        spec(
+            "on",
+            tr!("pilotes.milight.on"),
+            Kind::Binary,
+            None,
+            Semantic::OnOff,
+            true,
+        ),
+        spec(
+            "brightness",
+            tr!("pilotes.milight.brightness"),
+            Kind::Numeric {
+                min: Some(0.0),
+                max: Some(100.0),
+                step: Some(1.0),
+            },
+            Some(Unit::Percent),
+            Semantic::Brightness,
+            true,
+        ),
+        spec(
+            "color",
+            tr!("pilotes.milight.color"),
+            Kind::Text,
+            None,
+            Semantic::Color,
+            true,
+        ),
+        spec(
+            "state_estimated",
+            tr!("pilotes.milight.assumed"),
+            Kind::Binary,
+            None,
+            Semantic::Config,
+            false,
+        ),
+    ]);
+    extra
+}
+
 impl Driver for Milight {
     fn kind(&self) -> &'static str {
         "milight"
@@ -80,57 +151,30 @@ impl Driver for Milight {
         Box::pin(async move {
             for zone in &self.config.zones {
                 let id = ctx.device_id(&zone.to_string());
-                ctx.upsert_device(Device {
+                let declared = Device {
                     id: id.clone(),
                     instance: ctx.instance().clone(),
                     native_name: format!("MI-Light {zone}").into(),
                     manufacturer: Some("Mi-Light".into()),
-                    model: Some("RGBW (UDP v6)".into()),
+                    model: Some(
+                        if self.config.rgbcct {
+                            "RGB+CCT (UDP v6)"
+                        } else {
+                            "RGBW (UDP v6)"
+                        }
+                        .into(),
+                    ),
                     description: Some(tr!("pilotes.milight.assumed").into()),
                     native_room: self.config.room.as_deref().map(Into::into),
                     members: Vec::new(),
-                    points: vec![
-                        spec(
-                            "on",
-                            tr!("pilotes.milight.on"),
-                            Kind::Binary,
-                            None,
-                            Semantic::OnOff,
-                            true,
-                        ),
-                        spec(
-                            "brightness",
-                            tr!("pilotes.milight.brightness"),
-                            Kind::Numeric {
-                                min: Some(0.0),
-                                max: Some(100.0),
-                                step: Some(1.0),
-                            },
-                            Some(Unit::Percent),
-                            Semantic::Brightness,
-                            true,
-                        ),
-                        spec(
-                            "color",
-                            tr!("pilotes.milight.color"),
-                            Kind::Text,
-                            None,
-                            Semantic::Color,
-                            true,
-                        ),
-                        spec(
-                            "state_estimated",
-                            tr!("pilotes.milight.assumed"),
-                            Kind::Binary,
-                            None,
-                            Semantic::Config,
-                            false,
-                        ),
-                    ],
-                });
+                    points: points(self.config.rgbcct),
+                };
+                ctx.upsert_device(declared);
                 // Neither a restart nor a bridge reply reveals the lamp's real state.
-                for key in ["on", "brightness", "color"] {
-                    ctx.set_state(&id, key, Value::Null);
+                for key in ["on", "brightness", "color", "color_temp", "saturation"] {
+                    if self.config.rgbcct || !matches!(key, "color_temp" | "saturation") {
+                        ctx.set_state(&id, key, Value::Null);
+                    }
                 }
                 ctx.set_state(&id, "state_estimated", Value::Bool(true));
                 ctx.set_availability(&id, false);
@@ -152,10 +196,11 @@ impl Driver for Milight {
                         if command.abandoned() { continue; }
                         let zone = self.config.zones.iter().copied().find(|z| ctx.device_id(&z.to_string()) == command.device.id);
                         let Some(zone) = zone else { command.reply(Err("unknown Mi-Light zone".into())); continue; };
-                        let packets = match commands(zone, &command.key, &command.value) {
+                        let packets = match commands_for(zone, &command.key, &command.value, self.config.rgbcct) {
                             Ok(p) => p,
                             Err(e) => { command.reply(Err(e.to_string())); continue; }
                         };
+                        let saturation = packets.iter().find(|p| self.config.rgbcct && p[4] == 2).map(|p| Value::Int(i64::from(100 - p[5])));
                         for body in packets {
                             if command.abandoned() { break; }
                             if let Err(e) = session.send(body).await {
@@ -165,11 +210,19 @@ impl Driver for Milight {
                             tokio::time::sleep(Duration::from_millis(100)).await;
                         }
                         if command.abandoned() {
-                            for key in ["on", "brightness", "color"] { ctx.set_state(&command.device.id, key, Value::Null); }
+                            for key in ["on", "brightness", "color", "color_temp", "saturation"] { if self.config.rgbcct || !matches!(key, "color_temp" | "saturation") { ctx.set_state(&command.device.id, key, Value::Null); } }
                         } else {
                             let on = command.value != Value::Bool(false) && !(command.key.as_ref() == "brightness" && command.value.as_f64() == Some(0.0));
                             ctx.set_state(&command.device.id, "on", Value::Bool(on));
                             ctx.set_state(&command.device.id, &command.key, command.value.clone());
+                            if self.config.rgbcct {
+                                if command.key.as_ref() == "color" {
+                                    let white = matches!(&command.value, Value::Text(s) if s.eq_ignore_ascii_case("#ffffff"));
+                                    ctx.set_state(&command.device.id, "color_temp", if white { Value::Int(4600) } else { Value::Null });
+                                    ctx.set_state(&command.device.id, "saturation", saturation.unwrap_or(Value::Null));
+                                }
+                                if command.key.as_ref() == "color_temp" { ctx.set_state(&command.device.id, "color", Value::Null); }
+                            }
                             command.reply(Ok(()));
                         }
                     }
@@ -234,22 +287,52 @@ fn packet(session: [u8; 2], sequence: u8, body: [u8; 10]) -> [u8; 22] {
 fn body(zone: u8, kind: u8, value: u8) -> [u8; 10] {
     [0x31, 0, 0, 7, kind, value, 0, 0, 0, zone]
 }
+#[cfg(test)]
 fn commands(zone: u8, key: &str, value: &Value) -> anyhow::Result<Vec<[u8; 10]>> {
+    commands_for(zone, key, value, false)
+}
+fn commands_for(zone: u8, key: &str, value: &Value, rgbcct: bool) -> anyhow::Result<Vec<[u8; 10]>> {
     ensure!((1..=4).contains(&zone), "invalid Mi-Light zone");
-    let on = body(zone, 3, 1);
+    let command = |kind, value| {
+        let mut b = body(zone, kind, value);
+        if rgbcct {
+            b[3] = 8;
+        }
+        b
+    };
+    let switch = if rgbcct { 4 } else { 3 };
+    let on = command(switch, 1);
     match (key, value) {
-        ("on", Value::Bool(on)) => Ok(vec![body(zone, 3, if *on { 1 } else { 2 })]),
+        ("on", Value::Bool(on)) => Ok(vec![command(switch, if *on { 1 } else { 2 })]),
         ("brightness", _) => {
             let v = value
                 .as_f64()
                 .filter(|v| v.is_finite() && (0.0..=100.0).contains(v) && v.fract() == 0.0)
                 .ok_or_else(|| anyhow::anyhow!("invalid brightness"))?;
             if v == 0.0 {
-                return Ok(vec![body(zone, 3, 2)]);
+                return Ok(vec![command(switch, 2)]);
             }
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
             let level = v as u8; // Validated integer in 1..=100.
-            Ok(vec![on, body(zone, 2, level)])
+            Ok(vec![on, command(if rgbcct { 3 } else { 2 }, level)])
+        }
+        ("color_temp", _) if rgbcct => {
+            let k = value
+                .as_f64()
+                .filter(|v| v.is_finite() && (2700.0..=6500.0).contains(v))
+                .ok_or_else(|| anyhow::anyhow!("invalid white temperature"))?;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let level = ((k - 2700.0) / 38.0).round() as u8;
+            Ok(vec![on, command(5, level)])
+        }
+        ("saturation", _) if rgbcct => {
+            let v = value
+                .as_f64()
+                .filter(|v| v.is_finite() && (0.0..=100.0).contains(v))
+                .ok_or_else(|| anyhow::anyhow!("invalid saturation"))?;
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let level = v.round() as u8;
+            Ok(vec![on, command(2, 100 - level)])
         }
         ("color", Value::Text(hex)) => {
             let digits = hex
@@ -261,7 +344,10 @@ fn commands(zone: u8, key: &str, value: &Value) -> anyhow::Result<Vec<[u8; 10]>>
             let rgb = [(number >> 16) as u8, (number >> 8) as u8, number as u8];
             if rgb.iter().all(|&v| v == rgb[0]) {
                 ensure!(rgb[0] == 255, tr!("pilotes.milight.color_hint"));
-                return Ok(vec![on, body(zone, 3, 5)]);
+                return Ok(vec![
+                    on,
+                    command(if rgbcct { 5 } else { 3 }, if rgbcct { 50 } else { 5 }),
+                ]);
             }
             let [r, g, b] = rgb.map(f64::from);
             let max = r.max(g).max(b);
@@ -274,12 +360,19 @@ fn commands(zone: u8, key: &str, value: &Value) -> anyhow::Result<Vec<[u8; 10]>>
                 (r - g) / delta + 4.0
             };
             #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
-            let wheel = (hue / 6.0 * 255.0).round() as u8;
-            let color = 0xffu8.wrapping_sub(wheel).wrapping_sub(0x37);
-            Ok(vec![
-                on,
-                [0x31, 0, 0, 7, 1, color, color, color, color, zone],
-            ])
+            let wheel = (176.0 - (hue / 6.0 * 255.0).floor()).rem_euclid(256.0) as u8;
+            let shifted = 255 - i16::from(wheel) - if rgbcct { 0x48 } else { 0x37 };
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let color = if shifted < 0 { shifted + 255 } else { shifted } as u8;
+            let mut color_body = command(1, color);
+            color_body[6..9].fill(color);
+            let mut out = vec![on, color_body];
+            if rgbcct {
+                #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+                let saturation = (100.0 * delta / max).round() as u8;
+                out.push(command(2, 100 - saturation));
+            }
+            Ok(out)
         }
         _ => bail!("unsupported Mi-Light command"),
     }
@@ -312,11 +405,52 @@ mod tests {
             port: 5987,
             zones,
             room: None,
+            rgbcct: false,
         };
         assert!(Milight::new(config(Ipv4Addr::LOCALHOST, vec![1, 2])).is_ok());
         assert!(Milight::new(config(Ipv4Addr::LOCALHOST, vec![1, 1])).is_err());
         assert!(Milight::new(config(Ipv4Addr::new(8, 8, 8, 8), vec![1])).is_err());
     }
+    #[test]
+    fn full_color_zones_white_brightness_and_wheel_match_reference() {
+        let cmd = |zone, key, value| commands_for(zone, key, &value, true).unwrap();
+        assert_eq!(
+            cmd(2, "on", Value::Bool(true))[0],
+            [0x31, 0, 0, 8, 4, 1, 0, 0, 0, 2]
+        );
+        assert_eq!(
+            cmd(2, "brightness", Value::Int(40))[1],
+            [0x31, 0, 0, 8, 3, 40, 0, 0, 0, 2]
+        );
+        assert_eq!(
+            cmd(1, "color_temp", Value::Int(2700))[1],
+            [0x31, 0, 0, 8, 5, 0, 0, 0, 0, 1]
+        );
+        assert_eq!(
+            cmd(2, "color_temp", Value::Int(6500))[1],
+            [0x31, 0, 0, 8, 5, 100, 0, 0, 0, 2]
+        );
+        assert_eq!(cmd(1, "saturation", Value::Int(30))[1][5], 70);
+        assert_eq!(cmd(2, "color", Value::from("#ff8080"))[2][5], 50);
+        for (hex, expected) in [
+            ("#ff0000", 7),
+            ("#00ff00", 92),
+            ("#0000ff", 177),
+            ("#ff00ff", 218),
+        ] {
+            let packets = cmd(2, "color", Value::from(hex));
+            assert_eq!(&packets[1][5..9], &[expected; 4]);
+            assert_eq!(packets[1][9], 2);
+            assert_eq!(packets[2][5], 0);
+        }
+        assert_eq!(
+            commands(1, "color", &Value::from("#ff0000")).unwrap()[1][5],
+            24
+        );
+        assert!(commands_for(1, "color_temp", &Value::Int(2600), true).is_err());
+        assert!(commands_for(1, "color_temp", &Value::Int(4000), false).is_err());
+    }
+
     #[tokio::test]
     async fn session_and_ack_are_bound_to_the_expected_sequence() {
         let server = UdpSocket::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
