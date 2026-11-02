@@ -23,6 +23,8 @@
 
   // A bulb cut at the wall switch: off, and only the switch brings it back.
   const cut = $derived(!!d && !isFixture(d) && unpowered(id));
+  const assumed = $derived(value(id, 'state_estimated') === true);
+  const unknown = $derived(assumed && value(id, 'on') == null);
   const state = $derived(
     !d
       ? t('commun.lampe.introuvable')
@@ -32,12 +34,16 @@
           ? t('commun.lampe.injoignable')
           : busy
             ? '…'
-            : on
+            : unknown
+              ? t('commun.lampe.etat_inconnu')
+              : on
               ? level != null && dimmable
                 ? t('commun.pourcent', { n: Math.round(sentLevel ?? level) })
                 : t('commun.lampe.allumee')
               : t('commun.lampe.eteinte'),
   );
+
+  const caption = $derived(assumed && !unknown ? `${state} · ${t('commun.lampe.etat_suppose')}` : state);
 
   function tap() {
     if (cut && !also.length) {
@@ -187,11 +193,11 @@
 </script>
 
 <div class="tile" class:on class:busy class:off-grid={!ok || !d || cut} class:compact>
-  <button class="hit" onclick={tap} disabled={!d || (!ok && !cut)} aria-pressed={on} aria-label={t('commun.action', { label, action: state })}>
+  <button class="hit" onclick={tap} disabled={!d || (!ok && !cut)} aria-pressed={unknown ? 'mixed' : on} aria-label={t('commun.action', { label, action: caption })}>
     <span class="bulb" style:background={tint} style:color={tintInk} style:--glow={tint && `${tint}66`}><Icon name={icon} size={compact ? 22 : 26} /></span>
     <span class="text">
       <b>{label}</b>
-      <small>{state}</small>
+      <small>{caption}</small>
     </span>
     <span class="switch" aria-hidden="true"><i></i></span>
   </button>
@@ -248,6 +254,7 @@
           {/each}
         {/if}
         {#if canColor}
+          {#if !canWhite}<button class="dot white" style:background="white" onclick={() => paint('#ffffff')} title={t('commun.lampe.blanc')} aria-label={t('commun.lampe.blanc')}></button>{/if}
           {#each COLORS as [key, c] (c)}
             <button class="dot" style:background={c} onclick={() => paint(c)} title={t(key)} aria-label={t(key)}></button>
           {/each}

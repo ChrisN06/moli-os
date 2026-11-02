@@ -565,5 +565,11 @@
   "pilotes.overkiz.inactif": "Disabled",
   "pilotes.overkiz.montee": "Up",
   "pilotes.overkiz.descente": "Down",
-  "pilotes.overkiz.arret": "Stop"
+  "pilotes.overkiz.arret": "Stop",
+  "pilotes.milight.assumed": "Assumed state: last known command, no feedback from bulbs.",
+  "pilotes.milight.on": "On / off",
+  "pilotes.milight.brightness": "Brightness",
+  "pilotes.milight.color": "RGB color / white",
+  "pilotes.milight.ack_failed": "The MI-Light bridge did not acknowledge delivery. Bulb state remains unknown.",
+  "pilotes.milight.color_hint": "Choose a hue or white. Use brightness for grey levels and On/off to turn off."
 }

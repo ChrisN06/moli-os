@@ -267,5 +267,9 @@
   "commun.volet.regler": "Set opening of {name}",
   "commun.volet.cible": "Target: {pct}% · actual position: {actual}%",
   "commun.volet.inconnue": "Unknown position",
-  "commun.volet.position_non_supportee": "Intermediate position unavailable"
+  "commun.volet.position_non_supportee": "Intermediate position unavailable",
+  "commun.nav.parametres": "Settings",
+  "commun.lampe.etat_inconnu": "Unknown state",
+  "commun.lampe.etat_suppose": "assumed state",
+  "commun.lampe.blanc": "White"
 }

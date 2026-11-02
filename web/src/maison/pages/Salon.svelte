@@ -22,7 +22,7 @@
       {#if lamps.length}
         <AmbiancePicker lights={lamps} label={t('salon.titre')} />
         <div class="lamps">
-          {#each lamps as lamp (lamp)}<LightTile id={lamp} icon="light" compact dimmer />{/each}
+          {#each lamps as lamp (lamp)}<LightTile id={lamp} icon={home.config?.favorites?.lights?.find((l) => l.id === lamp)?.icon ?? 'light'} compact dimmer />{/each}
         </div>
       {/if}
     {:else}

@@ -7,7 +7,7 @@
 
   /** A camera image, refreshed every `refresh` seconds while visible.
    *  Battery cameras refresh only when asked: every image wakes them. */
-  let { id, name, refresh = 10, battery = false, big = false, onopen = null } = $props();
+  let { id, name, refresh = 10, battery = false, big = false, autoplay = false, onopen = null } = $props();
 
   /** Never two automatic images closer than this, whatever re-runs. */
   const MIN_GAP = 1000;
@@ -96,7 +96,7 @@
 </script>
 
 {#if device(id)?.video}
-  <VideoTile {id} {name} {big} {onopen} online={device(id)?.online === true} />
+  <VideoTile {id} {name} {big} {autoplay} {onopen} online={device(id)?.online === true} />
 {:else}
 <figure class="cam" class:big>
   <button class="frame" onclick={() => (onopen ? onopen(id) : load(true))} aria-label={t(onopen ? 'salon.camera.agrandir' : 'salon.camera.actualiser', { nom: name })}>

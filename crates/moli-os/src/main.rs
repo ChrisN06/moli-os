@@ -954,6 +954,7 @@ const KINDS: &[&str] = &[
     "igd",
     "tapo",
     "tapo-camera",
+    "milight",
     "shelly",
     "izypower",
     "solarman",
@@ -1092,6 +1093,7 @@ fn spawn_drivers(
     Ok((tasks, gates))
 }
 
+#[allow(clippy::too_many_lines)] // One explicit registry arm per supported driver.
 fn build_driver(
     config: &DriverConfig,
     data_dir: &std::path::Path,
@@ -1119,6 +1121,9 @@ fn build_driver(
             config.options.clone().try_into().with_context(context)?,
         )),
         "tapo-camera" => Arc::new(moli_tapo_camera::Camera::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
+        "milight" => Arc::new(moli_milight::Milight::new(
             config.options.clone().try_into().with_context(context)?,
         )?),
         "tapo" => Arc::new(moli_tapo::Tapo::new(

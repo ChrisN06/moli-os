@@ -1471,6 +1471,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "moli-milight"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "moli-core",
+ "moli-i18n",
+ "moli-runtime",
+ "serde",
+ "tokio",
+]
+
+[[package]]
 name = "moli-moonraker"
 version = "0.1.0"
 dependencies = [
@@ -1534,6 +1546,7 @@ dependencies = [
  "moli-ipp",
  "moli-izypower",
  "moli-lights",
+ "moli-milight",
  "moli-moonraker",
  "moli-net",
  "moli-overkiz",

@@ -1,4 +1,5 @@
 <script>
+  import { barIndex } from '../lib/readings.js';
   import { kwh } from '../lib/energy-live.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
 
@@ -25,6 +26,15 @@
   const peakHour = $derived(profile.indexOf(Math.max(...profile)));
   let hover = $state(null);
   const shown = $derived(hover ?? peakHour);
+  function select(event) {
+    if (event.type === 'pointerdown') {
+      if (event.pointerType !== 'mouse') event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    if (event.type === 'pointermove' && event.pointerType !== 'mouse' && !event.buttons) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    hover = barIndex(event.clientX, rect.left, rect.width, profile.length);
+  }
 </script>
 
 {#if soFar != null}
@@ -43,9 +53,9 @@
   {#if today?.[shown] != null}<span class="muted">{t('commun.jour.aujourdhui_kwh', { kwh: kwh(today[shown]) })}</span>{/if}
   {#if offAt(shown)}<span class="chip cool">{t('commun.jour.creuse')}</span>{:else if windows.length}<span class="chip warm">{t('commun.jour.pleine')}</span>{/if}
 </div>
-<div class="plot" role="img" aria-label={t('commun.jour.conso')} onpointerleave={() => (hover = null)}>
+<div class="plot" role="group" aria-label={t('commun.jour.conso')} onpointerdown={select} onpointermove={select} oncontextmenu={(e) => e.preventDefault()} onpointerleave={(e) => { if (e.pointerType === 'mouse') hover = null; }}>
   {#each profile as v, h (h)}
-    <button class="col" class:off={offAt(h)} class:on={shown === h} onpointerenter={() => (hover = h)} onfocus={() => (hover = h)} aria-label={t('commun.jour.heure_kwh', { h, kwh: kwh(v) })}>
+    <button class="col" class:off={offAt(h)} class:on={shown === h} onclick={() => (hover = h)} onfocus={() => (hover = h)} aria-label={t('commun.jour.heure_kwh', { h, kwh: kwh(v) })}>
       <i style:height="{Math.max(2, (v / max) * 100)}%"></i>
       {#if today?.[h] != null}
         <b class="mark" class:running={h === hourNow} style:bottom="{(today[h] / max) * 100}%"></b>
@@ -88,6 +98,11 @@
     align-items: end;
     gap: 3px;
     height: 140px;
+    padding-top: 5px;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: pan-y;
   }
 
   .running {
@@ -107,21 +122,23 @@
   /* Today's hour, over the usual one. */
   .mark {
     position: absolute;
-    left: 1px;
-    right: 1px;
-    height: 3px;
-    border-radius: 2px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     background: var(--ink);
-    transform: translateY(50%);
+    transform: translate(-50%, 50%);
     pointer-events: none;
   }
 
   .mark.running {
-    background: repeating-linear-gradient(90deg, var(--ink) 0 4px, transparent 4px 6px);
+    background: var(--cool);
   }
 
   .sw.today-sw {
-    height: 3px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
     background: var(--ink);
   }
 

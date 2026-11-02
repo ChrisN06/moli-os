@@ -5,10 +5,11 @@
 2. L'administrateur déclare l'adresse et le modèle, puis un relais go2rtc interne
    au réseau Docker, sans port publié, sans enregistrement et sans transcodage. Désactiver ses logs
    (`log.level: disabled`) ; Moli fournit le diagnostic utilisateur.
-3. Ouvrir **Caméras** dans Moli. Choisir l'appareil et saisir son compte local.
+3. Ouvrir **Paramètres** dans Moli. Choisir l'appareil et saisir son compte local.
    Si demandé, le propriétaire saisit lui-même son code Moli. Le compte n'est
    enregistré qu'après la vérification de lecture RTSP.
-4. Ouvrir **Voir en direct**. Vérifier Safari Mac/iPhone, puis fermer le lecteur
+4. Ouvrir **Caméras** : les vidéos démarrent automatiquement, muettes. Vérifier
+   Safari Mac/iPhone, puis quitter la page
    et confirmer que le relais n'a plus de consommateur après cinq secondes.
 
 Sur une connexion HTTP au NAS, le formulaire n'est pas chiffré sur le LAN. Pour

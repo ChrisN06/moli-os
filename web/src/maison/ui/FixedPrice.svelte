@@ -44,7 +44,7 @@
     {#if needPin}<label>{t('energie.price.code')}<input type="password" inputmode="numeric" autocomplete="off" bind:value={pin} required /></label>{/if}
     <button type="submit" disabled={busy}>{t('energie.price.save')}</button>
   </form>
-  <p class="muted">{t('energie.price.note')}</p>
+  <p class="muted">{t('energie.price.estimate')}</p>
   {#if energy.summary?.fixed_price_since}<p class="muted">{t('energie.price.since', { date: new Date(energy.summary.fixed_price_since).toLocaleString() })}</p>{/if}
   {#if message}<p role="status">{message}</p>{/if}
 </section>

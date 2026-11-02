@@ -565,5 +565,11 @@
   "pilotes.overkiz.inactif": "Désactivée",
   "pilotes.overkiz.montee": "Montée",
   "pilotes.overkiz.descente": "Descente",
-  "pilotes.overkiz.arret": "Arrêt"
+  "pilotes.overkiz.arret": "Arrêt",
+  "pilotes.milight.assumed": "État supposé : dernière commande connue, sans retour des ampoules.",
+  "pilotes.milight.on": "Marche / arrêt",
+  "pilotes.milight.brightness": "Luminosité",
+  "pilotes.milight.color": "Couleur RGB / blanc",
+  "pilotes.milight.ack_failed": "Le pont MI-Light n’a pas confirmé la réception. L’état des ampoules reste inconnu.",
+  "pilotes.milight.color_hint": "Choisissez une teinte ou le blanc. Utilisez la luminosité pour les gris et Marche/arrêt pour éteindre."
 }

@@ -219,5 +219,7 @@
   "maison.dehors.sun_history": "Éclairement · dernières 24 h",
   "maison.air.fair": "Acceptable",
   "maison.air.very_poor": "Très mauvais",
-  "maison.air.extreme": "Extrêmement mauvais"
+  "maison.air.extreme": "Extrêmement mauvais",
+  "maison.accueil.temperature_maison": "Température de la maison",
+  "maison.accueil.temperature_interieure": "Température intérieure"
 }

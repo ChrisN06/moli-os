@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { visibleReadings, hasReadOnlyDetails, readingWord } from './readings.js';
+import { visibleReadings, hasReadOnlyDetails, readingWord, houseReading, barIndex } from './readings.js';
 
 test('typed readings take precedence without duplicating raw index or receipt time', () => {
   const device = { points: [
@@ -33,4 +33,26 @@ test('mode translation leaves unknown and unrelated protocol values literal', ()
   assert.equal(readingWord('unrelated', 'eco'), null);
   assert.equal(readingWord('heating_mode', '__proto__'), null);
   assert.equal(readingWord('heating_mode', 'constructor'), null);
+});
+
+const sensor = (id, key, value, online = true) => ({ id, online, points: [{ key, semantic: key }], state: { [key]: { value } } });
+test('house readings use the sole indoor sensor and ignore outdoor devices', () => {
+  const devices = { inside: sensor('inside', 'temperature', 22.3), outside: sensor('outside', 'temperature', 8), humidity: sensor('humidity', 'humidity', 61) };
+  const config = { outdoor: { weather: 'outside' } };
+  assert.equal(houseReading(devices, config, 'temperature'), 22.3);
+  assert.equal(houseReading(devices, config, 'humidity'), 61);
+  devices.other = sensor('other', 'temperature', 19);
+  assert.equal(houseReading(devices, config, 'temperature'), null);
+  assert.equal(houseReading(devices, { indoor: { temperature: 'inside/temperature' } }, 'temperature'), 22.3);
+  devices.inside.online = false;
+  assert.equal(houseReading(devices, { indoor: { temperature: 'inside/temperature' } }, 'temperature'), null);
+  assert.equal(houseReading({}, {}, 'humidity'), null);
+});
+test('chart touch selection clamps edges and handles narrow targets', () => {
+  assert.equal(barIndex(100, 100, 240, 24), 0);
+  assert.equal(barIndex(225, 100, 240, 24), 12);
+  assert.equal(barIndex(999, 100, 240, 24), 23);
+  assert.equal(barIndex(-2, 100, 240, 24), 0);
+  assert.equal(barIndex(2, 0, 0, 24), null);
+  assert.equal(barIndex(2, 0, 240, 0), null);
 });

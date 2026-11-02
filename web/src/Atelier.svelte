@@ -48,6 +48,7 @@
 </script>
 
 <div class="atelier-heading">
+  <a class="back" href="#/parametres"><Icon name="tune" size={20} />{t('commun.nav.parametres')}</a>
   <a class="back" href="#/"><Icon name="arrow-left" size={20} />{t('commun.atelier.retour')}</a>
   <div><h1>{t('commun.nav.atelier')}</h1><p>{t('commun.atelier.description')}</p></div>
 </div>

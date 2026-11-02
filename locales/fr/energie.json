@@ -361,5 +361,6 @@
   "energie.price.failed": "Impossible d’enregistrer le tarif.",
   "energie.price.owner": "Identifiez-vous comme propriétaire pour modifier le tarif.",
   "energie.price.invalid": "Saisissez un prix entre 0 et 10 par kWh, sans tarif heures pleines/creuses configuré.",
-  "energie.price.partial": "Coût partiel depuis l’activation du tarif"
+  "energie.price.partial": "Coût partiel depuis l’activation du tarif",
+  "energie.price.estimate": "Coûts estimés au tarif fixe actuel, y compris l’historique ; hors abonnement. Les anciens tarifs ne sont pas connus."
 }

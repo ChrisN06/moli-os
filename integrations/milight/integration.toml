@@ -1,0 +1,19 @@
+[integration]
+id = "milight"
+name = "Mi-Light RGBW (UDP v6)"
+brands = ["Mi-Light", "LimitlessLED"]
+models = ["RGBW via pont UDP v6"]
+transport = "udp"
+driver = "milight"
+crate = "moli-milight"
+[discovery]
+mdns = []
+ssdp = []
+ports = [5987]
+[needs]
+secrets = []
+vars = []
+options = ["host", "port", "zones", "room"]
+[origin]
+reused = "Protocole UDP v6 documenté par node-milight-promise ; implémentation Rust indépendante, sans code tiers repris"
+author = "agent"

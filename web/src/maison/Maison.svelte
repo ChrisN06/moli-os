@@ -14,6 +14,7 @@
   import Pieces from './pages/Pieces.svelte';
   import Plan from './pages/Plan.svelte';
   import Cameras from './pages/Cameras.svelte';
+  import Parametres from './pages/Parametres.svelte';
   import Energie from './pages/Energie.svelte';
   import Impression from './pages/Impression.svelte';
   import Dehors from './pages/Dehors.svelte';
@@ -138,6 +139,9 @@
         <Icon name="branch" size={20} />
         <span class="label">{t('commun.nav.systeme')}</span>
       </a>
+      <a class="atelier" href="#/parametres" title={t('commun.nav.parametres')}>
+        <Icon name="tune" size={20} /><span class="label">{t('commun.nav.parametres')}</span>
+      </a>
       <a class="atelier" href="#/atelier" title={t('commun.nav.atelier_titre')}>
         <Icon name="atelier" size={20} />
         <span class="label">{t('commun.nav.atelier')}</span>
@@ -160,6 +164,8 @@
     {:else if page === 'energie' && route.startsWith('energie/solaire')}
       <!-- The solar demo (a simulation): loaded only when visited. -->
       {#await import('./pages/Solaire.svelte') then { default: Solaire }}<Solaire />{/await}
+    {:else if page === 'parametres'}
+      <Parametres />
     {:else if page === 'energie'}
       <Energie />
     {:else if page === 'impression'}
@@ -184,6 +190,7 @@
     <!-- On a phone the rail's foot is hidden: the same three, at the bottom. -->
     <footer class="phone-foot">
       <a href="#/systeme"><Icon name="branch" size={16} />{t('commun.nav.comment_ca_marche')}</a>
+      <a href="#/parametres"><Icon name="tune" size={16} />{t('commun.nav.parametres')}</a>
       <a href="#/atelier"><Icon name="atelier" size={16} />{t('commun.nav.atelier')}</a>
       <button onclick={cycleTheme}><Icon name={theme === 'night' ? 'moon' : 'sun'} size={16} />{home.theme === 'auto' ? t('commun.theme.auto_pied') : themeName}</button>
     </footer>

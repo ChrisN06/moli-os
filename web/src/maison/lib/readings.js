@@ -20,3 +20,25 @@ export function readingWord(key, value) {
   }[value];
   return typeof word === 'string' ? 'pilotes.overkiz.' + word : null;
 }
+
+/** Explicit references win; otherwise use a unique indoor sensor, never outdoor weather. */
+export function houseReading(devices, config, key) {
+  const point = config?.indoor?.[key];
+  const read = (d, k) => {
+    const v = d?.state?.[k]?.value;
+    return d?.online !== false && typeof v === 'number' && Number.isFinite(v) ? v : null;
+  };
+  if (point) {
+    const slash = point.indexOf('/');
+    return slash > 0 ? read(devices[point.slice(0, slash)], point.slice(slash + 1)) : null;
+  }
+  const outdoor = new Set(Object.values(config?.outdoor ?? {}).filter((v) => typeof v === 'string'));
+  const candidates = Object.values(devices).filter((d) => !outdoor.has(d.id) && d.points?.some((p) => p.key === key && p.semantic === key));
+  return candidates.length === 1 ? read(candidates[0], key) : null;
+}
+
+/** Index under the finger, including gaps and the two plot edges. */
+export function barIndex(clientX, left, width, count) {
+  if (!(width > 0) || count < 1) return null;
+  return Math.max(0, Math.min(count - 1, Math.floor(((clientX - left) / width) * count)));
+}

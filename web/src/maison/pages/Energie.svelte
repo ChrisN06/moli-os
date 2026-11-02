@@ -1,6 +1,5 @@
 <script>
   import CounterPower from '../ui/CounterPower.svelte';
-  import FixedPrice from '../ui/FixedPrice.svelte';
   import { onMount } from 'svelte';
   import { home, hub, value, isOn, nameOf, deviceKind, doorOpen, act } from '../lib/home.svelte.js';
   import { energy, useEnergy, euros, kwh, watts, power, liveLook, billOf } from '../lib/energy-live.svelte.js';
@@ -239,6 +238,7 @@
   {#if !s}
     <p class="muted">{energy.missing ? t('energie.aucun_compteur') : t('energie.chargement')}</p>
   {:else}
+    {#if s.costs_at_current_price}<p class="muted">{t('energie.price.estimate')}</p>{/if}
     <div class="heads">
       <section class="card now" class:hued={look.hue != null} style:--h={look.hue}>
         <span class="eyebrow">{t('energie.now.titre')}</span>
@@ -265,7 +265,7 @@
         <strong class="big num">{kwh(s.today.total.kwh)} <small>kWh</small></strong>
         <div class="row">
           <b class="num">{euros(s.today.total.cost, cur)}</b>
-          {#if s.fixed_price_since > s.today.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
+          {#if !s.costs_at_current_price && s.fixed_price_since > s.today.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
           {#if vsYesterday != null}
             <span class="chip {vsYesterday > 10 ? 'warm' : vsYesterday < -10 ? 'good' : ''}">
               {t('energie.vs_hier', { n: `${vsYesterday > 0 ? '+' : ''}${vsYesterday}` })}
@@ -277,7 +277,7 @@
       <section class="card">
         <span class="eyebrow">{t('energie.mois.titre')}</span>
         <strong class="big num">{euros(s.month.total.cost, cur)}</strong>
-        {#if s.fixed_price_since > s.month.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
+        {#if !s.costs_at_current_price && s.fixed_price_since > s.month.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
         <div class="row">
           {#if s.month_projection}
             <span class="muted num small">
@@ -389,7 +389,7 @@
       </section>
     </div>
 
-    {#if s.period_point}<TariffPie {windows} />{:else}<FixedPrice />{/if}
+    {#if s.period_point}<TariffPie {windows} />{/if}
 
     {#if profile}
       <section class="card">
