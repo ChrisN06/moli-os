@@ -4,7 +4,7 @@ Caméras C200 et C320WS : RTSP local vers go2rtc isolé, HLS H.264 du sous-flux
 `stream2`. Cette implémentation ne commande pas la caméra, ne l'oriente pas,
 n'enregistre rien et ne démarre aucun encodeur vidéo.
 
-Le compte caméra local est saisi dans **Caméras**, par un propriétaire du foyer.
+Le compte caméra local est saisi dans **Paramètres**, par un propriétaire du foyer.
 Il est vérifié par une connexion RTSP en lecture seule puis conservé dans le
 coffre chiffré (`camera_account`). Aucun identifiant RTSP n'est transmis au lecteur.
 Les sources go2rtc sont créées en mémoire par PATCH, sans écriture de configuration.
@@ -27,7 +27,7 @@ navigateur ne choisit aucune adresse réseau ; l'API refuse les instances inconn
 Les fichiers HLS restent liés à leur caméra et reprennent les restrictions des
 instantanés (invités refusés, pièce protégée réservée à une session humaine).
 
-Lecture à la demande, muette, arrêt au changement de page, à la fermeture ou au
+Lecture automatique sur le mur Caméras, muette ; ailleurs à la demande. Arrêt au changement de page, à la fermeture ou au
 passage en arrière-plan. Safari utilise HLS natif ; les autres navigateurs chargent
 hls.js light uniquement lors de la lecture. go2rtc ferme sa session après cinq
 secondes sans segment demandé. Une carte inactive n'ouvre pas de flux RTSP.

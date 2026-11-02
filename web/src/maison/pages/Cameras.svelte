@@ -2,7 +2,6 @@
   import { home, hub, roomOf, hidden, protectedRoom, nameOf, clock, relative, deviceKind } from '../lib/home.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
-  import CameraAccounts from '../ui/CameraAccounts.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
   import SecurityPanel from '../ui/SecurityPanel.svelte';
 
@@ -73,13 +72,12 @@
     <p class="page-sub">{t('salon.cameras.sous_titre')}</p>
   </header>
 
-  <CameraAccounts />
   <SecurityPanel />
 
   <div class="wall">
     {#each cameras as cam (cam.id)}
       <div class="slot">
-        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} onopen={(id) => (open = id)} />
+        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} autoplay={!open} onopen={(id) => (open = id)} />
         {#if cam.locked}<span class="chip cool lock"><Icon name="lock" size={14} />{t('salon.cameras.protegee')}</span>{/if}
       </div>
     {:else}

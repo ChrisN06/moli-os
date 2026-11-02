@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { home, hub, value, device, isOn, clock, num, relative, lastSeen, roomList, lampsOf, nameOf, doorOpen, leak, lowBattery, act, pending } from '../lib/home.svelte.js';
+  import { houseReading } from '../lib/readings.js';
   import { isPrinter, phase } from '../lib/printers.js';
   import { t, locale } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
@@ -14,8 +15,11 @@
 
   const cfg = $derived(home.config ?? {});
   const out = $derived(cfg.outdoor ?? {});
+  const houseTemp = $derived(houseReading(hub.devices, cfg, 'temperature'));
+  const houseHumidity = $derived(houseReading(hub.devices, cfg, 'humidity'));
 
   const lights = $derived(cfg.favorites?.lights ?? []);
+  const unknownLights = $derived(lights.some((l) => [l.id, ...(l.also ?? [])].some((id) => value(id, 'state_estimated') === true && value(id, 'on') == null)));
   const litCount = $derived(lights.filter((l) => [l.id, ...(l.also ?? [])].some((i) => isOn(i))).length);
 
   // Ambiances, room by room (the last room chosen is remembered here).
@@ -173,7 +177,7 @@
   <div class="grid">
     <section class="card lights">
       <div class="card-head">
-        <h2><Icon name="light" size={18} />{t('maison.accueil.lumieres')} <span class="count">{litCount ? t('maison.accueil.allumees', { count: litCount }) : t('maison.accueil.tout_eteint')}</span></h2>
+        <h2><Icon name="light" size={18} />{t('maison.accueil.lumieres')} <span class="count">{unknownLights ? t('commun.lampe.etat_inconnu') : litCount ? t('maison.accueil.allumees', { count: litCount }) : t('maison.accueil.tout_eteint')}</span></h2>
         <a class="more" href="#/pieces" aria-label={t('maison.accueil.toutes_pieces')}><Icon name="arrow-top-right" size={18} /></a>
       </div>
       <div class="tiles">
@@ -200,6 +204,14 @@
       <EnergyCard />
       <Routines />
     </div>
+
+    <section class="card house-climate">
+      <div class="card-head"><h2><Icon name="thermometer" size={18}/>{t('maison.accueil.temperature_maison')}</h2></div>
+      <div class="facts">
+        <div><small>{t('maison.accueil.temperature_interieure')}</small><b class="num">{houseTemp == null ? '—' : `${num(houseTemp, 1)} °C`}</b></div>
+        <div><small>{t('maison.accueil.humidite')}</small><b class="num">{houseHumidity == null ? '—' : `${num(houseHumidity)} %`}</b></div>
+      </div>
+    </section>
 
     {#if (cfg.favorites?.climate ?? []).length}
       <section class="card climate">

@@ -847,7 +847,10 @@ Restent ouverts (non urgents) :
 propriétaire reconnue par les contrôles existants. Refus 403 sinon, 400 pour un prix
 invalide ou une configuration à périodes tarifaires. Le prix est en devise configurée par
 kWh, entre 0 et 10 inclus, fini. `/api/energy` expose `fixed_price`, `fixed_price_since`
-quand définis, ainsi que `max_power_kw`. Les anciens coûts restent inchangés.
+quand définis, ainsi que `max_power_kw`. Les coûts **stockés** restent inchangés.
+Sans période tarifaire, `costs_at_current_price=true` dans le résumé et les séries
+signale la revalorisation de tous les kWh consommés au prix fixe courant pour affichage.
+Il s'agit d'estimations hors abonnement, pas de factures historiques.
 
 ### Caméras Tapo et vidéo locale
 

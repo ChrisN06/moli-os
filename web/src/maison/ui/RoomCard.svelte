@@ -18,6 +18,7 @@
    *  silent (filtered view). */
   let { room, every = false, icons = false } = $props();
 
+  const unknownLights = $derived(room.lights.some((d) => value(d.id, 'state_estimated') === true && value(d.id, 'on') == null));
   const locked = $derived(protectedRoom(room.name));
 
   /** What a quiet sensor shows when nothing is wrong (the « Capteurs » view): one
@@ -189,9 +190,11 @@
     if (!reachable(d.id)) return t('commun.piece.injoignable');
     if (outlets) return t('commun.piece.prises_allumees', { on: litCount(outlets, d.id), count: outlets.length });
     if (deviceKind(d) === 'speaker') return value(d.id, 'playing') === true ? t('commun.piece.lecture_en_cours') : t('commun.piece.a_l_arret');
-    if (!isOn(d.id, point)) return t('commun.piece.eteinte');
+    const assumed = value(d.id, 'state_estimated') === true;
+    if (assumed && value(d.id, 'on') == null) return t('commun.lampe.etat_inconnu');
     const b = value(d.id, 'brightness');
-    return typeof b === 'number' && fine(d) ? t('commun.pourcent', { n: Math.round(b) }) : t('commun.piece.allumee');
+    const state = !isOn(d.id, point) ? t('commun.piece.eteinte') : typeof b === 'number' && fine(d) ? t('commun.pourcent', { n: Math.round(b) }) : t('commun.piece.allumee');
+    return assumed ? `${state} · ${t('commun.lampe.etat_suppose')}` : state;
   }
 
   function tap(d, point, outlets, name) {
@@ -232,7 +235,7 @@
     <div class="title">
       <h2>{room.name}{#if locked}<span class="lock" title={t('commun.piece.protegee_titre')}><Icon name="lock" size={13} /></span>{/if}</h2>
       {#if room.group || room.lights.length}
-        <span class="muted">{room.lit ? t('commun.piece.allumees', { count: room.lit }) : t('commun.piece.tout_eteint')}</span>
+        <span class="muted">{unknownLights ? t('commun.lampe.etat_inconnu') : room.lit ? t('commun.piece.allumees', { count: room.lit }) : t('commun.piece.tout_eteint')}</span>
       {/if}
     </div>
     {#if temp != null}
@@ -244,7 +247,7 @@
       </button>
     {/if}
     {#if room.lights.length}
-      <button class="room-switch" class:on={room.lit} onclick={roomPower} aria-pressed={!!room.lit} title={room.lit ? t('commun.piece.tout_eteindre') : t('commun.piece.tout_allumer')} aria-label={t(room.lit ? 'commun.piece.label_eteindre' : 'commun.piece.label_allumer', { name: room.name })}><i></i></button>
+      <button class="room-switch" class:on={room.lit} onclick={roomPower} aria-pressed={unknownLights ? 'mixed' : !!room.lit} title={room.lit ? t('commun.piece.tout_eteindre') : t('commun.piece.tout_allumer')} aria-label={t(room.lit ? 'commun.piece.label_eteindre' : 'commun.piece.label_allumer', { name: room.name })}><i></i></button>
     {/if}
   </div>
 
@@ -266,7 +269,7 @@
               {#if !icons}<b>{label}</b><small>{stateOf(d, point)}</small>{/if}
             </a>
           {:else}
-            <button class="pad" class:on={lit} class:cut class:off-grid={!reachable(d.id) && !cut} onclick={() => tap(d, point, outlets, name)} title={label} aria-pressed={lit} aria-label={t('commun.action', { label, action: stateOf(d, point, outlets) })}>
+            <button class="pad" class:on={lit} class:cut class:off-grid={!reachable(d.id) && !cut} onclick={() => tap(d, point, outlets, name)} title={label} aria-pressed={value(d.id, 'state_estimated') === true && value(d.id, 'on') == null ? 'mixed' : lit} aria-label={t('commun.action', { label, action: stateOf(d, point, outlets) })}>
               <span class="ico"><Icon name={outlets ? 'power' : padIcon(d)} size={icons ? 22 : 18} /></span>
               {#if !icons}<b>{label}</b><small>{stateOf(d, point, outlets)}</small>{/if}
             </button>

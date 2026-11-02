@@ -131,11 +131,13 @@ impl Flows {
 #[derive(Clone, Debug, Serialize)]
 pub struct Summary {
     pub max_power_kw: f64,
-    /// User-chosen base price; only intervals after its first setting are priced.
+    /// Current base price used to estimate all displayed consumption costs.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fixed_price: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fixed_price_since: Option<u64>,
+    /// Displayed costs estimate consumption at the current fixed price, not an old bill.
+    pub costs_at_current_price: bool,
     pub currency: String,
     pub timezone: String,
     /// First hour on record.
@@ -175,6 +177,8 @@ pub struct Report {
     pub step: Step,
     pub from: u64,
     pub to: u64,
+    /// Displayed costs estimate consumption at the current fixed price, not an old bill.
+    pub costs_at_current_price: bool,
     pub currency: String,
     pub timezone: String,
     pub meters: Vec<MeterInfo>,
@@ -300,27 +304,38 @@ impl Energy {
         let tomorrow = report::next(today, Step::Day, tz)?;
         let from = last_month.min(yesterday);
         let store = Arc::clone(&self.inner.store);
-        let (rows, since) =
-            blocking(move || Ok((store.hours(from, tomorrow)?, store.first_hour()?))).await?;
+        let (mut rows, since, fixed_price) = blocking(move || {
+            Ok((
+                store.hours(from, tomorrow)?,
+                store.first_hour()?,
+                store.fixed_price()?,
+            ))
+        })
+        .await?;
         let config = &self.inner.config;
+        let current_price = config
+            .tariff
+            .is_none()
+            .then_some(fixed_price)
+            .flatten()
+            .map(|(_, p)| p);
+        price_display_rows(config, &mut rows, current_price);
         let month_period = Period::of(config, &rows, month, month_end);
         let period = self.period_now();
         let meters = self.meters();
-        let fixed_price = self.inner.store.fixed_price()?;
-        let mut month_projection = report::projection(&month_period, now, month_end);
-        if fixed_price.is_some_and(|(at, _)| at > month)
-            && let Some(projection) = &mut month_projection
-        {
-            projection.cost = None;
-        }
+        let month_projection = report::projection(&month_period, now, month_end);
         Ok(Summary {
             max_power_kw: config.max_power_kw,
             fixed_price: fixed_price.map(|(_, price)| price),
             fixed_price_since: fixed_price.map(|(at, _)| at),
+            costs_at_current_price: current_price.is_some(),
             currency: config.currency.clone(),
             timezone: config.timezone.clone(),
             since,
-            price_now: period.as_deref().and_then(|p| config.period_price(p)),
+            price_now: period
+                .as_deref()
+                .and_then(|p| config.period_price(p))
+                .or(current_price),
             period_point: config.tariff.as_ref().map(|t| t.period.clone()),
             period,
             flows: Flows::of(&meters),
@@ -357,17 +372,44 @@ impl Energy {
             return Err(EnergyError::Invalid("`to` must be after `from`".into()));
         }
         let store = Arc::clone(&self.inner.store);
-        let rows = blocking(move || store.hours(from, to)).await?;
+        let (mut rows, fixed_price) =
+            blocking(move || Ok((store.hours(from, to)?, store.fixed_price()?))).await?;
+        let current_price = self
+            .inner
+            .config
+            .tariff
+            .is_none()
+            .then_some(fixed_price)
+            .flatten()
+            .map(|(_, p)| p);
+        price_display_rows(&self.inner.config, &mut rows, current_price);
         let config = &self.inner.config;
         Ok(Report {
             step,
             from,
             to,
+            costs_at_current_price: current_price.is_some(),
             currency: config.currency.clone(),
             timezone: config.timezone.clone(),
             meters: self.meters(),
             buckets: report::buckets(&rows, from, to, step, &self.inner.tz)?,
         })
+    }
+}
+
+/// Reprice display copies only: imports and recorded costs remain intact for audit.
+fn price_display_rows(config: &Config, rows: &mut [HourRow], price: Option<f64>) {
+    let Some(price) = price else {
+        return;
+    };
+    for row in rows {
+        if config
+            .meters
+            .iter()
+            .any(|m| m.id == row.meter && m.role.consumes())
+        {
+            row.cost = Some(row.kwh * price);
+        }
     }
 }
 
@@ -922,6 +964,66 @@ mod tests {
     use super::*;
 
     const H: u64 = meter::HOUR_MS;
+
+    #[test]
+    fn displayed_fixed_cost_covers_imports_and_partial_costs_without_writes() {
+        let config: Config = serde_json::from_value(serde_json::json!({"meter":[
+            {"id":"total","name":"Total","point":"test:meter/index","role":"total"},
+            {"id":"circuit","name":"Circuit","point":"test:meter/circuit","role":"circuit"},
+            {"id":"export","name":"Export","point":"test:meter/export","role":"export"}
+        ]}))
+        .unwrap();
+        let store = Store::memory();
+        store
+            .import(&[
+                HourRow {
+                    meter: "total".into(),
+                    hour: 0,
+                    kwh: 9000.0,
+                    cost: None,
+                },
+                HourRow {
+                    meter: "circuit".into(),
+                    hour: 0,
+                    kwh: 1000.0,
+                    cost: Some(0.02),
+                },
+                HourRow {
+                    meter: "export".into(),
+                    hour: 0,
+                    kwh: 5.0,
+                    cost: Some(0.5),
+                },
+            ])
+            .unwrap();
+        let original = store.hours(0, H).unwrap();
+        let mut rows = original.clone();
+        price_display_rows(&config, &mut rows, Some(0.25));
+        assert_eq!(
+            rows.iter().find(|r| r.meter == "total").unwrap().cost,
+            Some(2250.0)
+        );
+        assert_eq!(
+            rows.iter().find(|r| r.meter == "circuit").unwrap().cost,
+            Some(250.0)
+        );
+        assert_eq!(
+            rows.iter().find(|r| r.meter == "export").unwrap().cost,
+            Some(0.5)
+        );
+        assert_eq!(store.hours(0, H).unwrap()[0].cost, original[0].cost);
+        let period = Period::of(&config, &rows, 0, H);
+        assert_eq!(period.total.kwh, 9000.0);
+        assert_eq!(period.total.cost, Some(2250.0));
+        price_display_rows(&config, &mut rows, Some(0.0));
+        assert_eq!(
+            rows.iter().find(|r| r.meter == "total").unwrap().cost,
+            Some(0.0)
+        );
+        let mut untouched = original.clone();
+        price_display_rows(&config, &mut untouched, None);
+        assert_eq!(untouched[0].cost, original[0].cost);
+    }
 
     #[tokio::test]
     async fn recorder_uses_the_chosen_price_without_pricing_older_slices() {

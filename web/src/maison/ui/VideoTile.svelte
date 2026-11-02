@@ -1,9 +1,10 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import Icon from './Icon.svelte';
   import { t } from '../../lib/i18n.svelte.js';
-  let { id, name, big = false, onopen = null, online = true } = $props();
+  let { id, name, big = false, autoplay = false, onopen = null, online = true } = $props();
   let video;
+  let mounted = $state(false);
   let playing = $state(false);
   let failed = $state(false);
   let hls;
@@ -17,6 +18,7 @@
   async function start() {
     stop(); failed = false;
     if (!online || document.visibilityState !== 'visible') return;
+    video.muted = true;
     playing = true;
     const run = generation;
     const src = `/api/devices/${encodeURIComponent(id)}/video/stream.m3u8`;
@@ -45,10 +47,13 @@
     } catch { if (run === generation) { stop(); failed = true; } }
   }
 
-  $effect(() => { if (!online) stop(); });
+  $effect(() => {
+    const auto = mounted && online && (autoplay || big);
+    untrack(() => { if (auto) start(); else stop(); });
+  });
   onMount(() => {
-    if (big) start();
-    const visibility = () => { if (document.visibilityState !== 'visible') stop(); };
+    mounted = true;
+    const visibility = () => { if (document.visibilityState !== 'visible') stop(); else if (online && (autoplay || big)) start(); };
     document.addEventListener('visibilitychange', visibility);
     return () => { document.removeEventListener('visibilitychange', visibility); stop(); };
   });
@@ -57,7 +62,7 @@
 <div class="live-camera">
   <video class:idle={!playing} bind:this={video} controls={playing} muted playsinline preload="none" aria-label={name} onerror={() => { if (playing) { stop(); failed = true; } }}></video>
   {#if !playing}<div class="placeholder" aria-hidden="true"><Icon name="cctv" size={40}/></div>{/if}
-  <div class="bar"><strong>{name}</strong>{#if playing}<button onclick={stop}>{t('camera.video.stop')}</button>{:else}<button disabled={!online} onclick={() => onopen ? onopen(id) : start()}>{t('camera.video.play')}</button>{/if}</div>
+  <div class="bar"><strong>{name}</strong>{#if playing}<button onclick={stop}>{t('camera.video.stop')}</button>{:else}<button disabled={!online} onclick={start}>{t('camera.video.play')}</button>{/if}{#if onopen}<button onclick={() => onopen(id)} aria-label={t('salon.camera.agrandir', { nom: name })}><Icon name="arrow-top-right" size={20}/></button>{/if}</div>
   {#if failed}<p role="status">{t('camera.video.failed')}</p>{/if}
 </div>
 

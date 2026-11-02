@@ -124,14 +124,16 @@ d’index quotidiens seraient des estimations au prorata, à distinguer des mesu
 
 ### Tarif fixe choisi dans le dashboard
 
-Sans période tarifaire configurée, Énergie affiche « Mon tarif fixe » (prix TTC par kWh).
+Sans période tarifaire configurée, **Paramètres** affiche « Mon tarif fixe » (prix TTC par kWh).
 `PUT /api/energy/price` exige une session propriétaire ; valeur finie entre 0 et 10.
 Le tarif et ses dates d'effet sont persistés dans `energy.db` (table additive `fixed_price`),
 inclus dans les sauvegardes SQLite et lisibles sans changer les fichiers de configuration.
 Les périodes HP/HC restent disponibles uniquement quand un point tarifaire existe.
 
-Les nouveaux intervalles sont valorisés au prix applicable, avec pondération temporelle
-si le prix change pendant un intervalle. Une tranche horaire commençant avant le premier tarif
-reste sans coût : aucun prix historique n'est inventé. Les anciens coûts et kWh ne sont
-jamais modifiés. Les coûts d'une période peuvent être partiels ; le dashboard le précise
-et ne projette pas une facture mensuelle à partir d'un premier tarif saisi en cours de mois.
+Le collecteur garde les coûts d'origine et les dates d'effet, mais les rapports sans
+période tarifaire **estiment tous les kWh consommés au tarif fixe actuel**, y compris les
+imports antérieurs et les anciennes heures partiellement valorisées. Aucun kWh ni coût
+stocké n'est réécrit. Changer le prix recalcule donc les estimations affichées.
+Les rapports `summary` et `series` annoncent `costs_at_current_price=true` ; le dashboard
+précise le tarif actuel, l'absence d'anciens tarifs et l'abonnement exclu. Production solaire
+et prix de revente ne sont pas revalorisés. Les rapports HP/HC gardent leur logique existante.

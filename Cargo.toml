@@ -31,6 +31,7 @@ moli-bambu = { path = "crates/moli-bambu" }
 moli-overkiz = { path = "crates/moli-overkiz" }
 moli-frigate = { path = "crates/moli-frigate" }
 moli-philips = { path = "crates/moli-philips" }
+moli-milight = { path = "crates/moli-milight" }
 moli-tapo = { path = "crates/moli-tapo" }
 moli-tapo-camera = { path = "crates/moli-tapo-camera" }
 moli-shelly = { path = "crates/moli-shelly" }

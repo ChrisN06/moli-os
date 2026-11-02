@@ -255,5 +255,9 @@
   "commun.volet.regler": "Régler l’ouverture de {name}",
   "commun.volet.cible": "Cible : {pct} % · position réelle : {actual} %",
   "commun.volet.inconnue": "Position inconnue",
-  "commun.volet.position_non_supportee": "Position intermédiaire non disponible"
+  "commun.volet.position_non_supportee": "Position intermédiaire non disponible",
+  "commun.nav.parametres": "Paramètres",
+  "commun.lampe.etat_inconnu": "État inconnu",
+  "commun.lampe.etat_suppose": "état supposé",
+  "commun.lampe.blanc": "Blanc"
 }

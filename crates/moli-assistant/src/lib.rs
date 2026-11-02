@@ -4084,6 +4084,7 @@ mod tests {
         };
         let mut summary = moli_energy::Summary {
             max_power_kw: 36.0,
+            costs_at_current_price: false,
             fixed_price: None,
             fixed_price_since: None,
             currency: "€".into(),

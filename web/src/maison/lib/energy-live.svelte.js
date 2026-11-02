@@ -34,7 +34,7 @@ export function useEnergy() {
 
 /** The month's bill at this pace, subscription included (null on its first day). */
 export function billOf(s) {
-  if (s?.fixed_price_since > s?.month?.from) return null;
+  if (!s?.costs_at_current_price && s?.fixed_price_since > s?.month?.from) return null;
   const cost = s?.month_projection?.cost;
   return cost == null ? null : cost + (s.monthly_fee ?? 0);
 }

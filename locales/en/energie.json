@@ -361,5 +361,6 @@
   "energie.price.failed": "Could not save the rate.",
   "energie.price.owner": "Sign in as an owner to change the rate.",
   "energie.price.invalid": "Enter a price between 0 and 10 per kWh, with no peak/off-peak tariff configured.",
-  "energie.price.partial": "Partial cost since pricing was enabled"
+  "energie.price.partial": "Partial cost since pricing was enabled",
+  "energie.price.estimate": "Costs estimated at the current fixed rate, including history; subscription excluded. Past rates are unknown."
 }
