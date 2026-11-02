@@ -93,7 +93,7 @@ fn journal_actor(origin: Origin, declared: Option<String>, caller: &Caller) -> O
 
 /// A guest commands in its rooms only.
 #[allow(clippy::result_large_err)]
-fn guest_may(hub: &Hub, caller: &Caller, device: &DeviceId) -> Result<(), Response> {
+pub(crate) fn guest_may(hub: &Hub, caller: &Caller, device: &DeviceId) -> Result<(), Response> {
     let Some(person) = caller.person.as_ref().filter(|p| p.is_guest()) else {
         return Ok(());
     };

@@ -1,4 +1,6 @@
 <script>
+  import { onDestroy, onMount } from 'svelte';
+  import { liveLight } from '../lib/live-light.js';
   import { device, isOn, pending, reachable, toggle, value, act, nameOf, setLook, note, unpowered, isFixture, powerKey } from '../lib/home.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
@@ -12,6 +14,14 @@
   // `also`: other lights switched with this one (one tile for the kitchen
   // and its corridor), on when any of them is.
   let { id, name = null, icon = 'light', dimmer = false, compact = false, point = null, members = null, also = [] } = $props();
+
+  const live = liveLight((key, v) => key === 'white' ? white(v) : key === 'color' ? paint(v) : act(`${id}/${key}`, v, label));
+  onDestroy(() => live.cancel());
+  onMount(() => {
+    const hide = () => { if (document.hidden) live.clear(); };
+    document.addEventListener('visibilitychange', hide);
+    return () => document.removeEventListener('visibilitychange', hide);
+  });
 
   const d = $derived(device(id));
   const ok = $derived(reachable(id) || also.some(reachable));
@@ -45,7 +55,9 @@
 
   const caption = $derived(assumed && !unknown ? `${state} · ${t('commun.lampe.etat_suppose')}` : state);
 
-  function tap() {
+  async function tap() {
+    live.clear();
+    await live.idle();
     if (cut && !also.length) {
       note(t('commun.lampe.coupee_note', { label }));
       return;
@@ -128,7 +140,7 @@
     let v = tempPoint.unit === 'mired' || (kind.max ?? 0) <= 1000 ? Math.round(1e6 / kelvin) : kelvin;
     if (kind.min != null) v = Math.max(kind.min, v);
     if (kind.max != null) v = Math.min(kind.max, v);
-    act(`${id}/color_temp`, v, label);
+    return act(`${id}/color_temp`, v, label);
   }
 
   // The whites as a slider too, in kelvin over the lamp's own range (a point in
@@ -163,12 +175,10 @@
   }
   $effect(() => () => clearTimeout(sentTimer));
   $effect(() => {
-    level;
-    sentLevel = null;
+    if (level === sentLevel) sentLevel = null;
   });
   $effect(() => {
-    kelvinNow;
-    sentK = null;
+    if (kelvinNow === sentK) sentK = null;
   });
   // The temperature in words (people do not think in kelvin).
   const whiteName = (k) =>
@@ -188,7 +198,7 @@
 
   function paint(c) {
     if (!colorPoint) return setLook(members, { color: c.toLowerCase() }, label);
-    act(`${id}/color`, c.toLowerCase(), label);
+    return act(`${id}/color`, c.toLowerCase(), label);
   }
 </script>
 
@@ -209,10 +219,8 @@
           max={100}
           value={sentLevel ?? level ?? 100}
           label={t('commun.lampe.luminosite', { label })}
-          oncommit={(v) => {
-            sent(v, null);
-            act(`${id}/brightness`, v, label);
-          }} />
+          onlive={(v) => { sent(v, null); live.push('brightness', v); }}
+          oncommit={(v) => { sent(v, null); live.push('brightness', v); }} />
       {/if}
       {#if bulbs.length > 1}
         <button class="apart" class:open={apart} onclick={() => (apart = !apart)} aria-expanded={apart} title={t('commun.lampe.ampoule_par_ampoule')} aria-label={t('commun.action', { label, action: t('commun.lampe.ampoule_par_ampoule').toLowerCase() })}>
@@ -241,31 +249,29 @@
               value={sentK ?? kelvinNow ?? 4000}
               label={t('commun.lampe.temperature', { label })}
               valuetext={(k) => t('commun.lampe.temperature_valeur', { n: k, nom: whiteName(k) })}
-              oncommit={(k) => {
-                sent(null, k);
-                white(k);
-              }} />
+              onlive={(k) => { sent(null, k); live.push('white', k); }}
+              oncommit={(k) => { sent(null, k); live.push('white', k); }} />
             <small title={t('commun.kelvin', { n: sentK ?? kelvinNow ?? '…' })}>{whiteName(sentK ?? kelvinNow)}</small>
           </label>
         {/if}
         {#if writable('saturation')}
           <label class="kelvin">
-            <Slider min={0} max={100} value={value(id, 'saturation') ?? 100} label={t('commun.action', { label, action: t('pilotes.milight.saturation') })} oncommit={(v) => act(`${id}/saturation`, v, label)} />
+            <Slider min={0} max={100} value={value(id, 'saturation') ?? 100} label={t('commun.action', { label, action: t('pilotes.milight.saturation') })} onlive={(v) => live.push('saturation', v)} oncommit={(v) => live.push('saturation', v)} />
             <small>{t('pilotes.milight.saturation')}</small>
           </label>
         {/if}
         {#if canWhite}
           {#each WHITES as [key, kelvin, look] (kelvin)}
-            <button class="dot white" style:background={look} onclick={() => white(kelvin)} title={t(key)} aria-label={t(key)}></button>
+            <button class="dot white" style:background={look} onclick={() => live.push('white', kelvin)} title={t(key)} aria-label={t(key)}></button>
           {/each}
         {/if}
         {#if canColor}
-          {#if !canWhite}<button class="dot white" style:background="white" onclick={() => paint('#ffffff')} title={t('commun.lampe.blanc')} aria-label={t('commun.lampe.blanc')}></button>{/if}
+          {#if !canWhite}<button class="dot white" style:background="white" onclick={() => live.push('color', '#ffffff')} title={t('commun.lampe.blanc')} aria-label={t('commun.lampe.blanc')}></button>{/if}
           {#each COLORS as [key, c] (c)}
-            <button class="dot" style:background={c} onclick={() => paint(c)} title={t(key)} aria-label={t(key)}></button>
+            <button class="dot" style:background={c} onclick={() => live.push('color', c)} title={t(key)} aria-label={t(key)}></button>
           {/each}
           <label class="dot other" title={t('commun.lampe.autre_couleur')}>
-            <input type="color" value={hex ?? '#ffffff'} onchange={(e) => paint(e.currentTarget.value)} aria-label={t('commun.lampe.autre_couleur')} />
+            <input type="color" value={hex ?? '#ffffff'} oninput={(e) => live.push('color', e.currentTarget.value)} onchange={(e) => live.push('color', e.currentTarget.value)} aria-label={t('commun.lampe.autre_couleur')} />
           </label>
         {/if}
       </div>

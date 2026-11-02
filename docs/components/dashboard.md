@@ -148,7 +148,7 @@ La garde et les confirmations existantes sont conservées.
 
 ### Caméras Tapo
 
-Le formulaire **Comptes caméra Tapo** de `#/cameras` liste les caméras déclarées
+Le formulaire **Comptes caméra Tapo** de `#/parametres` liste les caméras déclarées
 par l’installation. Le propriétaire saisit lui-même leur compte caméra local,
 distinct du compte cloud Tapo. Après vérification, le formulaire efface les champs ;
 le coffre chiffré conserve le compte. Une connexion échouée ne remplace pas le
@@ -182,3 +182,30 @@ Journée type : les points représentent les relevés horaires d'aujourd'hui, le
 la moyenne. Toucher ou glisser horizontalement sélectionne une tranche sans sélection
 de texte ni menu d'appui long ; le défilement vertical reste autorisé. Même sélection
 tactile sur l'historique. Les boutons de la journée type restent accessibles au clavier.
+
+### Éclairage en direct et favori personnel
+
+Les curseurs de luminosité, blanc et saturation envoient pendant le geste. Une
+seule commande par lampe reste en vol ; les valeurs intermédiaires sont remplacées
+par la plus récente, avec 400 ms entre les réponses et le prochain envoi. Quitter
+la page annule les valeurs encore en attente. Les erreurs et demandes du garde
+vident la file, sans répétition tardive. Passer l’application en arrière-plan vide
+aussi la file ; un geste en attente depuis plus de deux secondes est abandonné.
+
+**Perso**, première ambiance, rappelle le favori enregistré pour les lampes de la
+pièce. **Mémoriser** capture les derniers réglages connus du serveur, après les
+commandes en cours. La sauvegarde exige le propriétaire ; le rappel conserve les
+protections et les limites des invités. Le favori est partagé entre appareils et
+inclus dans la sauvegarde. Une lampe mémorisée éteinte reçoit seulement l'arrêt,
+car régler ses paramètres pourrait la faire clignoter. Les changements faits dans
+une application externe restent inconnus lorsqu'un pont ne fournit aucun retour.
+
+### Xiaomi Home
+
+**Paramètres** accueille la connexion Xiaomi, le captcha/second facteur et
+l'activation explicite des déplacements du robot. **Aspirateur** lit sa télémétrie,
+affiche la carte sur demande et mémorise un rectangle cuisine confirmé. Aucun
+nettoyage ne démarre lors de la connexion ni de l'enregistrement du rectangle.
+La caméra Xiaomi réutilise la page caméras et son démarrage à l'ouverture.
+Voir `integrations/xiaomi-vacuum/` et `integrations/xiaomi-camera/` pour les limites
+cloud, HEVC, firmware et stabilité du repère.

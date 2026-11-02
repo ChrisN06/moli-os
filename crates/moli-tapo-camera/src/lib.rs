@@ -80,39 +80,29 @@ impl Config {
         );
         Ok(())
     }
-    async fn request(&self, method: http::Method, path: String) -> anyhow::Result<Vec<u8>> {
-        let req = http::Request::builder()
-            .method(method)
-            .uri(path)
-            .body(Full::new(moli_net::Body::new()))?;
-        let (status, body) = moli_net::web(
-            &self.relay_host,
-            self.relay_port,
-            false,
-            req,
-            Duration::from_secs(12),
-            4 * 1024 * 1024,
-        )
-        .await
-        .map_err(|_| anyhow::anyhow!("camera relay unavailable"))?;
-        ensure!(status.is_success(), "camera request failed");
-        Ok(body.to_vec())
+    fn relay(&self) -> Relay {
+        Relay {
+            host: self.relay_host.clone(),
+            port: self.relay_port,
+        }
     }
-    async fn register(&self, name: &str, account: &Account) -> anyhow::Result<()> {
+    async fn request(&self, method: http::Method, path: String) -> anyhow::Result<Vec<u8>> {
+        self.relay().request(method, path).await
+    }
+    fn source(&self, account: &Account) -> anyhow::Result<String> {
         ensure!(account.valid(), "invalid camera account");
-        let source = format!(
+        Ok(format!(
             "rtsp://{}:{}@{}:{}/stream2#backchannel=0",
             encode(&account.username),
             encode(&account.password),
             self.host,
             self.rtsp_port
-        );
-        self.request(
-            http::Method::PATCH,
-            format!("/api/streams?name={}&src={}", encode(name), encode(&source)),
-        )
-        .await?;
-        Ok(())
+        ))
+    }
+    async fn register(&self, name: &str, account: &Account) -> anyhow::Result<()> {
+        self.relay()
+            .register_source(name, &self.source(account)?)
+            .await
     }
     /// Probes only the declared camera. Never returns upstream bodies or credentials.
     pub async fn verify(&self, instance: &str, account: &Account) -> anyhow::Result<()> {
@@ -140,6 +130,83 @@ impl Config {
         Ok(())
     }
 }
+/// Shared transport for server-authorized video sources, including HEVC.
+#[derive(Clone, Debug)]
+pub struct Relay {
+    pub host: String,
+    pub port: u16,
+}
+impl Relay {
+    pub fn validate(&self) -> anyhow::Result<()> {
+        ensure!(
+            !self.host.is_empty()
+                && self.host.len() <= 253
+                && self
+                    .host
+                    .bytes()
+                    .all(|b| b.is_ascii_alphanumeric() || b".-".contains(&b))
+                && self.port > 0,
+            "invalid relay configuration"
+        );
+        Ok(())
+    }
+    pub async fn exchange(
+        &self,
+        method: http::Method,
+        path: String,
+        body: Vec<u8>,
+    ) -> anyhow::Result<(http::StatusCode, Vec<u8>)> {
+        self.validate()?;
+        let req = http::Request::builder()
+            .method(method)
+            .uri(path)
+            .header("Content-Type", "application/x-www-form-urlencoded")
+            .body(Full::new(moli_net::Body::from(body)))?;
+        let (status, body) = moli_net::web(
+            &self.host,
+            self.port,
+            false,
+            req,
+            Duration::from_secs(20),
+            4 * 1024 * 1024,
+        )
+        .await
+        .map_err(|_| anyhow::anyhow!("camera relay unavailable"))?;
+        Ok((status, body.to_vec()))
+    }
+    pub async fn request(&self, method: http::Method, path: String) -> anyhow::Result<Vec<u8>> {
+        let (status, body) = self.exchange(method, path, Vec::new()).await?;
+        ensure!(status.is_success(), "camera request failed");
+        Ok(body)
+    }
+    pub async fn register_source(&self, name: &str, source: &str) -> anyhow::Result<()> {
+        self.request(
+            http::Method::PATCH,
+            format!("/api/streams?name={}&src={}", encode(name), encode(source)),
+        )
+        .await?;
+        Ok(())
+    }
+    pub fn video(
+        &self,
+        instance: &str,
+        source: Option<String>,
+        codec: &'static str,
+    ) -> anyhow::Result<Arc<Video>> {
+        self.validate()?;
+        ensure!(matches!(codec, "h264" | "h265"), "unsupported video codec");
+        Ok(Arc::new(Video {
+            relay: self.clone(),
+            name: stream_name(instance),
+            codec,
+            state: Mutex::new(State {
+                source,
+                ..State::default()
+            }),
+        }))
+    }
+}
+
 fn encode(value: &str) -> String {
     use std::fmt::Write as _;
     let mut out = String::new();
@@ -166,13 +233,21 @@ fn valid_session(id: &str) -> bool {
 
 #[derive(Default)]
 struct State {
-    account: Option<Account>,
+    source: Option<String>,
     sessions: HashMap<String, Instant>,
 }
-struct Video {
-    config: Config,
+pub struct Video {
+    relay: Relay,
+    codec: &'static str,
     name: String,
     state: Mutex<State>,
+}
+impl Video {
+    pub async fn set_source(&self, source: Option<String>) {
+        let mut state = self.state.lock().await;
+        state.source = source;
+        state.sessions.clear();
+    }
 }
 impl std::fmt::Debug for Video {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -193,13 +268,17 @@ impl VideoSource for Video {
             let (path, content_type) = match resource {
                 "stream.m3u8" if session.is_none() => {
                     ensure!(state.sessions.len() < 8, "too many camera viewers");
-                    let account = state
-                        .account
+                    let source = state
+                        .source
                         .as_ref()
                         .ok_or_else(|| anyhow::anyhow!("camera account missing"))?;
-                    self.config.register(&self.name, account).await?;
+                    self.relay.register_source(&self.name, source).await?;
                     (
-                        format!("/api/stream.m3u8?src={}&video=h264", encode(&self.name)),
+                        format!(
+                            "/api/stream.m3u8?src={}&video={}",
+                            encode(&self.name),
+                            self.codec
+                        ),
                         "application/vnd.apple.mpegurl",
                     )
                 }
@@ -221,7 +300,7 @@ impl VideoSource for Video {
                 }
                 _ => bail!("unknown video resource"),
             };
-            let result = self.config.request(http::Method::GET, path).await;
+            let result = self.relay.request(http::Method::GET, path).await;
             let bytes = match result {
                 Ok(b) => b,
                 Err(e) => {
@@ -301,7 +380,8 @@ impl Driver for Camera {
         Box::pin(async move {
             let id = ctx.device_id("camera");
             let video = Arc::new(Video {
-                config: self.config.clone(),
+                relay: self.config.relay(),
+                codec: "h264",
                 name: stream_name(ctx.instance().as_str()),
                 state: Mutex::new(State::default()),
             });
@@ -324,10 +404,11 @@ impl Driver for Camera {
                     let account = secret
                         .as_deref()
                         .and_then(|s| serde_json::from_str::<Account>(s).ok())
-                        .filter(Account::valid);
+                        .filter(Account::valid)
+                        .and_then(|a| self.config.source(&a).ok());
                     let present = account.is_some();
                     let mut state = video.state.lock().await;
-                    state.account = account;
+                    state.source = account;
                     state.sessions.clear();
                     drop(state);
                     ctx.set_availability(&id, present);
@@ -344,6 +425,12 @@ impl Driver for Camera {
                 tokio::select! { () = ctx.cancelled() => return Ok(()), () = tokio::time::sleep(Duration::from_secs(3)) => {} }
             }
         })
+    }
+}
+
+impl std::fmt::Debug for State {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("State { [redacted] }")
     }
 }
 
@@ -389,13 +476,11 @@ mod session_tests {
     #[tokio::test]
     async fn a_viewer_cannot_use_another_cameras_session_or_an_expired_one() {
         let video = Video {
-            config: Config {
-                host: "127.0.0.1".parse().unwrap(),
-                model: "C200".into(),
-                rtsp_port: 8554,
-                relay_host: "127.0.0.1".into(),
-                relay_port: 9,
+            relay: Relay {
+                host: "127.0.0.1".into(),
+                port: 9,
             },
+            codec: "h264",
             name: "test".into(),
             state: Mutex::new(State::default()),
         };
