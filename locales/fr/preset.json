@@ -1,0 +1,14 @@
+{
+  "preset.name": "Perso",
+  "preset.save": "Mémoriser",
+  "preset.replace": "Remplacer Perso",
+  "preset.recall": "Rappeler mon réglage",
+  "preset.note": "Mémoriser les réglages connus de ces lampes, y compris leur marche/arrêt. Les états radio restent supposés.",
+  "preset.saved": "Réglage Perso mémorisé.",
+  "preset.failed": "Impossible de mémoriser ou rappeler ce réglage.",
+  "preset.missing": "Aucun réglage Perso mémorisé pour ces lampes.",
+  "preset.owner": "Un propriétaire doit se connecter pour mémoriser Perso.",
+  "preset.storage": "Le fichier des réglages Perso est indisponible ou illisible.",
+  "preset.invalid": "Sélection de lampes non valide ou trop de favoris.",
+  "preset.unknown": "Réglez d’abord les lampes dans Moli : leur état doit être connu et disponible."
+}

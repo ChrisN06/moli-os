@@ -871,3 +871,36 @@ protégée réservée à une session humaine. Les réponses ne contiennent aucun
 RTSP, message brut du relais ou secret. Les fichiers font au plus 4 Mio, la lecture
 amont est limitée à 12 secondes ; aucun proxy réseau générique n’est exposé.
 Voir `integrations/tapo-camera/` pour l’exploitation du relais isolé.
+
+### Favori d'éclairage
+
+- `GET /api/light-preset?lights=<tableau JSON encodé>` : `{saved}`, accès limité aux pièces autorisées.
+- `PUT /api/light-preset {lights}` : capture serveur, propriétaire uniquement, stockage `light-presets.json` atomique.
+- `POST /api/light-preset {lights}` : rappel via le garde existant, rapport `done/skipped/held/failed`.
+
+Une portée contient au plus 32 lampes, normalisées ; au plus 64 favoris. Un fichier
+corrompu provoque une erreur sans remplacement. Le client n'envoie pas de commandes
+arbitraires à mémoriser.
+
+### Xiaomi
+
+`GET /api/xiaomi` renvoie les équipements configurés et leur statut, jamais les
+jetons. Les routes suivantes exigent le propriétaire :
+
+- `POST /api/xiaomi/login` : `{username,password}`, puis `{captcha}` ou `{verify}` si demandé.
+- `POST /api/xiaomi/discover` : nouvelle vérification avec le compte enregistré.
+- `PUT /api/xiaomi/{instance}/commands {enabled}` : déplacements du robot, désactivés initialement.
+- `GET /api/xiaomi/{instance}/map` : carte RR bornée, pixels en base64, dimensions en pixels de 50 mm, origine/base/robot en millimètres.
+- `GET|PUT /api/xiaomi/{instance}/zone` : rectangle, repère et confirmation serveur.
+
+Les défis d'authentification sont liés au demandeur, expirent après dix minutes et
+ne peuvent pas mélanger les étapes. Le relais ne reçoit les identifiants qu'après
+contrôle des droits. Ses erreurs brutes ne sont jamais relayées au navigateur. Le
+mot de passe n'est pas écrit sur disque. Les comptes et la zone utilisent le coffre.
+Le point `action` du robot accepte seulement `pause`, `dock`, `kitchen`, via l'API de
+commande habituelle. La cuisine vérifie carte, empreinte de géométrie et base ; une
+incertitude ne provoque jamais un nettoyage général. Les capacités restent à valider
+sur le matériel et son firmware réels.
+
+Une connexion Xiaomi réussie redémarre aussi le relais pour actualiser son cache de
+session cloud. Les lecteurs déjà ouverts peuvent être interrompus brièvement.

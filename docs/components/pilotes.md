@@ -639,3 +639,13 @@ ni pièce native). Il ne déplace jamais rien. Sans argument : plan à blanc ; `
 Pilote natif `milight` : pont local UDP v6 sur 5987, zones explicitement configurées,
 état supposé visible, aucun appairage ni état physique inventé.
 [Configuration, limites et tests](../../integrations/milight/README.md).
+
+### Xiaomi local et caméra autorisée par le cloud
+
+`moli-xiaomi` ajoute deux pilotes indépendants : `xiaomi-vacuum` (miIO UDP,
+interrogation locale 30 s) et `xiaomi-camera` (source Xiaomi go2rtc, HEVC/HLS).
+Leurs secrets sont saisis dans Paramètres puis placés dans le coffre. Le robot
+reste en lecture seule jusqu'à activation propriétaire. Carte et découverte utilisent
+le cloud EU ; la télémétrie miIO déjà configurée reste locale. Aucune commande moteur
+n'est rejouée et aucun firmware n'est modifié. Les manifestes documentent les modèles
+ciblés, sans revendiquer une validation matérielle.

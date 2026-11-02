@@ -317,7 +317,11 @@ fn native(dir: &Path, manifest: &Manifest, kinds: &[&str], row: &mut Row) {
             kinds.join(", ")
         ));
     }
-    let expected = format!("moli-{kind}");
+    // Xiaomi's two drivers share one account/protocol crate.
+    let expected = match kind {
+        "xiaomi-vacuum" | "xiaomi-camera" => "moli-xiaomi".to_owned(),
+        _ => format!("moli-{kind}"),
+    };
     match &manifest.integration.krate {
         Some(krate) if *krate == expected => row.runs.clone_from(krate),
         _ => row.errors.push(format!(
@@ -576,6 +580,24 @@ author = "agent"
         &rows.iter().find(|r| r.id == id).unwrap().errors
     }
 
+    #[test]
+    fn xiaomi_names_its_shared_crate_without_accepting_another_one() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../integrations");
+        for kind in ["xiaomi-vacuum", "xiaomi-camera"] {
+            let mut manifest: Manifest = toml::from_str(
+                &std::fs::read_to_string(root.join(kind).join("integration.toml")).unwrap(),
+            )
+            .unwrap();
+            let mut row = Row::default();
+            native(&root.join(kind), &manifest, &[kind], &mut row);
+            assert!(row.errors.is_empty(), "{:?}", row.errors);
+            assert_eq!(row.runs, "moli-xiaomi");
+            manifest.integration.krate = Some("moli-tapo-camera".into());
+            let mut row = Row::default();
+            native(&root.join(kind), &manifest, &[kind], &mut row);
+            assert!(!row.errors.is_empty());
+        }
+    }
     #[test]
     fn mistakes_are_named() {
         let root = std::env::temp_dir().join(format!("moli-catalogue-{}", std::process::id()));

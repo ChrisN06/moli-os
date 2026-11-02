@@ -1,5 +1,7 @@
 //! End-to-end: a real HTTP server over a hub with a fake driver.
 
+mod common;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -108,8 +110,7 @@ async fn request_with(
     );
     stream.write_all(head.as_bytes()).await.unwrap();
     stream.write_all(body.as_bytes()).await.unwrap();
-    let mut raw = Vec::new();
-    stream.read_to_end(&mut raw).await.unwrap();
+    let raw = common::response(&mut stream).await.unwrap();
     let raw = String::from_utf8_lossy(&raw).to_string();
     let status = raw[9..12].parse().unwrap();
     let (headers, body) = raw.split_once("\r\n\r\n").unwrap();
@@ -537,8 +538,7 @@ async fn request_cookie(
     );
     stream.write_all(head.as_bytes()).await.unwrap();
     stream.write_all(body.as_bytes()).await.unwrap();
-    let mut raw = Vec::new();
-    stream.read_to_end(&mut raw).await.unwrap();
+    let raw = common::response(&mut stream).await.unwrap();
     let raw = String::from_utf8_lossy(&raw).to_string();
     let status = raw[9..12].parse().unwrap();
     let (headers, body) = raw.split_once("\r\n\r\n").unwrap();

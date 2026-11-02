@@ -415,6 +415,7 @@ async fn serve(config: Config, boot: Instant) -> anyhow::Result<()> {
         weather: weather(&config),
         timezone: Some(config.zone.name.clone()),
         cameras: camera_configs(&config)?,
+        xiaomi: xiaomi_configs(&config)?,
     };
     // Client addresses matter: human sessions are bound to them.
     axum::serve(
@@ -935,6 +936,27 @@ fn start_history(
     Ok(Some(started))
 }
 
+fn xiaomi_configs(config: &Config) -> anyhow::Result<Vec<moli_xiaomi::Configured>> {
+    config
+        .drivers
+        .iter()
+        .filter(|d| {
+            matches!(d.kind.as_str(), "xiaomi-vacuum" | "xiaomi-camera") && d.enabled != Some(false)
+        })
+        .map(|d| {
+            Ok(moli_xiaomi::Configured {
+                instance: d.id.clone(),
+                kind: if d.kind == "xiaomi-camera" {
+                    moli_xiaomi::Kind::Camera
+                } else {
+                    moli_xiaomi::Kind::Vacuum
+                },
+                config: d.options.clone().try_into()?,
+            })
+        })
+        .collect()
+}
+
 fn camera_configs(config: &Config) -> anyhow::Result<Vec<(String, moli_tapo_camera::Config)>> {
     config
         .drivers
@@ -955,6 +977,8 @@ const KINDS: &[&str] = &[
     "tapo",
     "tapo-camera",
     "milight",
+    "xiaomi-vacuum",
+    "xiaomi-camera",
     "shelly",
     "izypower",
     "solarman",
@@ -1121,6 +1145,12 @@ fn build_driver(
             config.options.clone().try_into().with_context(context)?,
         )),
         "tapo-camera" => Arc::new(moli_tapo_camera::Camera::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
+        "xiaomi-vacuum" => Arc::new(moli_xiaomi::Vacuum::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
+        "xiaomi-camera" => Arc::new(moli_xiaomi::Camera::new(
             config.options.clone().try_into().with_context(context)?,
         )?),
         "milight" => Arc::new(moli_milight::Milight::new(

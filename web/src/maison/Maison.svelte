@@ -16,6 +16,7 @@
   import Cameras from './pages/Cameras.svelte';
   import Parametres from './pages/Parametres.svelte';
   import Energie from './pages/Energie.svelte';
+  import Aspirateur from './pages/Aspirateur.svelte';
   import Impression from './pages/Impression.svelte';
   import Dehors from './pages/Dehors.svelte';
   import Moli from './pages/Moli.svelte';
@@ -49,6 +50,7 @@
     { path: 'cameras', label: 'commun.nav.cameras', icon: 'cctv' },
     { path: 'parler', label: 'commun.nav.parler', icon: 'talk' },
     { path: 'energie', label: 'commun.nav.energie', icon: 'bolt' },
+    { path: 'aspirateur', label: 'xiaomi.vacuum.title', icon: 'robot', shown: () => Object.values(hub.devices).some(d => d.model === 'rockrobo.vacuum.v1') },
     { path: 'impression', label: 'commun.nav.impression', icon: 'printer3d' },
     { path: 'dehors', label: 'commun.nav.dehors', icon: 'flower-outline' },
     { path: 'automatismes', label: 'commun.nav.automatismes', icon: 'robot' },
@@ -168,6 +170,8 @@
       <Parametres />
     {:else if page === 'energie'}
       <Energie />
+    {:else if page === 'aspirateur'}
+      <Aspirateur />
     {:else if page === 'impression'}
       <Impression />
     {:else if page === 'dehors'}
