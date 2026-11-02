@@ -182,7 +182,7 @@
       </div>
       <div class="tiles">
         {#each lights as l (l.id)}
-          <LightTile id={l.id} name={l.name} icon={l.icon} also={l.also ?? []} />
+          <LightTile id={l.id} name={l.name} icon={l.icon} dimmer also={l.also ?? []} />
         {/each}
       </div>
       {#if mood}

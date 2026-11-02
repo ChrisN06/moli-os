@@ -571,5 +571,7 @@
   "pilotes.milight.brightness": "Brightness",
   "pilotes.milight.color": "RGB color / white",
   "pilotes.milight.ack_failed": "The MI-Light bridge did not acknowledge delivery. Bulb state remains unknown.",
-  "pilotes.milight.color_hint": "Choose a hue or white. Use brightness for grey levels and On/off to turn off."
+  "pilotes.milight.color_hint": "Choose a hue or white. Use brightness for grey levels and On/off to turn off.",
+  "pilotes.milight.white_temperature": "Warm / cool white",
+  "pilotes.milight.saturation": "Saturation"
 }

@@ -571,5 +571,7 @@
   "pilotes.milight.brightness": "Luminosité",
   "pilotes.milight.color": "Couleur RGB / blanc",
   "pilotes.milight.ack_failed": "Le pont MI-Light n’a pas confirmé la réception. L’état des ampoules reste inconnu.",
-  "pilotes.milight.color_hint": "Choisissez une teinte ou le blanc. Utilisez la luminosité pour les gris et Marche/arrêt pour éteindre."
+  "pilotes.milight.color_hint": "Choisissez une teinte ou le blanc. Utilisez la luminosité pour les gris et Marche/arrêt pour éteindre.",
+  "pilotes.milight.white_temperature": "Blanc chaud / froid",
+  "pilotes.milight.saturation": "Saturation"
 }

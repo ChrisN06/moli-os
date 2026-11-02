@@ -248,6 +248,12 @@
             <small title={t('commun.kelvin', { n: sentK ?? kelvinNow ?? '…' })}>{whiteName(sentK ?? kelvinNow)}</small>
           </label>
         {/if}
+        {#if writable('saturation')}
+          <label class="kelvin">
+            <Slider min={0} max={100} value={value(id, 'saturation') ?? 100} label={t('commun.action', { label, action: t('pilotes.milight.saturation') })} oncommit={(v) => act(`${id}/saturation`, v, label)} />
+            <small>{t('pilotes.milight.saturation')}</small>
+          </label>
+        {/if}
         {#if canWhite}
           {#each WHITES as [key, kelvin, look] (kelvin)}
             <button class="dot white" style:background={look} onclick={() => white(kelvin)} title={t(key)} aria-label={t(key)}></button>
