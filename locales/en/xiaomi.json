@@ -32,7 +32,7 @@
   "xiaomi.vacuum.pause": "Pause",
   "xiaomi.vacuum.dock": "Return to dock",
   "xiaomi.vacuum.kitchen": "Clean kitchen",
-  "xiaomi.vacuum.read_only": "Read only. Movement is disabled in settings.",
+  "xiaomi.vacuum.read_only": "Robot not connected. Commands will be available after connection.",
   "xiaomi.vacuum.enable": "Allow movement",
   "xiaomi.vacuum.disable": "Disable movement",
   "xiaomi.vacuum.offline": "Vacuum offline or not connected",
@@ -72,5 +72,12 @@
   "xiaomi.state.16": "Going to target",
   "xiaomi.state.17": "Zone cleaning",
   "xiaomi.state.18": "Room cleaning",
-  "xiaomi.vacuum.busy": "The vacuum is busy. Pause it before starting kitchen cleaning."
+  "xiaomi.vacuum.busy": "The vacuum is busy. Pause it before starting kitchen cleaning.",
+  "xiaomi.zone.map_local": "Local robot connection failed. No movement started.",
+  "xiaomi.zone.map_not_ready": "The robot has not provided a map yet. Try again shortly.",
+  "xiaomi.zone.map_session": "Xiaomi session unavailable. Reconnect the Xiaomi Home account.",
+  "xiaomi.zone.map_metadata": "Xiaomi did not provide a usable map link.",
+  "xiaomi.zone.map_download": "Could not download the Xiaomi map.",
+  "xiaomi.zone.map_decode": "Map format unsupported or dock reference missing.",
+  "xiaomi.zone.map_retry": "The robot is preparing the map (retry response). Try again shortly."
 }

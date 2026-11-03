@@ -889,7 +889,6 @@ jetons. Les routes suivantes exigent le propriétaire :
 
 - `POST /api/xiaomi/login` : `{username,password}`, puis `{captcha}` ou `{verify}` si demandé.
 - `POST /api/xiaomi/discover` : nouvelle vérification avec le compte enregistré.
-- `PUT /api/xiaomi/{instance}/commands {enabled}` : déplacements du robot, désactivés initialement.
 - `GET /api/xiaomi/{instance}/map` : carte RR bornée, pixels en base64, dimensions en pixels de 50 mm, origine/base/robot en millimètres.
 - `GET|PUT /api/xiaomi/{instance}/zone` : rectangle, repère et confirmation serveur.
 
@@ -898,7 +897,10 @@ ne peuvent pas mélanger les étapes. Le relais ne reçoit les identifiants qu'a
 contrôle des droits. Ses erreurs brutes ne sont jamais relayées au navigateur. Le
 mot de passe n'est pas écrit sur disque. Les comptes et la zone utilisent le coffre.
 Le point `action` du robot accepte seulement `pause`, `dock`, `kitchen`, via l'API de
-commande habituelle. La cuisine vérifie carte, empreinte de géométrie et base ; une
+commande habituelle, dès que le pilote a vérifié le compte et le modèle.
+L’ancien réglage de déplacement n’est plus utilisé ; sa route renvoie 404.
+Les échecs de carte distinguent connexion locale, attente du robot, session cloud,
+métadonnées, téléchargement et décodage, sans publier les détails amont. La cuisine vérifie carte, empreinte de géométrie et base ; une
 incertitude ne provoque jamais un nettoyage général. Les capacités restent à valider
 sur le matériel et son firmware réels.
 

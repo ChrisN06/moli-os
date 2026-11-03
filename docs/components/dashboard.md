@@ -202,8 +202,9 @@ une application externe restent inconnus lorsqu'un pont ne fournit aucun retour.
 
 ### Xiaomi Home
 
-**Paramètres** accueille la connexion Xiaomi, le captcha/second facteur et
-l'activation explicite des déplacements du robot. **Aspirateur** lit sa télémétrie,
+**Paramètres** accueille la connexion Xiaomi et le captcha/second facteur.
+Les commandes sont disponibles après vérification du compte et du modèle par le pilote,
+sans option de déplacement supplémentaire. **Aspirateur** lit sa télémétrie,
 affiche la carte sur demande et mémorise un rectangle cuisine confirmé. Aucun
 nettoyage ne démarre lors de la connexion ni de l'enregistrement du rectangle.
 La caméra Xiaomi réutilise la page caméras et son démarrage à l'ouverture.
