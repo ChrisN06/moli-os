@@ -181,16 +181,36 @@ pub fn failure_key(error: &anyhow::Error) -> &'static str {
         _ => "xiaomi.zone.map_failed",
     }
 }
+async fn map_reference<F, Fut>(mut request: F) -> anyhow::Result<serde_json::Value>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = anyhow::Result<serde_json::Value>>,
+{
+    for attempt in 0..5 {
+        let result = request().await?;
+        if result != json!(["retry"]) {
+            return Ok(result);
+        }
+        if attempt < 4 {
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+    }
+    anyhow::bail!("map_retry")
+}
 pub async fn current(config: &Config, account: &Account) -> anyhow::Result<Map> {
     config.validate()?;
     let cloud = account.cloud().await.context("map_session")?;
-    let result = cloud
-        .call(
-            &format!("/home/rpc/{}", account.device),
-            json!({"id":moli_core::now_ms() % 9999 + 1,"method":"get_map_v1","params":[]}),
-        )
-        .await
-        .context("map_cloud_request")?;
+    let path = format!("/home/rpc/{}", account.device);
+    let result = map_reference(|| async {
+        cloud
+            .call(
+                &path,
+                json!({"id":moli_core::now_ms() % 9999 + 1,"method":"get_map_v1","params":[]}),
+            )
+            .await
+            .context("map_cloud_request")
+    })
+    .await?;
     let name = result
         .get(0)
         .and_then(serde_json::Value::as_str)
@@ -257,6 +277,41 @@ mod tests {
             failure_key(&anyhow!("private upstream detail")),
             "xiaomi.zone.map_failed"
         );
+    }
+    #[tokio::test]
+    async fn map_preparation_retries_are_bounded_and_do_not_repeat_errors() {
+        let mut calls = 0;
+        let result = map_reference(|| {
+            calls += 1;
+            std::future::ready(Ok(if calls < 3 {
+                json!(["retry"])
+            } else {
+                json!(["map-fixture"])
+            }))
+        })
+        .await
+        .unwrap();
+        assert_eq!(calls, 3);
+        assert_eq!(result, json!(["map-fixture"]));
+        calls = 0;
+        let error = map_reference(|| {
+            calls += 1;
+            std::future::ready(Ok(json!(["retry"])))
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(calls, 5);
+        assert_eq!(failure_key(&error), "xiaomi.zone.map_retry");
+        calls = 0;
+        assert!(
+            map_reference(|| {
+                calls += 1;
+                std::future::ready(Err(anyhow!("map_cloud_request")))
+            })
+            .await
+            .is_err()
+        );
+        assert_eq!(calls, 1);
     }
     fn fixture(pixel: u8) -> Vec<u8> {
         let mut raw = vec![0; 20];

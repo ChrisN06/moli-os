@@ -57,3 +57,7 @@ Ces interfaces ne sont pas une API officielle Xiaomi garantie.
 La route cloud RPC est limitée à cette requête de lecture, avec identifiant numérique
 borné et paramètres vides. Aucune commande moteur ne passe par cette route.
 Source du transport : [openHAB MiCloudConnector](https://github.com/openhab/openhab-addons/blob/main/bundles/org.openhab.binding.miio/src/main/java/org/openhab/binding/miio/internal/cloud/MiCloudConnector.java).
+
+La réponse de préparation `retry` est relue au plus cinq fois, avec 500 ms entre
+les tentatives. Les autres erreurs ne sont pas répétées et aucune commande moteur
+ne passe dans cette reprise.
