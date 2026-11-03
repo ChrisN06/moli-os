@@ -79,5 +79,12 @@
   "xiaomi.zone.map_metadata": "Xiaomi did not provide a usable map link.",
   "xiaomi.zone.map_download": "Could not download the Xiaomi map.",
   "xiaomi.zone.map_decode": "Map format unsupported or dock reference missing.",
-  "xiaomi.zone.map_retry": "The robot is preparing the map (retry response). Try again shortly."
+  "xiaomi.zone.map_retry": "The robot is preparing the map (retry response). Try again shortly.",
+  "xiaomi.zone.map_connect": "Initial miIO connection to the robot failed. No movement started.",
+  "xiaomi.zone.map_timeout": "The robot did not answer the local map request. No movement started.",
+  "xiaomi.zone.map_refused": "The robot refused the local map request.",
+  "xiaomi.zone.map_token": "The robot did not validate the local map token.",
+  "xiaomi.zone.map_sequence": "The local map response has a different request number.",
+  "xiaomi.zone.map_reply": "The robot returned an incomplete local map response.",
+  "xiaomi.vacuum.clean": "Start cleaning"
 }

@@ -896,8 +896,10 @@ Les défis d'authentification sont liés au demandeur, expirent après dix minut
 ne peuvent pas mélanger les étapes. Le relais ne reçoit les identifiants qu'après
 contrôle des droits. Ses erreurs brutes ne sont jamais relayées au navigateur. Le
 mot de passe n'est pas écrit sur disque. Les comptes et la zone utilisent le coffre.
-Le point `action` du robot accepte seulement `pause`, `dock`, `kitchen`, via l'API de
+Le point `action` du robot accepte seulement `clean`, `pause`, `dock`, `kitchen`, via l'API de
 commande habituelle, dès que le pilote a vérifié le compte et le modèle.
+L’action explicite `clean` lance un nettoyage classique (`app_start`) sans carte ni
+zone ; elle ne sert jamais de repli à `kitchen`.
 L’ancien réglage de déplacement n’est plus utilisé ; sa route renvoie 404.
 Les échecs de carte distinguent connexion locale, attente du robot, session cloud,
 métadonnées, téléchargement et décodage, sans publier les détails amont. La cuisine vérifie carte, empreinte de géométrie et base ; une

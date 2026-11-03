@@ -171,7 +171,20 @@ fn map_host(host: &str) -> bool {
 /// Only fixed categories reach the UI; never expose upstream errors or signed URLs.
 pub fn failure_key(error: &anyhow::Error) -> &'static str {
     match error.to_string().as_str() {
-        "map_local" => "xiaomi.zone.map_local",
+        "map_connect" => "xiaomi.zone.map_connect",
+        "map_local" => {
+            for cause in error.chain().skip(1) {
+                match cause.to_string().as_str() {
+                    "miIO authenticated reply timed out" => return "xiaomi.zone.map_timeout",
+                    "miIO command refused" => return "xiaomi.zone.map_refused",
+                    "miIO checksum mismatch" => return "xiaomi.zone.map_token",
+                    "miIO sequence mismatch" => return "xiaomi.zone.map_sequence",
+                    "invalid miIO reply" | "invalid miIO length" => return "xiaomi.zone.map_reply",
+                    _ => {}
+                }
+            }
+            "xiaomi.zone.map_local"
+        }
         "map_not_ready" => "xiaomi.zone.map_not_ready",
         "map_retry" => "xiaomi.zone.map_retry",
         "map_session" => "xiaomi.zone.map_session",
@@ -255,6 +268,26 @@ mod tests {
         assert_eq!(
             failure_key(&anyhow!("private upstream detail")),
             "xiaomi.zone.map_failed"
+        );
+    }
+    #[test]
+    fn local_map_failure_reports_only_allowlisted_protocol_categories() {
+        for (cause, key) in [
+            (
+                "miIO authenticated reply timed out",
+                "xiaomi.zone.map_timeout",
+            ),
+            ("miIO command refused", "xiaomi.zone.map_refused"),
+            ("miIO checksum mismatch", "xiaomi.zone.map_token"),
+            ("miIO sequence mismatch", "xiaomi.zone.map_sequence"),
+            ("invalid miIO reply", "xiaomi.zone.map_reply"),
+            ("private upstream detail", "xiaomi.zone.map_local"),
+        ] {
+            assert_eq!(failure_key(&anyhow!(cause).context("map_local")), key);
+        }
+        assert_eq!(
+            failure_key(&anyhow!("private detail").context("map_connect")),
+            "xiaomi.zone.map_connect"
         );
     }
     fn fixture(pixel: u8) -> Vec<u8> {
