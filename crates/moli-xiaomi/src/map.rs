@@ -1,5 +1,5 @@
 //! Bounded RR-map decoding. Map URLs and cloud keys stay server-side.
-use crate::{Account, Config, Zone, miio::Miio};
+use crate::{Account, Config, Zone};
 use anyhow::{Context as _, anyhow, ensure};
 use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 use http_body_util::Full;
@@ -171,20 +171,7 @@ fn map_host(host: &str) -> bool {
 /// Only fixed categories reach the UI; never expose upstream errors or signed URLs.
 pub fn failure_key(error: &anyhow::Error) -> &'static str {
     match error.to_string().as_str() {
-        "map_connect" => "xiaomi.zone.map_connect",
-        "map_local" => {
-            for cause in error.chain().skip(1) {
-                match cause.to_string().as_str() {
-                    "miIO authenticated reply timed out" => return "xiaomi.zone.map_timeout",
-                    "miIO command refused" => return "xiaomi.zone.map_refused",
-                    "miIO checksum mismatch" => return "xiaomi.zone.map_token",
-                    "miIO sequence mismatch" => return "xiaomi.zone.map_sequence",
-                    "invalid miIO reply" | "invalid miIO length" => return "xiaomi.zone.map_reply",
-                    _ => {}
-                }
-            }
-            "xiaomi.zone.map_local"
-        }
+        "map_cloud_request" => "xiaomi.zone.map_cloud_request",
         "map_not_ready" => "xiaomi.zone.map_not_ready",
         "map_retry" => "xiaomi.zone.map_retry",
         "map_session" => "xiaomi.zone.map_session",
@@ -194,12 +181,16 @@ pub fn failure_key(error: &anyhow::Error) -> &'static str {
         _ => "xiaomi.zone.map_failed",
     }
 }
-pub async fn current(config: &Config, account: &Account, client: &mut Miio) -> anyhow::Result<Map> {
+pub async fn current(config: &Config, account: &Account) -> anyhow::Result<Map> {
     config.validate()?;
-    let result = client
-        .call("get_map_v1", json!([]))
+    let cloud = account.cloud().await.context("map_session")?;
+    let result = cloud
+        .call(
+            &format!("/home/rpc/{}", account.device),
+            json!({"id":moli_core::now_ms() % 9999 + 1,"method":"get_map_v1","params":[]}),
+        )
         .await
-        .context("map_local")?;
+        .context("map_cloud_request")?;
     let name = result
         .get(0)
         .and_then(serde_json::Value::as_str)
@@ -209,10 +200,7 @@ pub async fn current(config: &Config, account: &Account, client: &mut Miio) -> a
     let url = if name.starts_with("http://") || name.starts_with("https://") {
         name.to_owned()
     } else {
-        let result = account
-            .cloud()
-            .await
-            .context("map_session")?
+        let result = cloud
             .call("/home/getmapfileurl", json!({"obj_name":name}))
             .await
             .context("map_metadata")?;
@@ -255,7 +243,7 @@ mod tests {
     #[test]
     fn map_failure_categories_never_expose_upstream_details() {
         for (category, key) in [
-            ("map_local", "xiaomi.zone.map_local"),
+            ("map_cloud_request", "xiaomi.zone.map_cloud_request"),
             ("map_not_ready", "xiaomi.zone.map_not_ready"),
             ("map_retry", "xiaomi.zone.map_retry"),
             ("map_session", "xiaomi.zone.map_session"),
@@ -268,26 +256,6 @@ mod tests {
         assert_eq!(
             failure_key(&anyhow!("private upstream detail")),
             "xiaomi.zone.map_failed"
-        );
-    }
-    #[test]
-    fn local_map_failure_reports_only_allowlisted_protocol_categories() {
-        for (cause, key) in [
-            (
-                "miIO authenticated reply timed out",
-                "xiaomi.zone.map_timeout",
-            ),
-            ("miIO command refused", "xiaomi.zone.map_refused"),
-            ("miIO checksum mismatch", "xiaomi.zone.map_token"),
-            ("miIO sequence mismatch", "xiaomi.zone.map_sequence"),
-            ("invalid miIO reply", "xiaomi.zone.map_reply"),
-            ("private upstream detail", "xiaomi.zone.map_local"),
-        ] {
-            assert_eq!(failure_key(&anyhow!(cause).context("map_local")), key);
-        }
-        assert_eq!(
-            failure_key(&anyhow!("private detail").context("map_connect")),
-            "xiaomi.zone.map_connect"
         );
     }
     fn fixture(pixel: u8) -> Vec<u8> {

@@ -73,18 +73,12 @@
   "xiaomi.state.17": "Nettoyage de zone",
   "xiaomi.state.18": "Nettoyage de pièce",
   "xiaomi.vacuum.busy": "Le robot est occupé. Mettez-le en pause avant de lancer la cuisine.",
-  "xiaomi.zone.map_local": "Connexion locale au robot impossible. Aucun déplacement lancé.",
   "xiaomi.zone.map_not_ready": "Le robot n’a pas encore fourni de carte. Réessayez dans quelques instants.",
   "xiaomi.zone.map_session": "Session Xiaomi indisponible. Reconnectez le compte Xiaomi Home.",
   "xiaomi.zone.map_metadata": "Xiaomi n’a pas fourni de lien de carte utilisable.",
   "xiaomi.zone.map_download": "Téléchargement de la carte Xiaomi impossible.",
   "xiaomi.zone.map_decode": "Format de carte non reconnu ou repère de base absent.",
   "xiaomi.zone.map_retry": "Le robot prépare la carte (réponse « retry »). Réessayez dans quelques instants.",
-  "xiaomi.zone.map_connect": "La connexion miIO initiale au robot échoue. Aucun déplacement lancé.",
-  "xiaomi.zone.map_timeout": "Le robot ne répond pas à la demande locale de carte. Aucun déplacement lancé.",
-  "xiaomi.zone.map_refused": "Le robot refuse la demande locale de carte.",
-  "xiaomi.zone.map_token": "Le robot ne valide pas le jeton local pour la carte.",
-  "xiaomi.zone.map_sequence": "La réponse locale de carte porte un autre numéro de requête.",
-  "xiaomi.zone.map_reply": "Le robot renvoie une réponse locale de carte incomplète.",
-  "xiaomi.vacuum.clean": "Démarrer le nettoyage"
+  "xiaomi.vacuum.clean": "Démarrer le nettoyage",
+  "xiaomi.zone.map_cloud_request": "Xiaomi ne fournit pas la référence de carte du robot."
 }
