@@ -30,7 +30,9 @@ relay_port = 1984
 Batterie, état, surface, durée et erreurs sont lus localement en UDP miIO/AES-CBC.
 Les valeurs absentes restent absentes. Les commandes deviennent disponibles après connexion du compte et vérification
 du modèle par le pilote. Aucun réglage supplémentaire de déplacement n’est requis.
-Pause, retour à la base et cuisine passent par la garde de commandes Moli, avec échéance. Une
+Démarrage classique, pause, retour à la base et cuisine passent par la garde de
+commandes Moli, avec échéance. Le bouton de démarrage classique envoie explicitement
+`app_start`, sans dépendre de la carte ni de la zone cuisine. Une
 commande moteur sans réponse n'est jamais répétée automatiquement.
 
 La page **Aspirateur** charge la carte RR sur demande, via le cloud Xiaomi, puis
@@ -38,7 +40,7 @@ permet de dessiner et confirmer un rectangle. Les coordonnées sont celles du ro
 en millimètres ; la capture d'écran seule ne permet pas de les déduire. Avant tout
 nettoyage, la carte et la base sont vérifiées à nouveau. Un changement impose une
 nouvelle confirmation. La zone utilise un seul passage et `app_zoned_clean` ; aucun
-appel `app_start` ou nettoyage global de repli. Le robot peut traverser le salon
+appel `app_start` ni nettoyage global de repli dans le parcours cuisine. Le robot peut traverser le salon
 pour rejoindre la cuisine : le rectangle n'est pas une barrière virtuelle.
 
 La carte nécessite Internet et un format RR reconnu. Un échec de carte bloque le

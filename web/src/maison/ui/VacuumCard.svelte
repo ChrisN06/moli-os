@@ -43,6 +43,7 @@
   </dl>
   {#if value(id,'error')}<p role="alert">{t('xiaomi.vacuum.error')} : {value(id,'error')}</p>{/if}
   <div class="actions">
+    <button disabled={!writable || !device?.online} onclick={()=>order('clean')}>{t('xiaomi.vacuum.clean')}</button>
     <button disabled={!writable || !device?.online} onclick={()=>order('pause')}>{t('xiaomi.vacuum.pause')}</button>
     <button disabled={!writable || !device?.online} onclick={()=>order('dock')}>{t('xiaomi.vacuum.dock')}</button>
     <button disabled={!writable || !device?.online || (!value(id,'kitchen_ready') || (map && !saved))} onclick={()=>order('kitchen')}>{t('xiaomi.vacuum.kitchen')}</button>

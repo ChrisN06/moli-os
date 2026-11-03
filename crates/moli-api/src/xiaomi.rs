@@ -1,5 +1,6 @@
 //! Owner-only Xiaomi setup; neither tokens nor upstream errors reach the browser.
 use crate::{caller::Caller, people::People, session::Sessions};
+use anyhow::Context as _;
 use axum::{
     Extension, Json, Router,
     extract::{Path, State},
@@ -359,7 +360,7 @@ async fn fetch_map(hub: &Hub, d: &Configured) -> anyhow::Result<moli_xiaomi::map
         account.token.as_deref().unwrap_or_default(),
     )
     .await
-    .map_err(|_| anyhow::anyhow!("map_local"))?;
+    .context("map_connect")?;
     moli_xiaomi::map::current(&d.config, &account, &mut client).await
 }
 async fn zone(
