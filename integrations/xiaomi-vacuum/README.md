@@ -35,10 +35,12 @@ commandes Moli, avec échéance. Le bouton de démarrage classique envoie explic
 `app_start`, sans dépendre de la carte ni de la zone cuisine. Une
 commande moteur sans réponse n'est jamais répétée automatiquement.
 
-La page **Aspirateur** charge la carte RR sur demande, via le cloud Xiaomi, puis
+La page **Aspirateur** demande la référence de carte via le RPC cloud Xiaomi
+`get_map_v1`, puis télécharge la carte RR sur demande. Elle ne dépend pas d’une
+nouvelle connexion miIO locale pour cette lecture et
 permet de dessiner et confirmer un rectangle. Les coordonnées sont celles du robot,
 en millimètres ; la capture d'écran seule ne permet pas de les déduire. Avant tout
-nettoyage, la carte et la base sont vérifiées à nouveau. Un changement impose une
+nettoyage de cuisine, la carte et la base sont vérifiées à nouveau. Un changement impose une
 nouvelle confirmation. La zone utilise un seul passage et `app_zoned_clean` ; aucun
 appel `app_start` ni nettoyage global de repli dans le parcours cuisine. Le robot peut traverser le salon
 pour rejoindre la cuisine : le rectangle n'est pas une barrière virtuelle.
@@ -51,3 +53,7 @@ Sources de protocole : [python-miio](https://github.com/rytilahti/python-miio),
 [RR-map](https://github.com/PiotrMachowski/Python-package-vacuum-map-parser-roborock),
 [go2rtc Xiaomi](https://github.com/AlexxIT/go2rtc/tree/v1.9.15/internal/xiaomi).
 Ces interfaces ne sont pas une API officielle Xiaomi garantie.
+
+La route cloud RPC est limitée à cette requête de lecture, avec identifiant numérique
+borné et paramètres vides. Aucune commande moteur ne passe par cette route.
+Source du transport : [openHAB MiCloudConnector](https://github.com/openhab/openhab-addons/blob/main/bundles/org.openhab.binding.miio/src/main/java/org/openhab/binding/miio/internal/cloud/MiCloudConnector.java).

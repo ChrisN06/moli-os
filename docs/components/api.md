@@ -901,8 +901,10 @@ commande habituelle, dès que le pilote a vérifié le compte et le modèle.
 L’action explicite `clean` lance un nettoyage classique (`app_start`) sans carte ni
 zone ; elle ne sert jamais de repli à `kitchen`.
 L’ancien réglage de déplacement n’est plus utilisé ; sa route renvoie 404.
-Les échecs de carte distinguent connexion locale, attente du robot, session cloud,
-métadonnées, téléchargement et décodage, sans publier les détails amont. La cuisine vérifie carte, empreinte de géométrie et base ; une
+La référence de carte est demandée via le RPC cloud Xiaomi `get_map_v1`, seul RPC
+autorisé par le client cloud, avec identifiant numérique borné et paramètres vides.
+Les échecs distinguent attente du robot, session et requête cloud, métadonnées,
+téléchargement et décodage, sans publier les détails amont. La cuisine vérifie carte, empreinte de géométrie et base ; une
 incertitude ne provoque jamais un nettoyage général. Les capacités restent à valider
 sur le matériel et son firmware réels.
 

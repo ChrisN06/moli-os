@@ -248,7 +248,7 @@ impl Driver for Vacuum {
                         let Some(zone)=ctx.secret(ZONE).and_then(|s|serde_json::from_str::<Zone>(&s).ok()).filter(|z: &Zone| z.valid() && z.confirmed_at > 0) else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.required")));continue;};
                         let status=client.call("get_status",json!([])).await?;
                         if !status.get(0).and_then(|s|s["state"].as_u64()).is_some_and(|s|matches!(s,3|8|10)) {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.busy")));continue;}
-                        let result=crate::map::current(&self.config,&account,&mut client).await.and_then(|map|{ensure!(map.matches(&zone),"kitchen map changed");zone.params()});
+                        let result=crate::map::current(&self.config,&account).await.and_then(|map|{ensure!(map.matches(&zone),"kitchen map changed");zone.params()});
                         if let Ok(params)=result {("app_zoned_clean",params)} else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.changed")));continue;}
                        }
                        _=>{command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.invalid")));continue;}

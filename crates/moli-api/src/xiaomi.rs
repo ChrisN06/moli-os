@@ -1,6 +1,5 @@
 //! Owner-only Xiaomi setup; neither tokens nor upstream errors reach the browser.
 use crate::{caller::Caller, people::People, session::Sessions};
-use anyhow::Context as _;
 use axum::{
     Extension, Json, Router,
     extract::{Path, State},
@@ -354,14 +353,7 @@ async fn fetch_map(hub: &Hub, d: &Configured) -> anyhow::Result<moli_xiaomi::map
         .ok_or_else(|| anyhow::anyhow!("missing vacuum account"))?;
     let account: Account = serde_json::from_str(&secret)?;
     anyhow::ensure!(account.valid(Kind::Vacuum), "invalid vacuum account");
-    let mut client = moli_xiaomi::miio::Miio::connect(
-        d.config.host,
-        d.config.port,
-        account.token.as_deref().unwrap_or_default(),
-    )
-    .await
-    .context("map_connect")?;
-    moli_xiaomi::map::current(&d.config, &account, &mut client).await
+    moli_xiaomi::map::current(&d.config, &account).await
 }
 async fn zone(
     State(hub): State<Hub>,
