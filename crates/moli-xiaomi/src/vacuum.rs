@@ -213,7 +213,7 @@ impl Driver for Vacuum {
                     info["model"].as_str() == Some("rockrobo.vacuum.v1"),
                     "unexpected vacuum model"
                 );
-                ctx.upsert_device(device(ctx, &id, &self.config, account.commands));
+                ctx.upsert_device(device(ctx, &id, &self.config, true));
                 ctx.set_state(&id, "firmware", Value::from_json(&info["fw_ver"]));
                 let mut poll = tokio::time::interval(Duration::from_secs(self.config.poll_s));
                 poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -228,7 +228,7 @@ impl Driver for Vacuum {
                      }
                      command=ctx.next_command()=>{
                       let Some(command)=command else{return Ok(());};if command.abandoned(){continue;}
-                      if !account.commands || ctx.secret(ACCOUNT)!=secret {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.read_only")));continue;}
+                      if ctx.secret(ACCOUNT)!=secret {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.read_only")));continue;}
                       let (method,params)=match (&*command.key,&command.value){
                        ("action",Value::Text(v)) if &**v=="pause"=>("app_pause",json!([])),
                        ("action",Value::Text(v)) if &**v=="dock"=>("app_charge",json!([])),

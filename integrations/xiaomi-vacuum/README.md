@@ -28,9 +28,9 @@ relay_port = 1984
 ## Lecture et déplacements
 
 Batterie, état, surface, durée et erreurs sont lus localement en UDP miIO/AES-CBC.
-Les valeurs absentes restent absentes. Les déplacements sont désactivés par défaut ;
-seul le propriétaire peut les activer dans les paramètres. Pause, retour à la base
-et cuisine passent ensuite par le garde de commandes Moli, avec échéance. Une
+Les valeurs absentes restent absentes. Les commandes deviennent disponibles après connexion du compte et vérification
+du modèle par le pilote. Aucun réglage supplémentaire de déplacement n’est requis.
+Pause, retour à la base et cuisine passent par la garde de commandes Moli, avec échéance. Une
 commande moteur sans réponse n'est jamais répétée automatiquement.
 
 La page **Aspirateur** charge la carte RR sur demande, via le cloud Xiaomi, puis

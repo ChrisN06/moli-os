@@ -37,7 +37,6 @@
   <h2>{t('xiaomi.account.title')}</h2>
   <p class="muted">{t('xiaomi.account.note')}</p>
   <ul>{#each devices as d}<li>{d.instance} · {d.host} · {t(d.configured ? 'xiaomi.account.connected' : 'xiaomi.account.wait')}
-    {#if d.kind === 'vacuum' && d.configured}<button disabled={busy} onclick={() => send(`/api/xiaomi/${encodeURIComponent(d.instance)}/commands`,'PUT',{enabled:!d.commands})}>{t(d.commands ? 'xiaomi.vacuum.disable' : 'xiaomi.vacuum.enable')}</button>{/if}
   </li>{/each}</ul>
   <form onsubmit={e=>{e.preventDefault();connect();}}>
     {#if challenge}

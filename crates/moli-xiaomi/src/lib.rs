@@ -75,8 +75,6 @@ pub struct Account {
     pub relay_config: String,
     #[serde(default)]
     pub token: Option<String>,
-    #[serde(default)]
-    pub commands: bool,
 }
 impl std::fmt::Debug for Account {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -152,4 +150,19 @@ pub async fn restore_relay(config: &Config, account: &Account) -> anyhow::Result
         }
     }
     anyhow::bail!("Xiaomi relay restart failed")
+}
+
+#[cfg(test)]
+mod account_tests {
+    use super::*;
+    #[test]
+    fn legacy_movement_flag_does_not_require_reconnecting_account() {
+        let old = serde_json::json!({"user":"1","region":"de","device":"2",
+            "model":"rockrobo.vacuum.v1","relay_config":"", "token":null,"commands":false});
+        let account: Account = serde_json::from_value(old).unwrap();
+        let stored = serde_json::to_value(&account).unwrap();
+        assert!(stored.get("commands").is_none());
+        assert_eq!(stored["device"], "2");
+        assert_eq!(stored["user"], "1");
+    }
 }

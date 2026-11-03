@@ -437,7 +437,7 @@ async fn xiaomi_credentials_require_owner_before_any_relay_request() {
         )
         .await
         .0,
-        403
+        404
     );
     assert_eq!(
         request(
