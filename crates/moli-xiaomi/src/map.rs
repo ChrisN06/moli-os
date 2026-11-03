@@ -1,6 +1,6 @@
 //! Bounded RR-map decoding. Map URLs and cloud keys stay server-side.
-use crate::{Account, Config, Zone, miio::Miio};
-use anyhow::{anyhow, ensure};
+use crate::{Account, Config, Zone};
+use anyhow::{Context as _, anyhow, ensure};
 use base64::{Engine as _, engine::general_purpose::STANDARD as B64};
 use http_body_util::Full;
 use serde::Serialize;
@@ -168,25 +168,65 @@ pub fn parse(bytes: &[u8]) -> anyhow::Result<Map> {
 fn map_host(host: &str) -> bool {
     host.ends_with(".fds.api.xiaomi.com") || host.ends_with(".fds.api.mi-img.com")
 }
-pub async fn current(config: &Config, account: &Account, client: &mut Miio) -> anyhow::Result<Map> {
+/// Only fixed categories reach the UI; never expose upstream errors or signed URLs.
+pub fn failure_key(error: &anyhow::Error) -> &'static str {
+    match error.to_string().as_str() {
+        "map_cloud_request" => "xiaomi.zone.map_cloud_request",
+        "map_not_ready" => "xiaomi.zone.map_not_ready",
+        "map_retry" => "xiaomi.zone.map_retry",
+        "map_session" => "xiaomi.zone.map_session",
+        "map_metadata" | "invalid map URL" | "untrusted map host" => "xiaomi.zone.map_metadata",
+        "map_decode" => "xiaomi.zone.map_decode",
+        "map download unavailable" | "map download refused" => "xiaomi.zone.map_download",
+        _ => "xiaomi.zone.map_failed",
+    }
+}
+async fn map_reference<F, Fut>(mut request: F) -> anyhow::Result<serde_json::Value>
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = anyhow::Result<serde_json::Value>>,
+{
+    for attempt in 0..5 {
+        let result = request().await?;
+        if result != json!(["retry"]) {
+            return Ok(result);
+        }
+        if attempt < 4 {
+            tokio::time::sleep(std::time::Duration::from_millis(500)).await;
+        }
+    }
+    anyhow::bail!("map_retry")
+}
+pub async fn current(config: &Config, account: &Account) -> anyhow::Result<Map> {
     config.validate()?;
-    let result = client.call("get_map_v1", json!([])).await?;
+    let cloud = account.cloud().await.context("map_session")?;
+    let path = format!("/home/rpc/{}", account.device);
+    let result = map_reference(|| async {
+        cloud
+            .call(
+                &path,
+                json!({"id":moli_core::now_ms() % 9999 + 1,"method":"get_map_v1","params":[]}),
+            )
+            .await
+            .context("map_cloud_request")
+    })
+    .await?;
     let name = result
         .get(0)
         .and_then(serde_json::Value::as_str)
-        .filter(|s| !s.is_empty() && *s != "retry" && s.len() <= 2048)
-        .ok_or_else(|| anyhow!("map not ready"))?;
+        .filter(|s| !s.is_empty() && s.len() <= 2048)
+        .ok_or_else(|| anyhow!("map_not_ready"))?;
+    ensure!(name != "retry", "map_retry");
     let url = if name.starts_with("http://") || name.starts_with("https://") {
         name.to_owned()
     } else {
-        let result = account
-            .cloud()
-            .await?
+        let result = cloud
             .call("/home/getmapfileurl", json!({"obj_name":name}))
-            .await?;
+            .await
+            .context("map_metadata")?;
         result["url"]
             .as_str()
-            .ok_or_else(|| anyhow!("map URL unavailable"))?
+            .ok_or_else(|| anyhow!("map_metadata"))?
             .to_owned()
     };
     let url = url.replacen("http://", "https://", 1);
@@ -214,12 +254,65 @@ pub async fn current(config: &Config, account: &Account, client: &mut Miio) -> a
     .await
     .map_err(|_| anyhow!("map download unavailable"))?;
     ensure!(status.is_success(), "map download refused");
-    parse(&bytes)
+    parse(&bytes).context("map_decode")
 }
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Write as _;
+    #[test]
+    fn map_failure_categories_never_expose_upstream_details() {
+        for (category, key) in [
+            ("map_cloud_request", "xiaomi.zone.map_cloud_request"),
+            ("map_not_ready", "xiaomi.zone.map_not_ready"),
+            ("map_retry", "xiaomi.zone.map_retry"),
+            ("map_session", "xiaomi.zone.map_session"),
+            ("map_metadata", "xiaomi.zone.map_metadata"),
+            ("map_decode", "xiaomi.zone.map_decode"),
+        ] {
+            let error = anyhow!("private upstream detail").context(category);
+            assert_eq!(failure_key(&error), key);
+        }
+        assert_eq!(
+            failure_key(&anyhow!("private upstream detail")),
+            "xiaomi.zone.map_failed"
+        );
+    }
+    #[tokio::test]
+    async fn map_preparation_retries_are_bounded_and_do_not_repeat_errors() {
+        let mut calls = 0;
+        let result = map_reference(|| {
+            calls += 1;
+            std::future::ready(Ok(if calls < 3 {
+                json!(["retry"])
+            } else {
+                json!(["map-fixture"])
+            }))
+        })
+        .await
+        .unwrap();
+        assert_eq!(calls, 3);
+        assert_eq!(result, json!(["map-fixture"]));
+        calls = 0;
+        let error = map_reference(|| {
+            calls += 1;
+            std::future::ready(Ok(json!(["retry"])))
+        })
+        .await
+        .unwrap_err();
+        assert_eq!(calls, 5);
+        assert_eq!(failure_key(&error), "xiaomi.zone.map_retry");
+        calls = 0;
+        assert!(
+            map_reference(|| {
+                calls += 1;
+                std::future::ready(Err(anyhow!("map_cloud_request")))
+            })
+            .await
+            .is_err()
+        );
+        assert_eq!(calls, 1);
+    }
     fn fixture(pixel: u8) -> Vec<u8> {
         let mut raw = vec![0; 20];
         raw[..2].copy_from_slice(b"rr");

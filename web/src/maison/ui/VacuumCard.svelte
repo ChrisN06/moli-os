@@ -43,11 +43,12 @@
   </dl>
   {#if value(id,'error')}<p role="alert">{t('xiaomi.vacuum.error')} : {value(id,'error')}</p>{/if}
   <div class="actions">
+    <button disabled={!writable || !device?.online} onclick={()=>order('clean')}>{t('xiaomi.vacuum.clean')}</button>
     <button disabled={!writable || !device?.online} onclick={()=>order('pause')}>{t('xiaomi.vacuum.pause')}</button>
     <button disabled={!writable || !device?.online} onclick={()=>order('dock')}>{t('xiaomi.vacuum.dock')}</button>
     <button disabled={!writable || !device?.online || (!value(id,'kitchen_ready') || (map && !saved))} onclick={()=>order('kitchen')}>{t('xiaomi.vacuum.kitchen')}</button>
   </div>
-  {#if !writable}<p class="muted">{t('xiaomi.vacuum.read_only')} <a href="#/parametres">{t('commun.nav.parametres')}</a></p>{/if}
+  {#if !writable}<p class="muted">{t('xiaomi.vacuum.read_only')}</p>{/if}
   <h3>{t('xiaomi.zone.title')}</h3>
   <p class="muted">{t('xiaomi.zone.note')}</p>
   <button disabled={busy || !device?.online} onclick={load}>{t(busy?'xiaomi.zone.loading':'xiaomi.zone.load')}</button>

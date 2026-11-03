@@ -32,7 +32,7 @@
   "xiaomi.vacuum.pause": "Pause",
   "xiaomi.vacuum.dock": "Retour à la base",
   "xiaomi.vacuum.kitchen": "Nettoyer la cuisine",
-  "xiaomi.vacuum.read_only": "Lecture seule. Les déplacements sont désactivés dans les paramètres.",
+  "xiaomi.vacuum.read_only": "Robot non connecté. Les commandes seront disponibles après connexion.",
   "xiaomi.vacuum.enable": "Autoriser les déplacements",
   "xiaomi.vacuum.disable": "Désactiver les déplacements",
   "xiaomi.vacuum.offline": "Robot hors ligne ou non connecté",
@@ -72,5 +72,13 @@
   "xiaomi.state.16": "Déplacement vers une cible",
   "xiaomi.state.17": "Nettoyage de zone",
   "xiaomi.state.18": "Nettoyage de pièce",
-  "xiaomi.vacuum.busy": "Le robot est occupé. Mettez-le en pause avant de lancer la cuisine."
+  "xiaomi.vacuum.busy": "Le robot est occupé. Mettez-le en pause avant de lancer la cuisine.",
+  "xiaomi.zone.map_not_ready": "Le robot n’a pas encore fourni de carte. Réessayez dans quelques instants.",
+  "xiaomi.zone.map_session": "Session Xiaomi indisponible. Reconnectez le compte Xiaomi Home.",
+  "xiaomi.zone.map_metadata": "Xiaomi n’a pas fourni de lien de carte utilisable.",
+  "xiaomi.zone.map_download": "Téléchargement de la carte Xiaomi impossible.",
+  "xiaomi.zone.map_decode": "Format de carte non reconnu ou repère de base absent.",
+  "xiaomi.zone.map_retry": "Le robot prépare la carte (réponse « retry »). Réessayez dans quelques instants.",
+  "xiaomi.vacuum.clean": "Démarrer le nettoyage",
+  "xiaomi.zone.map_cloud_request": "Xiaomi ne fournit pas la référence de carte du robot."
 }

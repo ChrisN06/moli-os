@@ -68,6 +68,16 @@ fn allowed_ticket(uri: &Uri) -> bool {
             h == "account.xiaomi.com" || h == "api.io.mi.com" || h.ends_with(".api.io.mi.com")
         })
 }
+fn supported_call(path: &str, data: &Value) -> bool {
+    matches!(
+        path,
+        "/v2/home/device_list_page" | "/home/device_list" | "/home/getmapfileurl"
+    ) || (path.strip_prefix("/home/rpc/").is_some_and(|device| {
+        !device.is_empty() && device.len() <= 32 && device.bytes().all(|b| b.is_ascii_digit())
+    }) && data["id"].as_u64().is_some_and(|id| {
+        (1..=9999).contains(&id) && *data == json!({"id":id,"method":"get_map_v1","params":[]})
+    }))
+}
 pub struct Cloud {
     cookies: String,
     security: Vec<u8>,
@@ -163,10 +173,7 @@ impl Cloud {
     }
     pub async fn call(&self, path: &str, data: Value) -> anyhow::Result<Value> {
         ensure!(
-            matches!(
-                path,
-                "/v2/home/device_list_page" | "/home/device_list" | "/home/getmapfileurl"
-            ),
+            supported_call(path, &data),
             "unsupported Xiaomi cloud operation"
         );
         let mut nonce = [0; 12];
@@ -353,5 +360,44 @@ mod tests {
                 0xb7, 0xdf
             ]
         );
+    }
+}
+
+#[cfg(test)]
+mod map_rpc_tests {
+    use super::*;
+    #[test]
+    fn cloud_rpc_allows_only_a_bounded_read_only_map_request() {
+        let map = json!({"id":1,"method":"get_map_v1","params":[]});
+        assert!(supported_call("/home/rpc/12345678", &map));
+        for device in [
+            "",
+            "../123",
+            "1?other=2",
+            "robot",
+            "123456789012345678901234567890123",
+        ] {
+            assert!(!supported_call(&format!("/home/rpc/{device}"), &map));
+        }
+        for id in [0, 10000] {
+            assert!(!supported_call(
+                "/home/rpc/12345678",
+                &json!({"id":id,"method":"get_map_v1","params":[]})
+            ));
+        }
+        assert!(supported_call(
+            "/home/rpc/12345678",
+            &json!({"id":9999,"method":"get_map_v1","params":[]})
+        ));
+        for method in ["app_start", "app_charge", "app_zoned_clean", "get_status"] {
+            assert!(!supported_call(
+                "/home/rpc/12345678",
+                &json!({"id":1,"method":method,"params":[]})
+            ));
+        }
+        assert!(!supported_call(
+            "/home/rpc/12345678",
+            &json!({"id":1,"method":"get_map_v1","params":[1]})
+        ));
     }
 }

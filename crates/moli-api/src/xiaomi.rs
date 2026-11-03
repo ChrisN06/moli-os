@@ -5,7 +5,7 @@ use axum::{
     extract::{Path, State},
     http::{HeaderMap, Method, StatusCode},
     response::{IntoResponse, Response},
-    routing::{get, post, put},
+    routing::{get, post},
 };
 use moli_runtime::Hub;
 use moli_xiaomi::{ACCOUNT, Account, Configured, Kind, Vacuum, ZONE, Zone};
@@ -54,7 +54,6 @@ pub(crate) fn routes(devices: Vec<Configured>) -> Router<Hub> {
         .route("/api/xiaomi", get(status))
         .route("/api/xiaomi/login", post(login))
         .route("/api/xiaomi/discover", post(discover))
-        .route("/api/xiaomi/{instance}/commands", put(commands))
         .route("/api/xiaomi/{instance}/map", get(map))
         .route("/api/xiaomi/{instance}/zone", get(zone).put(save_zone))
         .layer(axum::extract::DefaultBodyLimit::max(8192))
@@ -77,7 +76,7 @@ async fn status(
     }
     Json(json!({"devices":setup.devices.iter().map(|d|{
  let account=hub.secret(&d.instance.as_str().into(),ACCOUNT).and_then(|s|serde_json::from_str::<Account>(&s).ok()).filter(|a|a.valid(d.kind));
- json!({"instance":d.instance,"kind":d.kind,"host":d.config.host.to_string(),"configured":account.is_some(),"commands":account.as_ref().is_some_and(|a|a.commands)})
+ json!({"instance":d.instance,"kind":d.kind,"host":d.config.host.to_string(),"configured":account.is_some(),"commands":d.kind == Kind::Vacuum && account.is_some()})
  }).collect::<Vec<_>>()})).into_response()
 }
 fn check_step(step: &Login) -> bool {
@@ -263,11 +262,6 @@ async fn register(hub: &Hub, setup: &Setup, user: &str, config: &str) -> Respons
             } else {
                 None
             },
-            commands: previous.as_ref().is_some_and(|a| {
-                a.commands
-                    && a.user == user
-                    && a.device == device["did"].as_str().unwrap_or_default()
-            }),
         };
         if !account.valid(configured.kind) {
             results.push(json!({"instance":configured.instance,"configured":false,"error":moli_i18n::tr!("xiaomi.account.invalid")}));
@@ -327,52 +321,6 @@ async fn discover(
     }
     fail(StatusCode::CONFLICT, "xiaomi.account.wait")
 }
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct Commands {
-    enabled: bool,
-}
-async fn commands(
-    State(hub): State<Hub>,
-    Extension(setup): Extension<Setup>,
-    auth: (Extension<Arc<Sessions>>, Extension<Arc<People>>),
-    caller: Caller,
-    headers: HeaderMap,
-    Path(instance): Path<String>,
-    Json(body): Json<Commands>,
-) -> Response {
-    if !owner(&caller, &auth, &headers) {
-        return fail(StatusCode::FORBIDDEN, "xiaomi.account.owner");
-    }
-    let Some(d) = setup
-        .devices
-        .iter()
-        .find(|d| d.instance == instance && d.kind == Kind::Vacuum)
-    else {
-        return fail(StatusCode::NOT_FOUND, "xiaomi.account.not_found");
-    };
-    let Some(mut account) = hub
-        .secret(&instance.as_str().into(), ACCOUNT)
-        .and_then(|s| serde_json::from_str::<Account>(&s).ok())
-    else {
-        return fail(StatusCode::CONFLICT, "xiaomi.account.wait");
-    };
-    if body.enabled && Vacuum::verify(&d.config, &account).await.is_err() {
-        return fail(StatusCode::BAD_GATEWAY, "xiaomi.vacuum.unavailable");
-    }
-    account.commands = body.enabled;
-    let Ok(secret) = serde_json::to_string(&account) else {
-        return fail(StatusCode::INTERNAL_SERVER_ERROR, "xiaomi.account.storage");
-    };
-    if hub
-        .store_secret(&instance.as_str().into(), ACCOUNT, &secret)
-        .await
-        .is_err()
-    {
-        return fail(StatusCode::INTERNAL_SERVER_ERROR, "xiaomi.account.storage");
-    }
-    Json(json!({"enabled":body.enabled})).into_response()
-}
 async fn map(
     State(hub): State<Hub>,
     Extension(setup): Extension<Setup>,
@@ -393,7 +341,10 @@ async fn map(
     };
     match fetch_map(&hub, d).await {
         Ok(m) => Json(m).into_response(),
-        Err(_) => fail(StatusCode::BAD_GATEWAY, "xiaomi.zone.map_failed"),
+        Err(error) => fail(
+            StatusCode::BAD_GATEWAY,
+            moli_xiaomi::map::failure_key(&error),
+        ),
     }
 }
 async fn fetch_map(hub: &Hub, d: &Configured) -> anyhow::Result<moli_xiaomi::map::Map> {
@@ -402,13 +353,7 @@ async fn fetch_map(hub: &Hub, d: &Configured) -> anyhow::Result<moli_xiaomi::map
         .ok_or_else(|| anyhow::anyhow!("missing vacuum account"))?;
     let account: Account = serde_json::from_str(&secret)?;
     anyhow::ensure!(account.valid(Kind::Vacuum), "invalid vacuum account");
-    let mut client = moli_xiaomi::miio::Miio::connect(
-        d.config.host,
-        d.config.port,
-        account.token.as_deref().unwrap_or_default(),
-    )
-    .await?;
-    moli_xiaomi::map::current(&d.config, &account, &mut client).await
+    moli_xiaomi::map::current(&d.config, &account).await
 }
 async fn zone(
     State(hub): State<Hub>,

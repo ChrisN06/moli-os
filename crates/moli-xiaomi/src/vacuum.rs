@@ -157,13 +157,23 @@ fn device(ctx: &DriverCtx, id: &DeviceId, config: &Config, writable: bool) -> De
                 "action",
                 "xiaomi.vacuum.action",
                 PointKind::Enum {
-                    values: ["pause", "dock", "kitchen"].map(Into::into).to_vec(),
+                    values: ["pause", "dock", "clean", "kitchen"]
+                        .map(Into::into)
+                        .to_vec(),
                 },
                 Semantic::Control,
                 None,
                 writable,
             ),
         ],
+    }
+}
+fn regular_command(action: &str) -> Option<&'static str> {
+    match action {
+        "pause" => Some("app_pause"),
+        "dock" => Some("app_charge"),
+        "clean" => Some("app_start"),
+        _ => None,
     }
 }
 fn publish(ctx: &DriverCtx, id: &DeviceId, status: &Json) {
@@ -213,7 +223,7 @@ impl Driver for Vacuum {
                     info["model"].as_str() == Some("rockrobo.vacuum.v1"),
                     "unexpected vacuum model"
                 );
-                ctx.upsert_device(device(ctx, &id, &self.config, account.commands));
+                ctx.upsert_device(device(ctx, &id, &self.config, true));
                 ctx.set_state(&id, "firmware", Value::from_json(&info["fw_ver"]));
                 let mut poll = tokio::time::interval(Duration::from_secs(self.config.poll_s));
                 poll.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
@@ -228,15 +238,17 @@ impl Driver for Vacuum {
                      }
                      command=ctx.next_command()=>{
                       let Some(command)=command else{return Ok(());};if command.abandoned(){continue;}
-                      if !account.commands || ctx.secret(ACCOUNT)!=secret {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.read_only")));continue;}
+                      if ctx.secret(ACCOUNT)!=secret {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.read_only")));continue;}
                       let (method,params)=match (&*command.key,&command.value){
-                       ("action",Value::Text(v)) if &**v=="pause"=>("app_pause",json!([])),
-                       ("action",Value::Text(v)) if &**v=="dock"=>("app_charge",json!([])),
+                       ("action",Value::Text(v)) if &**v!="kitchen"=>{
+                        let Some(method)=regular_command(v) else {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.invalid")));continue;};
+                        (method,json!([]))
+                       },
                        ("action",Value::Text(v)) if &**v=="kitchen"=>{
                         let Some(zone)=ctx.secret(ZONE).and_then(|s|serde_json::from_str::<Zone>(&s).ok()).filter(|z: &Zone| z.valid() && z.confirmed_at > 0) else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.required")));continue;};
                         let status=client.call("get_status",json!([])).await?;
                         if !status.get(0).and_then(|s|s["state"].as_u64()).is_some_and(|s|matches!(s,3|8|10)) {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.busy")));continue;}
-                        let result=crate::map::current(&self.config,&account,&mut client).await.and_then(|map|{ensure!(map.matches(&zone),"kitchen map changed");zone.params()});
+                        let result=crate::map::current(&self.config,&account).await.and_then(|map|{ensure!(map.matches(&zone),"kitchen map changed");zone.params()});
                         if let Ok(params)=result {("app_zoned_clean",params)} else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.changed")));continue;}
                        }
                        _=>{command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.invalid")));continue;}
@@ -257,6 +269,14 @@ impl Driver for Vacuum {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn regular_cleaning_is_explicit_and_never_a_kitchen_fallback() {
+        assert_eq!(regular_command("clean"), Some("app_start"));
+        assert_eq!(regular_command("pause"), Some("app_pause"));
+        assert_eq!(regular_command("dock"), Some("app_charge"));
+        assert_eq!(regular_command("kitchen"), None);
+        assert_eq!(regular_command("unknown"), None);
+    }
     #[test]
     fn kitchen_is_one_bounded_rectangle_never_global() {
         let mut z = Zone {
