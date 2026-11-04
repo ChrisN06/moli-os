@@ -910,3 +910,32 @@ sur le matériel et son firmware réels.
 
 Une connexion Xiaomi réussie redémarre aussi le relais pour actualiser son cache de
 session cloud. Les lecteurs déjà ouverts peuvent être interrompus brièvement.
+
+### Freebox locale (lecture seule)
+
+`GET /api/freebox` indique uniquement si un compte est configuré. Le foyer peut
+lire `GET /api/freebox/traffic` : état et débits Internet, ports Ethernet,
+compteurs, stations Wi-Fi et hôtes LAN nécessaires au rattachement des répéteurs.
+Les règles d'accès communes refusent ces routes aux invités et aux visiteurs
+extérieurs non connectés. Aucune commande réseau n'est exposée.
+
+`POST /api/freebox/pair` démarre l'autorisation sur l'afficheur de la Freebox.
+`POST /api/freebox/confirm` vérifie la validation puis conserve le jeton dans le
+coffre chiffré, sous l'instance `freebox`, nom `account`. Ces deux routes exigent
+le propriétaire. Une tentative dure trois minutes, reste liée à son propriétaire
+et ne remplace jamais un compte existant avant validation et sauvegarde réussies.
+Ni le jeton d'application ni celui de session ne sont renvoyés au navigateur.
+
+L'hôte est fixe (`mafreebox.freebox.fr`) ; aucun hôte ni chemin arbitraire n'est
+accepté du navigateur. La version est découverte par `/api_version`. Les lectures
+sont bornées à 2 Mio par réponse, trois secondes par échange et huit secondes
+pour un relevé complet. Le cache est partagé entre les clients, les lectures sont
+à la demande et la page demande un relevé toutes les cinq secondes. Aucun relevé
+périodique n'est lancé sans page ouverte. Le transport LAN utilise HTTP, comme
+Freebox OS local ; il ne doit pas être présenté comme chiffré en transit.
+
+Cette première intégration cible la Freebox Pop : trois ports Ethernet et deux
+radios. Une autre gamme nécessite une découverte des interfaces avant d'étendre
+ce contrat. Les vitesses Wi-Fi sont des débits PHY, distincts du trafic et de la
+vitesse Internet. Les compteurs Ethernet concernent le port entier, pas chaque
+appareil derrière un switch.

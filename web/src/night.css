@@ -1,0 +1,14 @@
+/* Shared network-inspired palette for the family dashboard and Atelier. */
+:root,html body .maison,html body .maison[data-theme='day'],html body .maison[data-theme='night']{
+  --bg:#0c142b;--bone:#0c142b;--surface:#15243d;--card:#15243d;--paper:#15243d;
+  --surface-2:#192d49;--surface-3:#243d5e;--ink:#e9f2ff;--ink-2:#bbd3f0;--ink-3:#94b2d5;
+  --line:#345476;--cool:#8acbff;--cool-soft:#193657;--sun:#8acbff;--sun-soft:#203d60;
+  --warm:#ffc16a;--warm-ink:#ffe0b0;--warm-soft:#392d1c;--good:#43f9a0;--good-soft:#173a30;
+  --alert:#ff747e;--alarm:#ff747e;--alert-soft:#3e2031;--ok:#43f9a0;
+  --shadow:0 0 0 1px #79baff30,0 8px 30px #0002;--shadow-lift:0 0 0 1px #8acbff65,0 12px 32px #0006;
+  --r-xl:18px;--r-lg:14px;--r-md:12px;--r-sm:10px;--radius:10px;--stroke:1px;--font:'Figtree Variable',ui-sans-serif,system-ui,-apple-system,sans-serif;color-scheme:dark;
+}
+html,body{background:#0c142b!important}.maison{background:radial-gradient(ellipse at 18% 60%,#26366980,transparent 55%),radial-gradient(ellipse at 65% 20%,#14244877,transparent 60%),#0c142b}
+.maison .card{border:1px solid #83baff30;background:linear-gradient(140deg,#1a304cbb,#142039dd);box-shadow:0 8px 24px #0002}
+.maison .rail{border-right:1px solid #79baff25;background:#0c142b99}.maison .rail a.active .glyph{background:#1b3d60;box-shadow:0 0 12px #62b6ff45}.maison .rail a.active{color:#b9e6ff}
+.maison input,.maison select,.maison textarea{background:var(--surface);color:var(--ink);border-color:var(--line)}

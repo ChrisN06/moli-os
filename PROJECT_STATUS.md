@@ -1,5 +1,33 @@
 # Moli OS — état du fork et reprise
 
+## Réseau Freebox et thème bleu nuit — 4 novembre 2026
+
+Développement dans un checkout isolé, branche `feat/freebox-network`, à partir de
+`f599497`. Publication et déploiement autorisés par le propriétaire le 4 novembre.
+Appairage réel et validation en production encore à effectuer.
+
+- API Freebox locale bornée et à la demande, cache partagé, HMAC de session et
+  appairage propriétaire. Jeton conservé dans le coffre Moli, jamais dans le web.
+- Page `#/reseau` intégrée : rendu de la maquette, animation lissée, compteur de
+  trafic par liaison, ports, Wi-Fi Pop et répéteur Ethernet, détails des appareils,
+  vitesses PHY, transition des associations et fermeture par second clic.
+- Accueil : téléchargement et envoi uniquement pour Freebox. Paramètres : appairage.
+- Palette bleu nuit partagée par Maison et Atelier ; fonctions existantes conservées.
+- Vérifications : 32 tests web, 88 tests API, Clippy strict du paquet API, build web,
+  traductions FR/EN, PWA et contrôle générique de fuites réussis. Premier essai API
+  bloqué par les permissions localhost du sandbox, puis réussi avec réseau autorisé.
+- Aperçu navigateur avec données synthétiques : navigation Accueil/Réseau/Atelier,
+  signal et vitesses Wi-Fi, ouverture/fermeture d'un port, absence de débordement
+  à 900 × 700. Aucune commande sur un équipement réel.
+- Contrôle workspace macOS : format et Clippy réussis ; quatre tests moli-profile
+  échouent sur des adresses de boucle locale indisponibles sur ce système, comme
+  lors du lot précédent. Le contrôle Linux doit réussir avant déploiement.
+- À faire avant livraison en production : construction de l'image compatible,
+  sauvegarde et retour arrière selon la procédure privée, puis validation physique
+  de l'appairage Moli OS sur la Freebox.
+  Performances sur le serveur de production et Safari/iPhone réels non mesurés.
+
+
 ## Actualisation robot — 3 novembre 2026
 
 Point de reprise courant. Projet actif ; les preuves des autres fonctionnalités restent datées de leurs recettes précédentes.

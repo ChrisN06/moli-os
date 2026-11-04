@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "test": "node --test \"src/maison/lib/voice/*.test.js\" \"src/maison/lib/readings.test.js\" \"src/lib/atelier.test.js\" \"src/maison/lib/counter-power.test.js\" \"src/maison/lib/live-light.test.js\" \"src/maison/lib/vacuum-map.test.js\" \"src/maison/lib/vacuum-map.test.js\""
+    "test": "node --test \"src/maison/lib/voice/*.test.js\" \"src/maison/lib/readings.test.js\" \"src/lib/atelier.test.js\" \"src/maison/lib/counter-power.test.js\" \"src/maison/lib/live-light.test.js\" \"src/maison/lib/vacuum-map.test.js\" \"src/maison/lib/vacuum-map.test.js\" \"src/maison/lib/freebox-data.test.js\""
   },
   "devDependencies": {
     "@fontsource-variable/figtree": "^5.3.0",
