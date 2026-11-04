@@ -48,7 +48,7 @@ impl Vacuum {
             account.token.as_deref().unwrap_or_default(),
         )
         .await?;
-        let info = client.call("miIO.info", json!([])).await?;
+        let info = client.read("miIO.info").await?;
         ensure!(
             info["model"].as_str() == Some("rockrobo.vacuum.v1"),
             "unexpected vacuum model"
@@ -59,7 +59,7 @@ impl Vacuum {
         let devices = account.cloud().await?.devices().await?;
         let (target, current) = Self::recovered_target(config, account, &devices)?;
         let (mut client, info) = Self::connect(&target, &current).await?;
-        let status = client.call("get_status", json!([])).await?;
+        let status = client.read("get_status").await?;
         ensure!(
             status.as_array().is_some_and(|a| !a.is_empty()),
             "vacuum status unavailable"
@@ -103,12 +103,12 @@ impl Vacuum {
             account.token.as_deref().unwrap_or_default(),
         )
         .await?;
-        let info = client.call("miIO.info", json!([])).await?;
+        let info = client.read("miIO.info").await?;
         ensure!(
             info["model"].as_str() == Some("rockrobo.vacuum.v1"),
             "unexpected vacuum model"
         );
-        let status = client.call("get_status", json!([])).await?;
+        let status = client.read("get_status").await?;
         ensure!(
             status.as_array().is_some_and(|a| !a.is_empty()),
             "vacuum status unavailable"
@@ -283,7 +283,7 @@ impl Driver for Vacuum {
                     tokio::select! {
                      _=poll.tick()=>{
                       if ctx.secret(ACCOUNT)!=secret{break;}
-                      let reply=client.call("get_status",json!([])).await?;let status=reply.get(0).ok_or_else(||anyhow!("invalid vacuum status"))?;
+                      let reply=client.read("get_status").await?;let status=reply.get(0).ok_or_else(||anyhow!("invalid vacuum status"))?;
                       publish(ctx,&id,status);
                       let zone=ctx.secret(ZONE).and_then(|s|serde_json::from_str::<Zone>(&s).ok()).is_some_and(|z|z.valid());ctx.set_state(&id,"kitchen_ready",Value::Bool(zone));
                       ctx.set_availability(&id,true);ctx.ready();
@@ -298,7 +298,7 @@ impl Driver for Vacuum {
                        },
                        ("action",Value::Text(v)) if &**v=="kitchen"=>{
                         let Some(zone)=ctx.secret(ZONE).and_then(|s|serde_json::from_str::<Zone>(&s).ok()).filter(|z: &Zone| z.valid() && z.confirmed_at > 0) else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.required")));continue;};
-                        let status=client.call("get_status",json!([])).await?;
+                        let status=client.read("get_status").await?;
                         if !status.get(0).and_then(|s|s["state"].as_u64()).is_some_and(|s|matches!(s,3|8|10)) {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.busy")));continue;}
                         let result=crate::map::current(&self.config,&account).await.and_then(|map|{map.rebase(&zone)?.params()});
                         if let Ok(params)=result {("app_zoned_clean",params)} else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.changed")));continue;}
@@ -308,7 +308,7 @@ impl Driver for Vacuum {
                       if command.abandoned(){continue;}
                       // No retries or whole-floor fallback: an unanswered motor command is uncertain.
                       match client.call(method,params).await{
-                       Ok(_)=>{command.reply(Ok(()));let status=client.call("get_status",json!([])).await?;if let Some(s)=status.get(0){publish(ctx,&id,s);}}
+                       Ok(_)=>{command.reply(Ok(()));let status=client.read("get_status").await?;if let Some(s)=status.get(0){publish(ctx,&id,s);}}
                        Err(e)=>{command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.failed")));return Err(e);}
                       }
                      }
