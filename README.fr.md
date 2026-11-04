@@ -61,6 +61,15 @@ intégration). Guide : [`docs/components/installation.md`](docs/components/insta
 vous. Les autres agents lisent [`AGENTS.md`](AGENTS.md). Une fois lancé, un agent se branche
 sur `http://<adresse>:8790/mcp`.
 
+## Réseau Freebox Pop
+
+Dans **Paramètres**, appairer la Freebox, puis valider **Moli OS** sur l’afficheur du Server.
+La page **Réseau** montre ports, clients Wi-Fi et répéteurs Ethernet, avec trafic animé
+actualisé toutes les cinq secondes. L’accueil affiche les débits descendant et montant.
+Voir le [guide du tableau de bord](docs/components/dashboard.md#réseau-freebox-et-habillage-bleu-nuit)
+et le [guide API](docs/components/api.md#freebox-locale-lecture-seule)
+pour l’appairage, les accès et les limites.
+
 ## Développer
 
 Aucune chaîne Rust à installer : voir `AGENTS.md`. Architecture : [`docs/`](docs/README.md).
