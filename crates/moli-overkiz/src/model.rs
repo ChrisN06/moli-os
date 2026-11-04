@@ -157,6 +157,19 @@ impl Equipment {
                 semantic: Semantic::Control,
             });
         }
+        if !self.controls.is_empty() || self.position_command {
+            points.push(PointSpec {
+                key: "refresh".into(),
+                label: moli_i18n::tr!("pilotes.overkiz.refresh").into(),
+                kind: Kind::Binary,
+                access: Access {
+                    read: false,
+                    write: !read_only,
+                },
+                unit: None,
+                semantic: Semantic::Config,
+            });
+        }
         points.push(PointSpec {
             key: "last_received".into(),
             label: moli_i18n::tr!("pilotes.overkiz.reception").into(),

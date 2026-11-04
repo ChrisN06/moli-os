@@ -52,6 +52,10 @@
 
   const outsideCams = $derived((home.config?.favorites?.cameras ?? []).filter((c) => !/sonnette|doorbell/i.test(c.name)));
 
+  const sunrise = $derived(Date.parse(v(w, 'sunrise')));
+  const sunset = $derived(Date.parse(v(w, 'sunset')));
+  const sunFrom = $derived(Number.isFinite(sunrise) && Number.isFinite(sunset) && sunset > sunrise ? sunrise - 3600000 : null);
+  const sunTo = $derived(sunFrom != null ? sunset + 3600000 : null);
   const sunPos = $derived.by(() => {
     const rise = Date.parse(v(w, 'sunrise'));
     const set = Date.parse(v(w, 'sunset'));
@@ -152,7 +156,7 @@
   </div>
 
   {#if sun}
-    <HistoryCard point={`${sun}/illuminance`} hours={24} title={t('maison.dehors.sun_history')} />
+    <HistoryCard point={`${sun}/illuminance`} hours={24} from={sunFrom} to={sunTo} title={t('maison.dehors.sun_history')} />
   {/if}
 
   {#if outsideCams.length}

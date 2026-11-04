@@ -19,5 +19,7 @@
   "camera.video.play": "Watch live",
   "camera.video.stop": "Stop live video",
   "camera.account.owner": "An owner must authorize camera connections.",
-  "camera.account.owner_failed": "Owner sign-in failed. Check your code and open Moli’s direct address."
+  "camera.account.owner_failed": "Owner sign-in failed. Check your code and open Moli’s direct address.",
+  "camera.display.title": "Camera orientation",
+  "camera.display.note": "Rotation is saved in this browser. Video keeps its original proportions."
 }

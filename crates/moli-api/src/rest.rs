@@ -572,6 +572,8 @@ pub(crate) struct Recorded(pub(crate) Option<moli_history::History>);
 #[derive(Deserialize)]
 pub(crate) struct HistoryQuery {
     point: String,
+    from: Option<u64>,
+    to: Option<u64>,
     #[serde(default = "default_hours")]
     hours: f64,
     #[serde(default = "default_points")]
@@ -610,15 +612,16 @@ pub(crate) async fn history(
     let Some(history) = history else {
         return error(StatusCode::NOT_FOUND, "history is disabled");
     };
-    let to = moli_core::now_ms();
+    let to =
+        q.to.unwrap_or_else(moli_core::now_ms)
+            .min(moli_core::now_ms());
     let span = window_ms(q.hours);
+    let from = q.from.unwrap_or_else(|| to.saturating_sub(span));
+    if from >= to || to.saturating_sub(from) > window_ms(8760.0) {
+        return error(StatusCode::BAD_REQUEST, "invalid history window");
+    }
     match history
-        .series(
-            &q.point,
-            to.saturating_sub(span),
-            to,
-            q.points.clamp(10, 2_000),
-        )
+        .series(&q.point, from, to, q.points.clamp(10, 2_000))
         .await
     {
         Ok(series) => Json(series).into_response(),
@@ -875,6 +878,38 @@ pub(crate) async fn energy_price(
         Err(moli_energy::EnergyError::Invalid(_)) => error(
             StatusCode::BAD_REQUEST,
             &moli_i18n::tr!("energie.price.invalid"),
+        ),
+        Err(e) => error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
+    }
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub(crate) struct EnergySubscription {
+    monthly_fee: f64,
+}
+pub(crate) async fn energy_subscription(
+    Extension(Metered(energy)): Extension<Metered>,
+    Extension(humans): Humans,
+    Extension(persons): Extension<Arc<People>>,
+    caller: Caller,
+    headers: HeaderMap,
+    Json(body): Json<EnergySubscription>,
+) -> Response {
+    if !crate::people_api::is_owner(&caller, &humans, &persons, &headers) {
+        return error(
+            StatusCode::FORBIDDEN,
+            &moli_i18n::tr!("energie.price.owner"),
+        );
+    }
+    let Some(energy) = energy else {
+        return error(StatusCode::NOT_FOUND, "no energy configured");
+    };
+    match energy.set_monthly_fee(body.monthly_fee).await {
+        Ok(()) => Json(json!({"ok":true})).into_response(),
+        Err(moli_energy::EnergyError::Invalid(_)) => error(
+            StatusCode::BAD_REQUEST,
+            &moli_i18n::tr!("energie.fee.invalid"),
         ),
         Err(e) => error(StatusCode::INTERNAL_SERVER_ERROR, &e.to_string()),
     }

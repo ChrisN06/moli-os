@@ -48,7 +48,7 @@ impl Points {
     async fn refresh(&self, ctx: &DriverCtx, id: &DeviceId) {
         match self.energy.summary().await {
             Ok(summary) => {
-                let fee = self.energy.inner.config.monthly_fee;
+                let fee = summary.monthly_fee;
                 for (key, value) in readings(&summary, fee, self.budget(), now_ms()) {
                     ctx.set_state(id, key, value);
                 }

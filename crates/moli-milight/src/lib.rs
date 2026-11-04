@@ -172,7 +172,9 @@ impl Driver for Milight {
                 ctx.upsert_device(declared);
                 // Neither a restart nor a bridge reply reveals the lamp's real state.
                 for key in ["on", "brightness", "color", "color_temp", "saturation"] {
-                    if self.config.rgbcct || !matches!(key, "color_temp" | "saturation") {
+                    if (self.config.rgbcct || !matches!(key, "color_temp" | "saturation"))
+                        && ctx.current(&id, key).is_none()
+                    {
                         ctx.set_state(&id, key, Value::Null);
                     }
                 }
@@ -381,6 +383,59 @@ fn commands_for(zone: u8, key: &str, value: &Value, rgbcct: bool) -> anyhow::Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test]
+    #[allow(clippy::default_trait_access)] // Infer the runtime token type without adding a dependency.
+    async fn restored_light_state_is_not_erased_on_driver_start() {
+        use moli_core::PointId;
+        use moli_runtime::{Hub, HubOptions, spawn_driver};
+        let path = std::env::temp_dir().join(format!("milight-state-{}.json", std::process::id()));
+        std::fs::write(
+            &path,
+            r#"{"fixture:1":{"on":{"value":true,"ts":123},"brightness":{"value":42,"ts":124}}}"#,
+        )
+        .unwrap();
+        let hub = Hub::new(HubOptions {
+            state_path: Some(path.clone()),
+            ..HubOptions::default()
+        })
+        .unwrap();
+        let driver = Milight::new(Config {
+            host: Ipv4Addr::LOCALHOST,
+            port: 9,
+            zones: vec![1],
+            rgbcct: true,
+            room: None,
+        })
+        .unwrap();
+        let task = spawn_driver(
+            &hub,
+            "fixture".into(),
+            std::sync::Arc::new(driver),
+            Default::default(),
+        );
+        tokio::time::timeout(Duration::from_secs(1), async {
+            while hub
+                .state(&PointId::from("fixture:1/state_estimated"))
+                .is_none()
+            {
+                tokio::task::yield_now().await;
+            }
+        })
+        .await
+        .unwrap();
+        let on = hub.state(&PointId::from("fixture:1/on")).unwrap();
+        assert_eq!(on.value, Value::Bool(true));
+        assert_eq!(on.ts, 123);
+        assert_eq!(
+            hub.state(&PointId::from("fixture:1/brightness"))
+                .unwrap()
+                .value
+                .as_f64(),
+            Some(42.0)
+        );
+        task.abort();
+        std::fs::remove_file(path).unwrap();
+    }
     #[test]
     fn rgbw_encoding_and_validation() {
         let on = commands(1, "on", &Value::Bool(true)).unwrap()[0];

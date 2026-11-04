@@ -135,5 +135,19 @@ période tarifaire **estiment tous les kWh consommés au tarif fixe actuel**, y 
 imports antérieurs et les anciennes heures partiellement valorisées. Aucun kWh ni coût
 stocké n'est réécrit. Changer le prix recalcule donc les estimations affichées.
 Les rapports `summary` et `series` annoncent `costs_at_current_price=true` ; le dashboard
-précise le tarif actuel, l'absence d'anciens tarifs et l'abonnement exclu. Production solaire
+précise le tarif actuel et l'absence d'anciens tarifs. Production solaire
 et prix de revente ne sont pas revalorisés. Les rapports HP/HC gardent leur logique existante.
+
+### Abonnement mensuel TTC
+
+`PUT /api/energy/subscription` accepte `{ "monthly_fee": 15.5 }`, avec une session
+propriétaire et un montant fini entre 0 et 10 000. Le montant persiste dans `energy.db`
+et remplace la valeur TOML `monthly_fee`, y compris avec un tarif HP/HC. Aucun relevé
+historique n’est modifié. Les montants sont estimés à l’abonnement actuel, sans historique
+des changements d’abonnement.
+
+`summary` et `series` exposent `monthly_fee`. Les coûts des compteurs et appareils restent
+ceux de la consommation. Le dashboard ajoute l’abonnement aux totaux du jour, du mois et
+aux coûts de l’historique ; il affiche séparément la part abonnement du graphique. Le
+prorata suit les jours du mois local et la fraction écoulée du jour, y compris les journées
+à 23 ou 25 heures. Le mois projeté ajoute un abonnement mensuel entier, une seule fois.

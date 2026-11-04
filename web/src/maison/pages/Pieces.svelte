@@ -38,7 +38,7 @@
     savePref('pieces-look', v);
   }
 
-  const all = $derived(roomList());
+  const all = $derived(roomList().filter((r) => !r.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').match(/^electricite$/i)));
   const devices = $derived(
     all.flatMap((r) => [r.group, ...r.lights, ...r.plugs, ...r.covers, ...r.climates, ...r.media, ...r.sensors].filter(Boolean)),
   );
