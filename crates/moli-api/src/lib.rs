@@ -355,6 +355,7 @@ pub fn router(hub: Hub, shutdown: CancellationToken, options: &Options) -> Route
         .merge(freebox::routes())
         .route("/api/energy", get(rest::energy))
         .route("/api/energy/price", put(rest::energy_price))
+        .route("/api/energy/subscription", put(rest::energy_subscription))
         .route("/api/energy/series", get(rest::energy_series))
         .merge(assistant_routes())
         .route(

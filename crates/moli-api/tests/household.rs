@@ -472,3 +472,29 @@ async fn freebox_pairing_requires_owner_and_never_returns_a_token() {
         assert!(!body.contains("token"));
     }
 }
+
+#[tokio::test]
+async fn subscription_changes_require_owner_before_accessing_energy() {
+    let dir = std::env::temp_dir().join(format!("moli-subscription-owner-{}", std::process::id()));
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    let body = json!({"monthly_fee":15.5});
+    assert_eq!(
+        request(&addr, "PUT", "/api/energy/subscription", &body, UI)
+            .await
+            .0,
+        403
+    );
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    assert_eq!(
+        request(&addr, "PUT", "/api/energy/subscription", &body, &owner)
+            .await
+            .0,
+        404
+    );
+}

@@ -174,6 +174,7 @@ pub struct Summary {
 
 #[derive(Clone, Debug, Serialize)]
 pub struct Report {
+    pub monthly_fee: Option<f64>,
     pub step: Step,
     pub from: u64,
     pub to: u64,
@@ -186,6 +187,17 @@ pub struct Report {
 }
 
 impl Energy {
+    pub async fn set_monthly_fee(&self, fee: f64) -> Result<(), EnergyError> {
+        let store = Arc::clone(&self.inner.store);
+        blocking(move || store.set_monthly_fee(fee)).await
+    }
+    pub async fn monthly_fee(&self) -> Result<Option<f64>, EnergyError> {
+        let store = Arc::clone(&self.inner.store);
+        Ok(blocking(move || store.monthly_fee())
+            .await?
+            .or(self.inner.config.monthly_fee))
+    }
+
     pub async fn set_fixed_price(&self, price: f64) -> Result<(), EnergyError> {
         if self.inner.config.tariff.is_some() {
             return Err(EnergyError::Invalid(
@@ -346,7 +358,7 @@ impl Energy {
             month_projection,
             month: month_period,
             last_month: Period::of(config, &rows, last_month, month),
-            monthly_fee: config.monthly_fee,
+            monthly_fee: self.monthly_fee().await?,
             budget_point: config.budget.clone(),
         })
     }
@@ -385,6 +397,7 @@ impl Energy {
         price_display_rows(&self.inner.config, &mut rows, current_price);
         let config = &self.inner.config;
         Ok(Report {
+            monthly_fee: self.monthly_fee().await?,
             step,
             from,
             to,

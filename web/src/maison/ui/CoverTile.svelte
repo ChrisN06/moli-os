@@ -1,5 +1,6 @@
 <script>
   import { onDestroy } from 'svelte';
+  import { refreshCover } from '../lib/cover-refresh.js';
   import { device, value, act, nameOf, num, hub, home, relative } from '../lib/home.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
 
@@ -7,6 +8,9 @@
   let { id, name = null } = $props();
 
   const d = $derived(device(id));
+  $effect(() => {
+    if (d?.online !== false && d?.points.some(p => p.key === 'refresh' && p.access?.write)) refreshCover(id);
+  });
   const label = $derived(nameOf(id, name));
   const pos = $derived(value(id, 'percent_control'));
   const position = $derived(d?.points.find((p) => p.key === 'percent_control'));

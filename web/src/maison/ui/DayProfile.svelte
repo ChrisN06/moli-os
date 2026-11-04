@@ -23,9 +23,8 @@
     const m = h * 60 + 30;
     return windows.some((w) => (w.from < w.to ? m >= w.from && m < w.to : m >= w.from || m < w.to));
   };
-  const peakHour = $derived(profile.indexOf(Math.max(...profile)));
   let hover = $state(null);
-  const shown = $derived(hover ?? peakHour);
+  const shown = $derived(hover ?? hourNow);
   function select(event) {
     if (event.type === 'pointerdown') {
       if (event.pointerType !== 'mouse') event.preventDefault();
@@ -48,7 +47,7 @@
   </div>
 {/if}
 <div class="readout">
-  <span class="muted">{hover == null ? t('commun.jour.plus_chargee') : t('commun.jour.moyenne')}</span>
+  <span class="muted">{t('commun.jour.moyenne')}</span>
   <strong class="num">{t('commun.jour.plage', { from: shown, to: shown + 1, kwh: kwh(profile[shown]) })}</strong>
   {#if today?.[shown] != null}<span class="muted">{t('commun.jour.aujourdhui_kwh', { kwh: kwh(today[shown]) })}</span>{/if}
   {#if offAt(shown)}<span class="chip cool">{t('commun.jour.creuse')}</span>{:else if windows.length}<span class="chip warm">{t('commun.jour.pleine')}</span>{/if}

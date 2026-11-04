@@ -19,5 +19,7 @@
   "camera.video.play": "Voir en direct",
   "camera.video.stop": "Arrêter le direct",
   "camera.account.owner": "Un propriétaire doit autoriser la connexion des caméras.",
-  "camera.account.owner_failed": "Connexion propriétaire impossible. Vérifiez votre code et ouvrez l’adresse directe de Moli."
+  "camera.account.owner_failed": "Connexion propriétaire impossible. Vérifiez votre code et ouvrez l’adresse directe de Moli.",
+  "camera.display.title": "Orientation des caméras",
+  "camera.display.note": "Rotation mémorisée sur ce navigateur. Le flux conserve ses proportions."
 }

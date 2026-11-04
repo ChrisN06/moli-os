@@ -272,13 +272,30 @@ async fn connected(
         }
     }
     ctx.ready();
+    let mut refreshed: Option<Instant> = None;
     let mut tick = tokio::time::interval(Duration::from_secs(config.poll_seconds));
     tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
     loop {
         tokio::select! {
             command = ctx.next_command() => {
                 let Some(command) = command else { return Ok(()) };
-                send_command(config, &known, session, command).await;
+                if &*command.key == "refresh" && command.value == moli_core::Value::Bool(true) {
+                    if command.abandoned() { continue; }
+                    let id = command.device.id.clone();
+                    if refreshed.is_some_and(|at| at.elapsed() < Duration::from_secs(30)) {
+                        command.reply(Ok(())); continue;
+                    }
+                    let Some(_device) = known.get(&id) else { command.reply(Err(moli_i18n::tr!("pilotes.overkiz.refus"))); continue; };
+                    let limit = command.deadline.saturating_duration_since(Instant::now()).min(LIMIT);
+                    if limit.is_zero() { continue; }
+                    let result = session.call(Method::POST, "setup/devices/states/refresh", None, limit).await;
+                    match result {
+                        Ok(_) => { refreshed = Some(Instant::now()); command.reply(Ok(())); },
+                        Err(_) => command.reply(Err(moli_i18n::tr!("pilotes.overkiz.refus"))),
+                    }
+                } else {
+                    send_command(config, &known, session, command).await;
+                }
             }
             _ = tick.tick() => {
                 let events = session.call(Method::POST, &format!("events/{}/fetch", model::encode(listener)), Some(&json!({})), LIMIT).await?;

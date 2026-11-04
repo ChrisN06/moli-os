@@ -16,7 +16,7 @@ Le flux SSE `/api/events` est ouvert **une seule fois** et partagé (`web/src/li
 |---|---|---|
 | Accueil | `#/` | date, salut, heure, météo ; alertes seulement quand il y a un souci (fumée, eau, portes, sonnette, piscine, approbations) ; lumières favorites, et dessous **Ambiance** : le choix de la pièce (pastilles, la dernière choisie est retenue sur l'appareil) et le bandeau d'ambiances ; électricité (jauge du jour vs hier, et à côté la jauge **en direct** du Linky sur l'abonnement, `[energy.live]` : sa couleur dit combien on tire, pas la distance à l'abonnement, verte au calme, orange dès `warn` (par exemple 2 kVA), rouge au double ; mot « calme / modérée / soutenue / forte ») ; clims (cadran **tactile** : on fait glisser le doigt sur l'anneau pour la consigne, le point gris = la température de la pièce, la perle = la consigne, visibles même clim éteinte ; une consigne glissée clim éteinte part tout de suite et la clim démarre dessus ; marche/arrêt, consigne ± 0,5 °C regroupée en un seul ordre, mode, dès que le profil sait écrire) ; sonnette (image + dernier passage réel, lu dans l'historique) ; télécommande ; dehors en bref **Mise à jour du 7 oct.** : une tuile de lumière peut en commander plusieurs (`favorites.lights[].also` : par exemple une pièce et son couloir) ; Électricité : les plus gros consommateurs du moment en légende ; Climatisation : coût du jour et du mois par clim (compteur de son circuit, sinon « coût non mesuré ») ; Dehors : l'humidité à la place de la couleur Tempo. |
 | Moli | `#/moli` | l'assistant plein écran : la conversation à gauche, **l'écran se compose** à droite avec les cartes choisies par Moli (voir [moli.md](moli.md)) |
-| Salon | `#/salon` | éclairage uniquement : groupe et lampes déclarés dans `home.json`, ambiances ; état vide sans équipement. La télévision et le son restent disponibles dans les autres surfaces. |
+| Salon | `#/salon` | Éclairage et ambiances, température/humidité intérieures, volets des pièces Salon et Cuisine (liste personnalisable par `salon.cover_rooms`). |
 | Pièces | `#/pieces` | une carte par pièce : groupe Hue, lampes (curseur de luminosité ; lampe couleur : pastille qui ouvre une palette, trois blancs par température et huit couleurs + « autre couleur » ; en mode couleur l'ampoule de la tuile prend la teinte ; la tuile « Toute la pièce » a la même palette, appliquée à chaque lampe de la pièce qui sait la prendre) ; bouton **Ambiances** : un bandeau (Feu de cheminée, Bougies, Fin de journée, Cocooning, Fête, Océan, Forêt, Aurore boréale, Romantique, Cinéma, Lecture, Veilleuse), aussi sur la page Salon, volets, clims, prises, médias, capteurs en pastilles ; « Protégée » sur les chambres ; « Tout éteindre » **Depuis le 7 oct., cartes compactes** (`ui/RoomCard.svelte`) : en-tête = température de la pièce (moyenne de ses sondes et clims, jauge froid → chaud), ambiances (pastille), petit interrupteur de toutes ses lumières (jamais télé ni prises) ; lumières, télé, enceinte, prises en petites pastilles côte à côte, icônes parlantes (suspension, spot, lampe, ventilateur, prise…), ⚙ pour les réglages d'une lampe (luminosité, couleurs, ampoule par ampoule, ventilateur) ; une clim sur une ligne (le cadran au toucher) ; affichage « Aa » (noms) ou icônes seules, retenu par appareil (`pieces-look`). |
 | Lumières (D12) | partout | une lampe injoignable est « Coupée à l'interrupteur » (jamais comptée allumée, pas de halo ; un appui l'explique) ; une pièce Hue est « Toute la pièce », jamais une lampe ni une pastille du plan ; un **luminaire** (`lumieres:…`) remplace ses ampoules et son relais dans les vues de la famille, avec un bouton « ampoule par ampoule » (une couleur chacune) ; « Tout éteindre » une pièce = ses lampes et luminaires une à une, jamais la télé, l'enceinte ni les prises ; les ambiances visent les ampoules d'un luminaire. `home.svelte.js` : `isOn` (injoignable = éteint, groupe = une de ses lampes joignables), `isFixture`, `isGroup`, `fixtureOf`, `unpowered` |
 | Plan | `#/plan` | **le plan vivant** : un onglet par étage. Étage **dessiné** (`plan/Drawing.svelte`) : la maison redessinée en SVG depuis la donnée, zoom molette / pincement / double tap / boutons, 4 habillages (Plan, Blueprint, Nuit, Aquarelle ; choix par appareil, défaut de la maison en modification), chaque lampe allumée projette un halo découpé par sa pièce, les pièces se teintent ; bouton **3D** (`plan/House3D.svelte` + `plan/scene3d.js`, three.js chargé à la demande) : étages empilés, murs coupés à 60 % sur l'étage regardé, meubles modélisés (`plan/furniture3d.js` : lits, canapés, chaises, voitures, trampoline, transat…), murs de biais et murets, toit de tuiles sur l'étage qui en a un (le regarder = la maison de dehors), vraies lumières, toucher une perle = l'appareil. En modification d'un étage dessiné : ajouter / déplacer / tourner / redimensionner un élément (lit, canapé, voiture…), « poser les appareils dans leur pièce ». Étage **image** (ancien mode) : l'image du plan, une lumière allumée brille, une porte ouverte ou une présence se colore, une fumée ou une fuite clignote ; toucher = allumer/éteindre (lumières, prises), caméras et télé ouvrent leur page, le reste ouvre une fiche. « Modifier » : ajouter un étage avec son image (photo du plan acceptée), poser un appareil (le choisir dans la liste, toucher le plan), glisser pour déplacer ; enregistrer demande le code. Données : `data/plan.json`, images dans `data/plan/` (voir [api.md](api.md)). |
@@ -232,3 +232,29 @@ et envoi, avec un lien vers Réseau. Paramètres propose l'appairage propriétai
 aucun secret n'est saisi ou retourné dans le navigateur. `night.css` partage le
 fond bleu nuit, les surfaces, couleurs, bordures et rayons avec Maison et Atelier.
 Les schémas et preuves de développement utilisent des appareils fictifs.
+
+## Ajustements des pages — novembre 2026
+
+L’accueil utilise une grille responsive sans fragmentation multicolonne. Les éclairages
+et ambiances restent dans Salon et Pièces ; les raccourcis Salon et Dehors sont retirés.
+Pièces masque la pièce nommée Électricité, sans modifier ses appareils ni leur historique.
+Le Salon reprend les références `indoor` ou les sondes intérieures uniques, et les volets
+attribués aux pièces `salon.cover_rooms` (par défaut Salon et Cuisine).
+
+Chaque montage d’une tuile de volet demande l’actualisation des états Overkiz. La requête
+est regroupée par instance et limitée à une toutes les 30 secondes, côté navigateur et
+pilote. Le point `refresh` reste soumis aux droits et à la garde ; il ne lance aucun
+mouvement. Le retour arrive par les événements cloud, sans état de position optimiste.
+
+Les flux vidéo n’ont plus de bandeau de commande. Cliquer ouvre le lecteur ; un clic
+dans le lecteur révèle les commandes natives. Les proportions natives sont conservées.
+Paramètres propose une rotation 0/90/180/270°, mémorisée dans ce navigateur uniquement.
+Les flux s’arrêtent hors écran et lorsque l’onglet est masqué.
+
+La journée type sélectionne l’heure courante en l’absence d’interaction. L’éclairement
+utilise les bornes lever moins une heure / coucher plus une heure, lorsque disponibles ;
+il conserve la fenêtre de 24 heures en leur absence. Aucun point futur n’est inventé.
+
+Mi-Light conserve les valeurs déjà restaurées par le cache serveur au lieu de les effacer
+au redémarrage du pilote. Elles restent des états supposés, sans retour physique des lampes.
+Une commande incertaine continue d’invalider les valeurs concernées.

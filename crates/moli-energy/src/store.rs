@@ -40,6 +40,7 @@ pub struct Store {
 const SCHEMA: &str = "
     PRAGMA journal_mode = WAL;
     PRAGMA synchronous = NORMAL;
+    CREATE TABLE IF NOT EXISTS subscription (id INTEGER PRIMARY KEY CHECK(id=1), fee REAL NOT NULL CHECK(fee>=0 AND fee<=10000)) STRICT;
     CREATE TABLE IF NOT EXISTS fixed_price (
         ts INTEGER PRIMARY KEY,
         price REAL NOT NULL CHECK(price >= 0 AND price <= 10)
@@ -80,6 +81,20 @@ fn unms(v: i64) -> u64 {
 }
 
 impl Store {
+    pub fn set_monthly_fee(&self, fee: f64) -> Result<(), EnergyError> {
+        if !fee.is_finite() || !(0.0..=10000.0).contains(&fee) {
+            return Err(EnergyError::Invalid("invalid monthly subscription".into()));
+        }
+        self.conn().execute("INSERT INTO subscription(id,fee) VALUES(1,?1) ON CONFLICT(id) DO UPDATE SET fee=excluded.fee", [fee])?;
+        Ok(())
+    }
+    pub fn monthly_fee(&self) -> Result<Option<f64>, EnergyError> {
+        Ok(self
+            .conn()
+            .query_row("SELECT fee FROM subscription WHERE id=1", [], |r| r.get(0))
+            .optional()?)
+    }
+
     pub fn set_fixed_price(&self, at: u64, price: f64) -> Result<(), EnergyError> {
         if !price.is_finite() || !(0.0..=10.0).contains(&price) {
             return Err(EnergyError::Invalid(
@@ -307,10 +322,15 @@ mod tests {
         {
             let store = Store::open(&path).unwrap();
             store.set_fixed_price(1000, 0.21).unwrap();
+            store.set_monthly_fee(15.5).unwrap();
         }
         {
             let store = Store::open(&path).unwrap();
             assert_eq!(store.fixed_price().unwrap(), Some((1000, 0.21)));
+            assert_eq!(store.monthly_fee().unwrap(), Some(15.5));
+            assert!(store.set_monthly_fee(-1.0).is_err());
+            assert!(store.set_monthly_fee(f64::NAN).is_err());
+            assert!(store.set_monthly_fee(10001.0).is_err());
         }
         std::fs::remove_file(path).unwrap();
     }

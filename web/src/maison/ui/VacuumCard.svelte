@@ -1,7 +1,8 @@
 <script>
+  import { onMount } from 'svelte';
   import { hub,home,value,act } from '../lib/home.svelte.js';
   import {t} from '../../lib/i18n.svelte.js';
-  import {at,rectangle,overlay,picture} from '../lib/vacuum-map.js';
+  import {at,rectangle,overlay,picture,rebase} from '../lib/vacuum-map.js';
   let {id}=$props();
   const device=$derived(hub.devices[id]), instance=$derived(device?.instance), writable=$derived(device?.points?.some(p=>p.key==='action' && p.access?.write));
   let map=$state(null), image=$state(''), bounds=$state(null), saved=$state(false), busy=$state(false), message=$state(''), start=$state(null);
@@ -13,15 +14,17 @@
     if(!r.ok) throw new Error(result.error??t('xiaomi.zone.map_failed'));
     return result;
   }
-  async function load() {
+  async function load(automatic=false) {
     if(busy)return;busy=true;message='';
     try {
       const result=await request('map'); image=picture(result);map=result;
       const stored=(await request('zone')).zone;
-      saved=!!stored && stored.map_index===map.index && stored.frame===map.frame && stored.dock.every((p,i)=>Math.abs(p-map.dock[i])<=100);
-      bounds=saved?stored.bounds:rectangle(at(map,Math.max(0,(map.width-94)/2),Math.max(0,(map.height-66)/2)),at(map,Math.min(map.width,(map.width+94)/2),Math.min(map.height,(map.height+66)/2)));
-    }catch(e){message=e.message;}finally{busy=false;}
+      const rebased=rebase(map,stored);
+      saved=!!rebased;
+      bounds=saved?rebased:rectangle(at(map,Math.max(0,(map.width-94)/2),Math.max(0,(map.height-66)/2)),at(map,Math.min(map.width,(map.width+94)/2),Math.min(map.height,(map.height+66)/2)));
+    }catch(e){if(!automatic)message=e.message;}finally{busy=false;}
   }
+  onMount(() => { load(true); const timer=setInterval(() => { if (document.visibilityState==='visible' && !start && (!bounds || saved)) load(true); },60000); return () => clearInterval(timer); });
   function point(e) {const svg=e.currentTarget,p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;const xy=p.matrixTransform(svg.getScreenCTM().inverse());return at(map,xy.x,xy.y);}
   function down(e) {if(busy)return;e.preventDefault();e.currentTarget.setPointerCapture(e.pointerId);start=point(e);bounds=rectangle(start,start);saved=false;}
   function move(e) {if(start){e.preventDefault();bounds=rectangle(start,point(e));}}
@@ -51,7 +54,7 @@
   {#if !writable}<p class="muted">{t('xiaomi.vacuum.read_only')}</p>{/if}
   <h3>{t('xiaomi.zone.title')}</h3>
   <p class="muted">{t('xiaomi.zone.note')}</p>
-  <button disabled={busy || !device?.online} onclick={load}>{t(busy?'xiaomi.zone.loading':'xiaomi.zone.load')}</button>
+  <button disabled={busy || !device?.online} onclick={()=>load()}>{t(busy?'xiaomi.zone.loading':'xiaomi.zone.load')}</button>
   {#if map}
     <p>{t('xiaomi.zone.draw')}</p>
     <svg viewBox={`0 0 ${map.width} ${map.height}`} role="img" aria-label={t('xiaomi.zone.title')} onpointerdown={down} onpointermove={move} onpointerup={up} onpointercancel={()=>{start=null;}}>
