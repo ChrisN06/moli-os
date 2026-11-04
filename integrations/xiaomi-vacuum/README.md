@@ -76,3 +76,8 @@ cette opération sur une carte fraîche et refuse tout rectangle invalide ou hor
 Ce recalage suppose que les axes de la carte restent orientés de la même façon : une base
 ponctuelle ne permet pas de retrouver une rotation. Si les axes ont tourné, redessiner et
 confirmer le rectangle avant de commander. Aucun nettoyage global de repli.
+
+Les seules lectures locales `miIO.info` et `get_status` sont relues une fois après un délai
+d’attente, avec un identifiant augmenté de 100. Une réponse tardive authentifiée de
+l’ancienne requête est ignorée jusqu’à la nouvelle réponse, dans le même délai borné.
+Les commandes moteur continuent d’être envoyées une seule fois.

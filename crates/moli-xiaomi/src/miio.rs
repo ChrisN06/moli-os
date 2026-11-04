@@ -148,6 +148,23 @@ impl Miio {
             id: 0,
         })
     }
+    /// Retry only read-only probes, with a fresh sequence number; motor commands use `call` once.
+    pub async fn read(&mut self, method: &str) -> anyhow::Result<Value> {
+        ensure!(
+            matches!(method, "miIO.info" | "get_status"),
+            "unsupported miIO read"
+        );
+        match self.call(method, json!([])).await {
+            Err(error) if error.root_cause().is::<tokio::time::error::Elapsed>() => {
+                self.id = self
+                    .id
+                    .checked_add(100)
+                    .ok_or_else(|| anyhow!("miIO sequence exhausted"))?;
+                self.call(method, json!([])).await
+            }
+            result => result,
+        }
+    }
     pub async fn call(&mut self, method: &str, params: Value) -> anyhow::Result<Value> {
         self.id = self
             .id
@@ -164,10 +181,16 @@ impl Miio {
             .send(&packet(&self.token, self.device, now, &data)?)
             .await?;
         let mut reply = vec![0; 65536];
-        let n = timeout(WAIT, self.socket.recv(&mut reply))
-            .await
-            .context("miIO authenticated reply timed out")??;
-        let result = unpack(&self.token, self.device, &reply[..n], self.id)?;
+        let deadline = tokio::time::Instant::now() + WAIT;
+        let result = loop {
+            let n = tokio::time::timeout_at(deadline, self.socket.recv(&mut reply))
+                .await
+                .context("miIO authenticated reply timed out")??;
+            match unpack(&self.token, self.device, &reply[..n], self.id) {
+                Err(error) if error.to_string() == "miIO sequence mismatch" => {}
+                result => break result?,
+            }
+        };
         self.time = u32::from_be_bytes(reply[12..16].try_into()?);
         self.opened = Instant::now();
         Ok(result)
@@ -246,6 +269,46 @@ mod tests {
             8
         );
         assert_eq!(server.await.unwrap(), ["miIO.info", "get_status"]);
+    }
+    #[tokio::test]
+    async fn timed_out_reads_change_sequence_and_ignore_authenticated_late_replies() {
+        let socket = UdpSocket::bind("127.0.0.1:0").await.unwrap();
+        let port = socket.local_addr().unwrap().port();
+        let server = tokio::spawn(async move {
+            let mut bytes = [0; 4096];
+            let (_, peer) = socket.recv_from(&mut bytes).await.unwrap();
+            let mut hello = [0; 32];
+            hello[..4].copy_from_slice(&[0x21, 0x31, 0, 32]);
+            hello[8..12].copy_from_slice(&[1, 2, 3, 4]);
+            hello[12..16].copy_from_slice(&123u32.to_be_bytes());
+            socket.send_to(&hello, peer).await.unwrap();
+            for expected in [1, 102] {
+                let (n, peer) = socket.recv_from(&mut bytes).await.unwrap();
+                let plain = crypt(&[7; 16], &bytes[32..n], true).unwrap();
+                let query: Value = serde_json::from_slice(&plain[..plain.len() - 1]).unwrap();
+                assert_eq!(query["method"], "get_status");
+                assert_eq!(query["id"], expected);
+                if expected == 102 {
+                    for id in [1, 102] {
+                        let response =
+                            serde_json::to_vec(&json!({"id":id,"result":[{"state":8}]})).unwrap();
+                        socket
+                            .send_to(
+                                &packet(&[7; 16], [1, 2, 3, 4], 128, &response).unwrap(),
+                                peer,
+                            )
+                            .await
+                            .unwrap();
+                    }
+                }
+            }
+        });
+        let mut client = Miio::connect(std::net::Ipv4Addr::LOCALHOST, port, &"07".repeat(16))
+            .await
+            .unwrap();
+        assert!(client.read("app_start").await.is_err());
+        assert_eq!(client.read("get_status").await.unwrap()[0]["state"], 8);
+        server.await.unwrap();
     }
     #[test]
     fn framing_authentication_sequence_and_padding() {
