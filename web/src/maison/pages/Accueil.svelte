@@ -11,6 +11,7 @@
   import CameraTile from '../ui/CameraTile.svelte';
   import AmbiancePicker from '../ui/AmbiancePicker.svelte';
   import Routines from '../ui/Routines.svelte';
+  import FreeboxRates from '../ui/FreeboxRates.svelte';
   import SkyHero from '../ui/SkyHero.svelte';
 
   const cfg = $derived(home.config ?? {});
@@ -201,6 +202,7 @@
     </section>
 
     <div class="side">
+      <FreeboxRates />
       <EnergyCard />
       <Routines />
     </div>
@@ -333,7 +335,11 @@
 
   .side {
     grid-column: span 4;
+    display:grid;
+    gap:16px;
   }
+
+  .house-climate { grid-column:span 4; }
 
   .climate {
     grid-column: span 7;
@@ -523,6 +529,7 @@
     }
 
     .side,
+    .house-climate,
     .doorbell {
       grid-column: span 6;
       grid-row: auto;

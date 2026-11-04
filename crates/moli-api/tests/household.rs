@@ -453,3 +453,22 @@ async fn xiaomi_credentials_require_owner_before_any_relay_request() {
     );
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[tokio::test]
+async fn freebox_pairing_requires_owner_and_never_returns_a_token() {
+    let dir = std::env::temp_dir().join(format!("moli-freebox-test-{}", moli_core::now_ms()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let hub = bedroom(&dir).await;
+    let addr = serve(&hub, &moli_api::Options::default()).await;
+    let (status, _, body) = request(&addr, "GET", "/api/freebox", &json!({}), "").await;
+    assert_eq!(status, 200);
+    assert!(body.contains("false"));
+    assert!(!body.contains("token"));
+    let (status, _, _) = request(&addr, "GET", "/api/freebox/traffic", &json!({}), "").await;
+    assert_eq!(status, 404);
+    for route in ["/api/freebox/pair", "/api/freebox/confirm"] {
+        let (status, _, body) = request(&addr, "POST", route, &json!({}), UI).await;
+        assert_eq!(status, 403);
+        assert!(!body.contains("token"));
+    }
+}
