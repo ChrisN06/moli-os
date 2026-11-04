@@ -1,15 +1,13 @@
 <script>
   import { onMount } from 'svelte';
-  import { home, hub, value, device, isOn, clock, num, relative, lastSeen, roomList, lampsOf, nameOf, doorOpen, leak, lowBattery, act, pending } from '../lib/home.svelte.js';
+  import { home, hub, value, device, clock, num, relative, lastSeen, nameOf, doorOpen, leak, lowBattery, act, pending } from '../lib/home.svelte.js';
   import { houseReading } from '../lib/readings.js';
   import { isPrinter, phase } from '../lib/printers.js';
   import { t, locale } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
-  import LightTile from '../ui/LightTile.svelte';
   import ClimateCard from '../ui/ClimateCard.svelte';
   import EnergyCard from '../ui/EnergyCard.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
-  import AmbiancePicker from '../ui/AmbiancePicker.svelte';
   import Routines from '../ui/Routines.svelte';
   import FreeboxRates from '../ui/FreeboxRates.svelte';
   import SkyHero from '../ui/SkyHero.svelte';
@@ -18,29 +16,6 @@
   const out = $derived(cfg.outdoor ?? {});
   const houseTemp = $derived(houseReading(hub.devices, cfg, 'temperature'));
   const houseHumidity = $derived(houseReading(hub.devices, cfg, 'humidity'));
-
-  const lights = $derived(cfg.favorites?.lights ?? []);
-  const unknownLights = $derived(lights.some((l) => [l.id, ...(l.also ?? [])].some((id) => value(id, 'state_estimated') === true && value(id, 'on') == null)));
-  const litCount = $derived(lights.filter((l) => [l.id, ...(l.also ?? [])].some((i) => isOn(i))).length);
-
-  // Ambiances, room by room (the last room chosen is remembered here).
-  const moodRooms = $derived(roomList().map((r) => ({ name: r.name, lamps: lampsOf(r) })).filter((r) => r.lamps.length));
-  let moodPick = $state((() => {
-    try {
-      return localStorage.getItem('moli.mood-room');
-    } catch {
-      return null;
-    }
-  })());
-  const mood = $derived(moodRooms.find((r) => r.name === moodPick) ?? moodRooms.find((r) => r.name === 'Salon') ?? moodRooms[0]);
-  function pickRoom(name) {
-    moodPick = name;
-    try {
-      localStorage.setItem('moli.mood-room', name);
-    } catch {
-      /* remembered for this visit only */
-    }
-  }
 
   // The house's mode (a helper, « Mode Maison »): one tap, like Home
   // Assistant's mode buttons.
@@ -119,20 +94,6 @@
     return list;
   });
 
-  const aqi = $derived(value(out.air, 'aqi'));
-  const aqiWord = $derived(
-    aqi == null
-      ? '—'
-      : aqi <= 20
-        ? t('maison.air.tres_bon')
-        : aqi <= 40
-          ? t('maison.air.bon')
-          : aqi <= 60
-            ? t('maison.air.moyen')
-            : aqi <= 80
-              ? t('maison.air.mediocre')
-              : t('maison.air.mauvais'),
-  );
   const bell = $derived((cfg.favorites?.cameras ?? [])[0]);
 
   // The last real passage at the door (the history knows; the live value
@@ -176,36 +137,9 @@
   </section>
 
   <div class="grid">
-    <section class="card lights">
-      <div class="card-head">
-        <h2><Icon name="light" size={18} />{t('maison.accueil.lumieres')} <span class="count">{unknownLights ? t('commun.lampe.etat_inconnu') : litCount ? t('maison.accueil.allumees', { count: litCount }) : t('maison.accueil.tout_eteint')}</span></h2>
-        <a class="more" href="#/pieces" aria-label={t('maison.accueil.toutes_pieces')}><Icon name="arrow-top-right" size={18} /></a>
-      </div>
-      <div class="tiles">
-        {#each lights as l (l.id)}
-          <LightTile id={l.id} name={l.name} icon={l.icon} dimmer also={l.also ?? []} />
-        {/each}
-      </div>
-      {#if mood}
-        <div class="moods">
-          <div class="moods-head">
-            <span class="moods-title"><Icon name="palette" size={16} />{t('maison.accueil.ambiance')}</span>
-            <div class="rooms" role="group" aria-label={t('maison.accueil.piece')}>
-              {#each moodRooms as r (r.name)}
-                <button class:on={r.name === mood.name} onclick={() => pickRoom(r.name)} aria-pressed={r.name === mood.name}>{r.name}</button>
-              {/each}
-            </div>
-          </div>
-          <AmbiancePicker lights={mood.lamps} label={mood.name} />
-        </div>
-      {/if}
-    </section>
-
-    <div class="side">
-      <FreeboxRates />
-      <EnergyCard />
-      <Routines />
-    </div>
+    <FreeboxRates />
+    <EnergyCard />
+    <Routines />
 
     <section class="card house-climate">
       <div class="card-head"><h2><Icon name="thermometer" size={18}/>{t('maison.accueil.temperature_maison')}</h2></div>
@@ -237,26 +171,7 @@
       </section>
     {/if}
 
-    <a class="card living-room" href="#/salon">
-      <Icon name="light-group" size={40} />
-      <span class="living-room-text">
-        <strong>{t('salon.titre')}</strong>
-        <span class="muted">{t('salon.eclairage_description')}</span>
-      </span>
-      <span class="go"><Icon name="arrow-top-right" size={20} /></span>
-    </a>
 
-    <a class="card outside" href="#/dehors">
-      <div class="card-head"><h2><Icon name="flower-outline" size={18} />{t('maison.accueil.dehors')}</h2><span class="more" aria-hidden="true"><Icon name="arrow-top-right" size={18} /></span></div>
-      <div class="facts">
-        <div><small>{t('maison.accueil.air')}</small><b>{aqiWord}</b></div>
-        <div><small>UV</small><b class="num">{num(value(out.air, 'uv_index'), 0)}</b></div>
-        <div><small>{t('maison.accueil.humidite')}</small><b class="num">{value(out.weather, 'humidity') != null ? `${num(value(out.weather, 'humidity'))} %` : '—'}</b></div>
-        {#if out.pool}
-          <div><small>{t('maison.accueil.piscine')}</small><b class="num">{value(out.pool, 'temperature') != null ? `${num(value(out.pool, 'temperature'), 1)}°` : '—'}</b></div>
-        {/if}
-      </div>
-    </a>
   </div>
 </div>
 
@@ -324,102 +239,9 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: 20px;
     align-items: start;
-  }
-
-  .lights {
-    grid-column: span 8;
-  }
-
-  .side {
-    grid-column: span 4;
-    display:grid;
-    gap:16px;
-  }
-
-  .house-climate { grid-column:span 4; }
-
-  .climate {
-    grid-column: span 7;
-  }
-
-  .doorbell {
-    grid-column: span 5;
-    grid-row: span 2;
-  }
-
-  .living-room {
-    grid-column: span 3;
-  }
-
-  .outside {
-    grid-column: span 4;
-  }
-
-  .moods {
-    grid-template-columns: minmax(0, 1fr);
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
-    display: grid;
-    gap: 12px;
-  }
-
-  .moods-head {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px 14px;
-    flex-wrap: wrap;
-  }
-
-  .moods-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
-  .rooms {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    min-width: 0;
-    flex: 1;
-  }
-
-  .rooms button {
-    flex: none;
-    border: 0;
-    border-radius: 999px;
-    padding: 6px 12px;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 650;
-    background: var(--surface-2);
-    color: var(--ink-3);
-    cursor: pointer;
-  }
-
-  .rooms button.on {
-    background: var(--warm-soft);
-    color: var(--warm-ink);
-  }
-
-  .count {
-    font-weight: 550;
-    color: var(--ink-3);
-    margin-left: 4px;
-  }
-
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
   }
 
   .clims {
@@ -431,51 +253,6 @@
   .small {
     font-size: 13px;
     margin-top: 10px;
-  }
-
-  .living-room {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 14px;
-    color: inherit;
-    text-decoration: none;
-    min-height: 168px;
-    align-content: space-between;
-    transition: transform 0.2s var(--ease);
-  }
-
-  .living-room:hover,
-  .outside:hover {
-    transform: translateY(-2px);
-  }
-
-  .living-room-text {
-    display: grid;
-  }
-
-  .living-room-text strong {
-    font-size: 18px;
-  }
-
-  .living-room-text span {
-    font-size: 13px;
-  }
-
-  .go {
-    align-self: end;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--surface-2);
-    display: grid;
-    place-items: center;
-    color: var(--ink-2);
-  }
-
-  .outside {
-    color: inherit;
-    text-decoration: none;
-    transition: transform 0.2s var(--ease);
   }
 
   .facts {
@@ -496,62 +273,8 @@
     font-weight: 650;
   }
 
-  /* Without the air-conditioning card the twelve-column grid no longer tiles:
-     a row is as tall as its tallest card (the energy side, the doorbell over
-     two rows) and leaves empty space under the short ones. On a wide screen
-     the cards then stack in columns, which leaves no hole whichever cards
-     the house has. */
-  @media (min-width: 1181px) {
-    .grid:not(:has(.climate)) {
-      display: block;
-      columns: 420px 3;
-      column-gap: 20px;
-    }
-
-    .grid:not(:has(.climate)) > * {
-      width: 100%;
-      margin: 0 0 20px;
-      break-inside: avoid;
-    }
-
-    /* Out of a grid, a card that is a link turns inline again and loses its
-       background. Block it, with no specificity, so a card that declares its
-       own display (the living room card) keeps it. */
-    :where(.grid:not(:has(.climate))) > :where(a) {
-      display: block;
-    }
-  }
-
-  @media (max-width: 1180px) {
-    .lights,
-    .climate {
-      grid-column: span 12;
-    }
-
-    .side,
-    .house-climate,
-    .doorbell {
-      grid-column: span 6;
-      grid-row: auto;
-    }
-
-    .living-room,
-    .outside {
-      grid-column: span 6;
-    }
-  }
-
+  .grid > * { min-width: 0; }
   @media (max-width: 760px) {
-    .grid > * {
-      grid-column: span 12 !important;
-    }
-
-    .tiles {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .clims {
-      grid-template-columns: 1fr;
-    }
+    .clims { grid-template-columns: 1fr; }
   }
 </style>

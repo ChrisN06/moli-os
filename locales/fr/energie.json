@@ -52,7 +52,7 @@
   "energie.solaire.note.water": "Le ballon garde la chaleur : chauffée à midi, l’eau reste chaude pour le soir.",
   "energie.solaire.note.pool": "La filtration fait le même travail en journée.",
   "energie.solaire.note.heat": "Seule une part se décale (préchauffer ou rafraîchir d’avance) : le confort passe d’abord.",
-  "energie.solaire.note.hypothetique": "Ballon hypothétique : aucun chauffe-eau n’est mesuré, on suppose 4 kWh par nuit pris dans «\u00a0le reste de la maison\u00a0».",
+  "energie.solaire.note.hypothetique": "Ballon hypothétique : aucun chauffe-eau n’est mesuré, on suppose 4 kWh par nuit pris dans « le reste de la maison ».",
   "energie.solaire.idee.charge_titre": "{verb} entre {from} h et {to} h",
   "energie.solaire.idee.habituel": "D’habitude entre {from} h et {to} h, au prix du réseau.",
   "energie.solaire.idee.charge_texte": "Moli s’en chargerait aux heures où les panneaux donnent plus que la maison ne consomme : {kwh} kWh par mois passeraient sur le soleil.",
@@ -170,7 +170,7 @@
   "energie.solaire.banner.debut": "Aucun panneau n’est installé ici : Moli imagine une installation de {kwc} kWc {orientation}{battery}, et la croise heure par heure avec la",
   "energie.solaire.banner.avec_batterie": "avec une batterie de {n} kWh",
   "energie.solaire.banner.vraie": "vraie consommation",
-  "energie.solaire.banner.fin": "de la maison{days}. Le soleil est calculé, les nuages tirés au sort. Ce qui est marqué «\u00a0hypothèse\u00a0» se règle en bas de page.",
+  "energie.solaire.banner.fin": "de la maison{days}. Le soleil est calculé, les nuages tirés au sort. Ce qui est marqué « hypothèse » se règle en bas de page.",
   "energie.solaire.banner.sur_jours": "sur les {n} derniers jours",
   "energie.solaire.orient_phrase.90": "à l’est",
   "energie.solaire.orient_phrase.135": "au sud-est",
@@ -362,5 +362,10 @@
   "energie.price.owner": "Identifiez-vous comme propriétaire pour modifier le tarif.",
   "energie.price.invalid": "Saisissez un prix entre 0 et 10 par kWh, sans tarif heures pleines/creuses configuré.",
   "energie.price.partial": "Coût partiel depuis l’activation du tarif",
-  "energie.price.estimate": "Coûts estimés au tarif fixe actuel, y compris l’historique ; hors abonnement. Les anciens tarifs ne sont pas connus."
+  "energie.price.estimate": "Consommation estimée au tarif fixe actuel, y compris l’historique. Les totaux incluent l’abonnement ; les coûts par appareil l’excluent. Les anciens tarifs ne sont pas connus.",
+  "energie.fee.title": "Abonnement électrique",
+  "energie.fee.label": "Montant mensuel TTC (€)",
+  "energie.fee.note": "Estimation au montant actuel, répartie au prorata des jours du mois.",
+  "energie.fee.invalid": "Saisissez un montant entre 0 et 10 000.",
+  "energie.fee.chart": "Dont abonnement : {cost}"
 }

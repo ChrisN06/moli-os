@@ -1,4 +1,5 @@
 <script>
+  import { subscriptionCost } from '../lib/subscription.js';
   import { kwh, euros } from '../lib/energy-live.svelte.js';
   import { deviceSeries } from '../lib/energy-series.js';
   import { barIndex } from '../lib/readings.js';
@@ -27,6 +28,7 @@
   $effect(() => {
     const { step, count } = RANGES[range];
     void energy.summary?.fixed_price;
+    void energy.summary?.monthly_fee;
     error = '';
     hover = null;
     fetch(`/api/energy/series?step=${step}&count=${count}`)
@@ -70,10 +72,11 @@
   };
 
   const bars = $derived(
-    (report?.buckets ?? []).map((b) => {
+    (report?.buckets ?? []).map((b, i, buckets) => {
       const parts = series.map((s) => ({ s, a: amount(b, s) }));
       return {
         start: b.start,
+        fee: subscriptionCost(report.monthly_fee, b.start, Math.min(Date.now(), buckets[i + 1]?.start ?? report.to), report.timezone),
         parts,
         total: parts.reduce((t, p) => t + p.a.kwh, 0),
         cost: parts.some((p) => p.a.cost != null) ? parts.reduce((t, p) => t + (p.a.cost ?? 0), 0) : null,
@@ -123,6 +126,7 @@
     return { per, kwh: per.reduce((t, p) => t + p.kwh, 0), cost: bars.some((b) => b.cost != null) ? per.reduce((t, p) => t + p.cost, 0) : null };
   });
 
+  const fee = $derived(shown ? shown.fee : bars.reduce((sum, b) => sum + b.fee, 0));
   const shown = $derived(hover != null ? bars[hover] : null);
   function select(event) {
     if (event.type === 'pointerdown') {
@@ -140,15 +144,16 @@
 {:else if !report}
   <p class="muted">{t('energie.chargement')}</p>
 {:else}
+  <p class="muted">{t('energie.fee.chart', {cost: euros(fee, report.currency)})}</p>
   <div class="readout" aria-live="polite">
     {#if shown}
       <span class="when">{when(shown.start)}</span>
       <strong class="num">{kwh(shown.total)} kWh</strong>
-      {#if shown.cost != null}<span class="num">{euros(shown.cost, report.currency)}</span>{/if}
+      {#if shown.cost != null}<span class="num">{euros(shown.cost + shown.fee, report.currency)}</span>{/if}
     {:else}
       <span class="when">{t('energie.chart.periode')}</span>
       <strong class="num">{kwh(totals.kwh)} kWh</strong>
-      {#if totals.cost != null}<span class="num">{euros(totals.cost, report.currency)}</span>{/if}
+      {#if totals.cost != null}<span class="num">{euros(totals.cost + fee, report.currency)}</span>{/if}
     {/if}
   </div>
 

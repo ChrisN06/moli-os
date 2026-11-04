@@ -41,6 +41,60 @@ impl Vacuum {
         config.validate()?;
         Ok(Self { config })
     }
+    async fn connect(config: &Config, account: &Account) -> anyhow::Result<(Miio, Json)> {
+        let mut client = Miio::connect(
+            config.host,
+            config.port,
+            account.token.as_deref().unwrap_or_default(),
+        )
+        .await?;
+        let info = client.call("miIO.info", json!([])).await?;
+        ensure!(
+            info["model"].as_str() == Some("rockrobo.vacuum.v1"),
+            "unexpected vacuum model"
+        );
+        Ok((client, info))
+    }
+    async fn recover(config: &Config, account: &Account) -> anyhow::Result<(Miio, Json, Account)> {
+        let devices = account.cloud().await?.devices().await?;
+        let (target, current) = Self::recovered_target(config, account, &devices)?;
+        let (mut client, info) = Self::connect(&target, &current).await?;
+        let status = client.call("get_status", json!([])).await?;
+        ensure!(
+            status.as_array().is_some_and(|a| !a.is_empty()),
+            "vacuum status unavailable"
+        );
+        Ok((client, info, current))
+    }
+    fn recovered_target(
+        config: &Config,
+        account: &Account,
+        devices: &[Json],
+    ) -> anyhow::Result<(Config, Account)> {
+        let matches: Vec<_> = devices
+            .iter()
+            .filter(|d| {
+                d["did"].as_str() == Some(&account.device)
+                    && d["model"].as_str() == Some(&account.model)
+            })
+            .collect();
+        let [device] = matches.as_slice() else {
+            anyhow::bail!("vacuum identity unavailable");
+        };
+        let mut current = account.clone();
+        current.token = device["token"].as_str().map(str::to_owned);
+        ensure!(
+            current.valid(Kind::Vacuum),
+            "invalid recovered vacuum account"
+        );
+        let mut target = config.clone();
+        target.host = device["localip"]
+            .as_str()
+            .ok_or_else(|| anyhow!("vacuum address unavailable"))?
+            .parse()?;
+        target.validate()?;
+        Ok((target, current))
+    }
     pub async fn verify(config: &Config, account: &Account) -> anyhow::Result<Json> {
         ensure!(account.valid(Kind::Vacuum), "invalid vacuum account");
         let mut client = Miio::connect(
@@ -212,13 +266,11 @@ impl Driver for Vacuum {
                     tokio::select! {()=tokio::time::sleep(Duration::from_secs(3))=>{},command=ctx.next_command()=>{if let Some(c)=command{c.reply(Err(moli_i18n::tr!("xiaomi.vacuum.read_only")));}else{return Ok(());}}}
                     continue;
                 };
-                let mut client = Miio::connect(
-                    self.config.host,
-                    self.config.port,
-                    account.token.as_deref().unwrap_or_default(),
-                )
-                .await?;
-                let info = client.call("miIO.info", json!([])).await?;
+                let (mut client, info, account) = match Self::connect(&self.config, &account).await
+                {
+                    Ok((client, info)) => (client, info, account),
+                    Err(_) => Self::recover(&self.config, &account).await?,
+                };
                 ensure!(
                     info["model"].as_str() == Some("rockrobo.vacuum.v1"),
                     "unexpected vacuum model"
@@ -248,7 +300,7 @@ impl Driver for Vacuum {
                         let Some(zone)=ctx.secret(ZONE).and_then(|s|serde_json::from_str::<Zone>(&s).ok()).filter(|z: &Zone| z.valid() && z.confirmed_at > 0) else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.required")));continue;};
                         let status=client.call("get_status",json!([])).await?;
                         if !status.get(0).and_then(|s|s["state"].as_u64()).is_some_and(|s|matches!(s,3|8|10)) {command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.busy")));continue;}
-                        let result=crate::map::current(&self.config,&account).await.and_then(|map|{ensure!(map.matches(&zone),"kitchen map changed");zone.params()});
+                        let result=crate::map::current(&self.config,&account).await.and_then(|map|{map.rebase(&zone)?.params()});
                         if let Ok(params)=result {("app_zoned_clean",params)} else {command.reply(Err(moli_i18n::tr!("xiaomi.zone.changed")));continue;}
                        }
                        _=>{command.reply(Err(moli_i18n::tr!("xiaomi.vacuum.invalid")));continue;}
@@ -269,6 +321,38 @@ impl Driver for Vacuum {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn recovery_is_bound_to_device_identity_and_local_addresses() {
+        let config: Config =
+            serde_json::from_value(json!({"host":"127.0.0.1","relay_host":"127.0.0.1"})).unwrap();
+        let account = Account {
+            user: "123".into(),
+            region: "de".into(),
+            device: "456".into(),
+            model: "rockrobo.vacuum.v1".into(),
+            relay_config: "xiaomi:\n  \"123\": dummy-token\n".into(),
+            token: Some("01".repeat(16)),
+        };
+        let device = json!({"did":"456","model":"rockrobo.vacuum.v1","localip":"192.168.1.10","token":"02".repeat(16)});
+        let (target, recovered) =
+            Vacuum::recovered_target(&config, &account, std::slice::from_ref(&device)).unwrap();
+        assert_eq!(target.host.to_string(), "192.168.1.10");
+        assert_eq!(recovered.token, Some("02".repeat(16)));
+        assert!(Vacuum::recovered_target(&config, &account, &[]).is_err());
+        assert!(
+            Vacuum::recovered_target(&config, &account, &[device.clone(), device.clone()]).is_err()
+        );
+        for (key, value) in [
+            ("did", "999"),
+            ("model", "other"),
+            ("token", "bad"),
+            ("localip", "8.8.8.8"),
+        ] {
+            let mut bad = device.clone();
+            bad[key] = json!(value);
+            assert!(Vacuum::recovered_target(&config, &account, &[bad]).is_err());
+        }
+    }
     #[test]
     fn regular_cleaning_is_explicit_and_never_a_kitchen_fallback() {
         assert_eq!(regular_command("clean"), Some("app_start"));

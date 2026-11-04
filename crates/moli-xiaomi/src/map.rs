@@ -20,6 +20,24 @@ pub struct Map {
     pub pixels: String,
 }
 impl Map {
+    pub fn rebase(&self, zone: &Zone) -> anyhow::Result<Zone> {
+        ensure!(
+            zone.valid() && zone.confirmed_at > 0,
+            "invalid kitchen rectangle"
+        );
+        let dx = i32::from(self.dock[0]) - i32::from(zone.dock[0]);
+        let dy = i32::from(self.dock[1]) - i32::from(zone.dock[1]);
+        let mut rebased = zone.clone();
+        for (i, bound) in rebased.bounds.iter_mut().enumerate() {
+            *bound = u16::try_from(i32::from(*bound) + if i % 2 == 0 { dx } else { dy })?;
+        }
+        rebased.dock = self.dock;
+        rebased.map_index = self.index;
+        rebased.frame.clone_from(&self.frame);
+        ensure!(self.matches(&rebased), "kitchen outside current map");
+        Ok(rebased)
+    }
+
     pub fn matches(&self, z: &Zone) -> bool {
         z.valid()
             && self.index == z.map_index
@@ -356,6 +374,34 @@ mod tests {
         assert!(parse(&[0; 100]).is_err());
         assert!(!map_host("fds.api.xiaomi.com.attacker.invalid"));
         assert!(!map_host("127.0.0.1"));
+    }
+    #[test]
+    fn rebase_preserves_size_and_rejects_outside_map() {
+        let map = Map {
+            index: 5,
+            frame: "b".repeat(64),
+            left: 5000,
+            bottom: 5000,
+            width: 400,
+            height: 400,
+            dock: [16000, 13000],
+            robot: None,
+            pixels: String::new(),
+        };
+        let zone = Zone {
+            bounds: [10000, 11000, 14700, 14300],
+            dock: [15000, 15000],
+            map_index: 1,
+            frame: "a".repeat(64),
+            confirmed_at: 1,
+        };
+        let rebased = map.rebase(&zone).unwrap();
+        assert_eq!(rebased.bounds, [11000, 9000, 15700, 12300]);
+        assert!(map.matches(&rebased));
+        assert_eq!(zone.bounds, [10000, 11000, 14700, 14300]);
+        let mut outside = map;
+        outside.dock = [100, 100];
+        assert!(outside.rebase(&zone).is_err());
     }
     #[test]
     fn changed_dock_or_map_prevents_kitchen_cleaning() {

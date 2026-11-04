@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { useEnergy, energy } from '../lib/energy-live.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
+  import CameraDisplay from '../ui/CameraDisplay.svelte';
   import CameraAccounts from '../ui/CameraAccounts.svelte';
   import XiaomiAccounts from '../ui/XiaomiAccounts.svelte';
   import FreeboxSetup from '../ui/FreeboxSetup.svelte';
@@ -12,7 +13,9 @@
 <div class="settings">
   <header><h1 class="page-title">{t('commun.nav.parametres')}</h1></header>
   {#if energy.summary && !energy.summary.period_point}<FixedPrice />{/if}
+  {#if energy.summary}<FixedPrice subscription />{/if}
   <FreeboxSetup />
+  <CameraDisplay />
   <CameraAccounts />
   <XiaomiAccounts />
 </div>

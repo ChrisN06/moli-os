@@ -362,5 +362,10 @@
   "energie.price.owner": "Sign in as an owner to change the rate.",
   "energie.price.invalid": "Enter a price between 0 and 10 per kWh, with no peak/off-peak tariff configured.",
   "energie.price.partial": "Partial cost since pricing was enabled",
-  "energie.price.estimate": "Costs estimated at the current fixed rate, including history; subscription excluded. Past rates are unknown."
+  "energie.price.estimate": "Consumption estimated at the current fixed rate, including history. Totals include subscription; per-device costs exclude it. Past rates are unknown.",
+  "energie.fee.title": "Electricity subscription",
+  "energie.fee.label": "Monthly amount including tax (€)",
+  "energie.fee.note": "Estimate at the current fee, prorated by calendar days in each month.",
+  "energie.fee.invalid": "Enter an amount between 0 and 10,000.",
+  "energie.fee.chart": "Including subscription: {cost}"
 }

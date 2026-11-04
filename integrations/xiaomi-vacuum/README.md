@@ -61,3 +61,18 @@ Source du transport : [openHAB MiCloudConnector](https://github.com/openhab/open
 La réponse de préparation `retry` est relue au plus cinq fois, avec 500 ms entre
 les tentatives. Les autres erreurs ne sont pas répétées et aucune commande moteur
 ne passe dans cette reprise.
+
+## Récupération de liaison et actualisation de carte
+
+Après un échec de lecture locale à la connexion, le pilote retrouve le robot par son DID
+et son modèle dans le compte cloud existant. Une adresse locale et un jeton valides sont
+exigés ; le modèle puis la télémétrie sont vérifiés en lecture avant de rendre les commandes
+disponibles. Les valeurs restent en mémoire privée. Aucune commande moteur n’est rejouée.
+
+La page charge la carte à l’ouverture puis toutes les 60 secondes lorsqu’elle est visible,
+sans écraser un rectangle en cours d’édition. Un rectangle confirmé est translaté par le
+déplacement des coordonnées de la base, sans redimensionnement. La commande zonée refait
+cette opération sur une carte fraîche et refuse tout rectangle invalide ou hors carte.
+Ce recalage suppose que les axes de la carte restent orientés de la même façon : une base
+ponctuelle ne permet pas de retrouver une rotation. Si les axes ont tourné, redessiner et
+confirmer le rectangle avant de commander. Aucun nettoyage global de repli.

@@ -16,3 +16,12 @@ export function picture(map) {
   }
   context.putImageData(image,0,0); return canvas.toDataURL();
 }
+
+/** Translate a saved rectangle by the dock displacement; never resize or clip it. */
+export function rebase(map, zone) {
+  if (!zone?.bounds || !zone?.dock || !zone.confirmed_at) return null;
+  const delta = map.dock.map((v, i) => v-zone.dock[i]);
+  const bounds = zone.bounds.map((v,i) => v+delta[i%2]);
+  if (bounds.some(v => !Number.isFinite(v) || v < 0 || v > 51200) || bounds[0]<map.left || bounds[1]<map.bottom || bounds[2]>map.left+map.width*50 || bounds[3]>map.bottom+map.height*50) return null;
+  return bounds;
+}

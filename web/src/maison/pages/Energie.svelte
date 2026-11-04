@@ -1,5 +1,6 @@
 <script>
   import CounterPower from '../ui/CounterPower.svelte';
+  import { subscriptionCost } from '../lib/subscription.js';
   import { onMount } from 'svelte';
   import { home, hub, value, isOn, nameOf, deviceKind, doorOpen, act } from '../lib/home.svelte.js';
   import { energy, useEnergy, euros, kwh, watts, power, liveLook, billOf } from '../lib/energy-live.svelte.js';
@@ -264,7 +265,7 @@
         <span class="eyebrow">{t('energie.span.today')}</span>
         <strong class="big num">{kwh(s.today.total.kwh)} <small>kWh</small></strong>
         <div class="row">
-          <b class="num">{euros(s.today.total.cost, cur)}</b>
+          <b class="num">{euros(s.today.total.cost == null ? null : s.today.total.cost + subscriptionCost(s.monthly_fee, s.today.from, Math.min(home.now, s.today.to), s.timezone), cur)}</b>
           {#if !s.costs_at_current_price && s.fixed_price_since > s.today.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
           {#if vsYesterday != null}
             <span class="chip {vsYesterday > 10 ? 'warm' : vsYesterday < -10 ? 'good' : ''}">
@@ -276,7 +277,7 @@
 
       <section class="card">
         <span class="eyebrow">{t('energie.mois.titre')}</span>
-        <strong class="big num">{euros(s.month.total.cost, cur)}</strong>
+        <strong class="big num">{euros(s.month.total.cost == null ? null : s.month.total.cost + subscriptionCost(s.monthly_fee, s.month.from, Math.min(home.now, s.month.to), s.timezone), cur)}</strong>
         {#if !s.costs_at_current_price && s.fixed_price_since > s.month.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
         <div class="row">
           {#if s.month_projection}
