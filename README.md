@@ -59,6 +59,15 @@ Guide (in French): [`docs/components/installation.md`](docs/components/installat
 always typed by you. Other agents read [`AGENTS.md`](AGENTS.md). Once running, point an
 agent at `http://<host>:8790/mcp`.
 
+## Freebox Pop network
+
+Pair the Freebox in **Settings**, then approve **Moli OS** on the Freebox Server display.
+The **Network** page shows ports, Wi-Fi clients and Ethernet repeaters with animated
+traffic refreshed every five seconds. Home shows download and upload rates.
+See the [dashboard guide](docs/components/dashboard.md#réseau-freebox-et-habillage-bleu-nuit)
+for behavior and the [API guide](docs/components/api.md#freebox-locale-lecture-seule)
+for pairing, access and limits.
+
 ## Develop
 
 No local Rust toolchain needed: see `AGENTS.md`. Architecture: [`docs/`](docs/README.md).
