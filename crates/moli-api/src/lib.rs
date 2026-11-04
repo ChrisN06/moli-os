@@ -21,6 +21,7 @@ mod automations;
 mod caller;
 mod cameras;
 mod directory;
+mod freebox;
 mod guard;
 mod integrations;
 mod light_presets;
@@ -351,6 +352,7 @@ pub fn router(hub: Hub, shutdown: CancellationToken, options: &Options) -> Route
         .route("/api/system", get(system::system))
         .merge(cameras::routes(options.cameras.clone()))
         .merge(xiaomi::routes(options.xiaomi.clone()))
+        .merge(freebox::routes())
         .route("/api/energy", get(rest::energy))
         .route("/api/energy/price", put(rest::energy_price))
         .route("/api/energy/series", get(rest::energy_series))

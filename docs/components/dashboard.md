@@ -211,3 +211,24 @@ nettoyage ne démarre lors de la connexion ni de l'enregistrement du rectangle.
 La caméra Xiaomi réutilise la page caméras et son démarrage à l'ouverture.
 Voir `integrations/xiaomi-vacuum/` et `integrations/xiaomi-camera/` pour les limites
 cloud, HEVC, firmware et stabilité du repère.
+
+### Réseau Freebox et habillage bleu nuit
+
+`#/reseau` reprend la topologie Freebox : branches des ports et du Wi-Fi Pop,
+répéteurs rattachés à leur port Ethernet, appareils, signal, bande et vitesses
+PHY. Les flux verts descendants et rouges montants restent animés entre les
+relevés de cinq secondes ; débit, largeur et densité sont interpolés sans changer
+l'amplitude d'ondulation. Les éléments gardent une identité MAC lors des
+changements de point d'accès. Un second clic sur le même port ferme son panneau.
+
+Le rendu est chargé à la visite et isolé dans un Shadow DOM pour ne pas modifier
+les interactions des autres pages. Quitter la page libère le canevas et son
+animation ; les lectures partagées s'arrêtent quand aucune vue ne les utilise,
+ou quand l'onglet est masqué. Une erreur efface les valeurs courantes et indique
+l'indisponibilité, sans afficher une ancienne mesure comme actuelle.
+
+L'Accueil conserve seulement les deux valeurs de trafic Freebox, téléchargement
+et envoi, avec un lien vers Réseau. Paramètres propose l'appairage propriétaire ;
+aucun secret n'est saisi ou retourné dans le navigateur. `night.css` partage le
+fond bleu nuit, les surfaces, couleurs, bordures et rayons avec Maison et Atelier.
+Les schémas et preuves de développement utilisent des appareils fictifs.

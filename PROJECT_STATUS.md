@@ -1,8 +1,84 @@
 # Moli OS — état du fork et reprise
 
+## Réseau Freebox et thème bleu nuit — point de reprise du 4 novembre 2026
+
+Fonctionnalité livrée et vérifiée sur Mac ; projet Moli OS toujours actif.
+Version applicative `005fcf509f8dffa86f7d34d49d83ccbdd14ecf88`, branche
+`feat/freebox-network`, clone de travail isolé `moli-freebox`, base `f599497`.
+Les commits `35ad98f` (intégration) et `005fcf5` (débordement du menu) sont publiés.
+[PR 2](https://github.com/ChrisN06/moli-os/pull/2) en brouillon, base
+`fix/vacuum-controls-map` ; aucune fusion dans `personal/main`.
+
+### Livré et preuves
+
+- Page `#/reseau` : trois ports Ethernet, Wi-Fi Pop et répéteur Ethernet,
+  noms des appareils, signal et vitesses PHY. Données réelles observées sur Mac.
+- Actualisation nominale de cinq secondes, cache serveur partagé de 4,5 secondes,
+  lectures à la demande et arrêt sans vue concernée visible. Le délai
+  réseau s'ajoute à l'intervalle ; ne pas promettre une synchronisation exacte.
+- Flux descendants verts et montants rouges : débit lissé, densité et épaisseur
+  variables, amplitude d'ondulation fixe. Identité MAC conservée lors des changements
+  d'association ; transition vérifiée sur données synthétiques.
+- Accueil : les deux débits globaux Freebox uniquement. Paramètres : appairage
+  propriétaire avec validation physique sur la Freebox, confirmée par le propriétaire.
+  Jeton dans le coffre chiffré ; appairage conservé après le dernier redémarrage.
+- Palette bleu nuit Maison et Atelier observée. Page Réseau vérifiée à 1280 × 720
+  sans débordement général ; le menu latéral défile séparément. Panneau de port
+  fermé par second clic, détails Wi-Fi et absence d'erreur console vérifiés.
+- Image amd64 générique construite hors du serveur, CI Linux et sauvegardes
+  vérifiées avant remplacement. Historique, tarif et identifiants d'appareils/points
+  conservés. Les autres services gardent leurs dates de création et états visibles.
+  Détails d'installation et captures exclusivement dans le dossier privé voisin.
+
+### Vérifications et limites
+
+Depuis la racine du clone `moli-freebox`, sur le code livré :
+
+- `npm test --prefix web` : 32 tests réussis ; relancé lors de cette clôture.
+- `node scripts/i18n-check.mjs` : 3352 clés FR/EN, aucun texte en dur détecté ; relancé.
+- `npm run build --prefix web` : réussi avant livraison, avertissements Svelte
+  existants conservés. Pas de changement applicatif depuis ce build.
+- `cargo test -p moli-api -j2` : 88 tests réussis avant livraison, dont garde
+  propriétaire et HMAC Freebox. PWA et contrôle générique de fuites réussis.
+- `sh scripts/check.sh` : format et Clippy workspace réussis ; quatre échecs
+  `moli-profile` sur macOS liés aux adresses de boucle locale indisponibles.
+  Aucune modification du réseau du Mac. Catalogue : 36 paquets, six avertissements.
+- CI Linux sur `005fcf5` : [check 41812414207](https://github.com/ChrisN06/moli-os/actions/runs/41812414207),
+  [image 41812444735](https://github.com/ChrisN06/moli-os/actions/runs/41812444735)
+  et audit réussis. Ces résultats récents sont réutilisés ; aucune reconstruction
+  ni nouvelle exécution sur les équipements pendant la clôture documentaire.
+- Recette réelle du déploiement : Safari Mac et navigateur intégré. Pas de recette
+  iPhone, de débranchement réel pour tester un déplacement de port, ni de commande
+  physique par l'agent. CPU prolongé non mesuré ; mesures mémoire ponctuelles privées.
+- Cette version cible Pop (trois ports, deux radios). Les vitesses Wi-Fi sont PHY,
+  distinctes du trafic ; Ethernet mesure le port entier, pas chaque client d'un switch.
+  Le câblage des switchs intermédiaires n'est pas connu. Sur fenêtre compacte,
+  les libellés sont réduits pour garder toute la topologie visible.
+
+### Points d'entrée et reprise du lot
+
+- API et tests : `crates/moli-api/src/freebox.rs`, `crates/moli-api/tests/household.rs`.
+- Données et polling : `web/src/maison/lib/freebox-data.js`, `freebox.svelte.js` ;
+  tests de normalisation : `freebox-data.test.js`.
+- Rendu : `web/src/maison/ui/NetworkTopology.svelte`, `ui/network/renderer.js`
+  et `template.html` ; accueil et appairage : `FreeboxRates.svelte`, `FreeboxSetup.svelte`.
+- Palette commune : `web/src/night.css` ; documentation :
+  [dashboard](docs/components/dashboard.md#réseau-freebox-et-habillage-bleu-nuit)
+  et [API](docs/components/api.md#freebox-locale-lecture-seule).
+- Preuves et retour arrière privés : `../moli-maison/freebox-20261104/DIAGNOSTIC.md`.
+- À l'ouverture de cette clôture : arbre applicatif identique à `005fcf5`, index vide,
+  seul `.DS_Store` non suivi, exclu et conservé. `PROJECT_STATUS.md`, `README.md`
+  et `README.fr.md` restent à commiter après accord ; index non modifié. Aucun
+  nouveau commit ni push effectué pendant cette clôture. Les motifs génériques
+  de fuite ont été recherchés dans les 24 fichiers du lot et la documentation,
+  sans occurrence non fictive ; liste noire privée indisponible, historique complet
+  non audité. Liens et ancres documentaires vérifiés.
+- Le checkout historique `moli-os` reste à préserver : corruption Git constatée
+  le 3 novembre, pas réauditée ici. Ne pas y faire de pull/reset/clean/réparation.
+
 ## Actualisation robot — 3 novembre 2026
 
-Point de reprise courant. Projet actif ; les preuves des autres fonctionnalités restent datées de leurs recettes précédentes.
+État historique du 3 novembre, conservé pour les preuves robot. La version courante et le clone de reprise figurent ci-dessus.
 
 - Version déployée : `b6df9a4`, branche `fix/vacuum-controls-map`, [PR 1](https://github.com/ChrisN06/moli-os/pull/1), encore en brouillon. `personal/main` reste à `1603bbb`.
 - Option d’autorisation des déplacements retirée. Les commandes sont disponibles après vérification du compte et du modèle par le pilote. La garde et les échéances restent actives.
@@ -32,7 +108,8 @@ Aucun service ni équipement réel n’a été retesté pendant cette clôture d
 | Xiaomi robot : télémétrie, commandes et carte | Le 3 novembre : télémétrie, nettoyage classique, pause et retour à la base confirmés par le propriétaire ; carte réelle affichée dans Moli | `crates/moli-xiaomi/src/vacuum.rs`, [robot](integrations/xiaomi-vacuum/README.md) |
 | Xiaomi robot : nettoyage zoné | Essai physique réussi confirmé par le propriétaire le 3 novembre ; aucune commande lancée par l’agent | `crates/moli-xiaomi/src/vacuum.rs`, [robot](integrations/xiaomi-vacuum/README.md) |
 | Xiaomi caméra : direct | Direct confirmé par l’utilisateur ; playlists vérifiées le 3 novembre, sans consultation des images par l’agent | `crates/moli-xiaomi/src/camera.rs`, [caméra](integrations/xiaomi-camera/README.md) |
-| Exploitation Docker | Version `b6df9a4` déployée après CI Linux réussie et sauvegardes ; dix autres conteneurs et relais inchangés, référence Compose synchronisée | [exploitation](docs/components/exploitation.md) ; preuves privées `robot-20261103/DIAGNOSTIC.md` |
+| Réseau Freebox et thème commun | Version `005fcf5` déployée le 4 novembre ; appairage réel, ports, répéteur, PHY, deux débits sur l’accueil et rendu Mac vérifiés | `crates/moli-api/src/freebox.rs`, `web/src/maison/ui/NetworkTopology.svelte`, `web/src/night.css` |
+| Exploitation Docker | Version `005fcf5` déployée après CI Linux et sauvegardes ; autres services et historique conservés, Compose synchronisée | [exploitation](docs/components/exploitation.md) ; preuves privées `freebox-20261104/DIAGNOSTIC.md` |
 
 « Vérifié » décrit uniquement la portée indiquée ; cela ne garantit pas toutes les
 capacités d’un protocole, ni leur fonctionnement permanent.
@@ -66,7 +143,7 @@ capacités d’un protocole, ni leur fonctionnement permanent.
 - Plafonds mémoire observés ; quota CPU effectif non démontré sur l’ancien Docker,
   malgré sa déclaration dans Compose.
 - Dernier contrôle complet local : quatre échecs préexistants `moli-profile` sur macOS
-  liés aux changements d’adresse. CI Linux verte sur `b6df9a4` ; ne pas les ignorer
+  liés aux changements d’adresse. CI Linux verte sur `005fcf5` ; ne pas les ignorer
   ni modifier le réseau du Mac pour faire passer les tests.
 - Catalogue : six avertissements de fixtures au dernier contrôle, aucune erreur.
   Certains textes amont indiquent encore 24 intégrations ; dernier catalogue contrôlé : 36 paquets.
@@ -103,13 +180,15 @@ capacités d’un protocole, ni leur fonctionnement permanent.
 
 ## Prochaines étapes ordonnées
 
-1. Consigner les recettes réelles manquantes : curseurs iPhone, Perso, coût historique,
-   graphiques tactiles et volets. Ne pas assimiler interface et validation matérielle.
-2. Préparer HTTPS local, puis les essais PWA ; poursuivre les intégrations selon priorité utilisateur.
+1. Ouvrir `#/reseau` sur l’iPhone du propriétaire et vérifier lisibilité, topologie complète
+   et détails des ports ; consigner le résultat dans le dossier privé. Aucun essai physique
+   ni déploiement supplémentaire n’est autorisé par cette clôture.
+2. Au besoin, proposer une recette de déplacement de port au propriétaire ; ne rien débrancher automatiquement.
+3. Consigner les autres recettes manquantes : curseurs iPhone, Perso, coût historique,
+   graphiques tactiles et volets. Préparer HTTPS/PWA selon priorité utilisateur.
+4. Examiner les PR en brouillon et leur dépendance avant de proposer une fusion ; aucune fusion autorisée ici.
 
-Le propriétaire a autorisé le commit et le push du seul `PROJECT_STATUS.md`. Aucun nouveau déploiement autorisé par ce lot.
-
-## Contrôles et reprise indépendante
+## Archive des contrôles et de la reprise robot — 3 novembre 2026
 
 Vérifications récentes du code publié, exécutées depuis le clone isolé mentionné plus haut :
 
@@ -147,7 +226,8 @@ aucune occurrence des motifs génériques de fuite dans le fichier proposé ; li
 privée indisponible. Index du clone vide ; état et index du checkout principal non
 vérifiables (commandes expirées après cinq secondes). Aucun index modifié.
 
-Cette clôture actualise uniquement `PROJECT_STATUS.md`, avec commit et push autorisés par le propriétaire.
+La clôture du 3 novembre avait autorisé le commit et le push du seul `PROJECT_STATUS.md`.
+Cette autorisation historique ne couvre pas les nouveaux documents du 4 novembre.
 Le commit documentaire est préparé dans le clone isolé, sur `fix/vacuum-controls-map` ;
 le checkout principal conserve ses modifications. `AGENTS.md` et les fichiers privés sont exclus.
 Vérifier le résultat Git à la reprise ; ce document ne présume pas une fusion de la PR.

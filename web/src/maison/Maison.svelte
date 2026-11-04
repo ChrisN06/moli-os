@@ -54,6 +54,7 @@
     { path: 'impression', label: 'commun.nav.impression', icon: 'printer3d' },
     { path: 'dehors', label: 'commun.nav.dehors', icon: 'flower-outline' },
     { path: 'automatismes', label: 'commun.nav.automatismes', icon: 'robot' },
+    { path: 'reseau', label: 'freebox.title', icon: 'lan' },
     { path: 'infra', label: 'commun.nav.infra', icon: 'server' },
     // Only when something is watched: a house with nothing to watch sees no empty page.
     { path: 'parc', label: 'commun.nav.parc', icon: 'package', shown: () => Object.values(hub.devices).some((d) => !hidden(d.id) && watches(d)) },
@@ -151,7 +152,7 @@
     </div>
   </nav>
 
-  <main class="content">
+  <main class="content" class:network={page === 'reseau'}>
     {#if page === 'salon'}
       <Salon />
     {:else if page === 'pieces'}
@@ -182,6 +183,8 @@
       <Automatismes {route} />
     {:else if page === 'systeme'}
       <Systeme />
+    {:else if page === 'reseau'}
+      {#await import('./ui/NetworkTopology.svelte') then { default: NetworkTopology }}<NetworkTopology />{/await}
     {:else if page === 'infra'}
       <!-- The house's machines: loaded only when visited. -->
       {#await import('./pages/Infra.svelte') then { default: Infra }}<Infra />{/await}
@@ -192,12 +195,12 @@
       <Accueil />
     {/if}
     <!-- On a phone the rail's foot is hidden: the same three, at the bottom. -->
-    <footer class="phone-foot">
+    {#if page !== 'reseau'}<footer class="phone-foot">
       <a href="#/systeme"><Icon name="branch" size={16} />{t('commun.nav.comment_ca_marche')}</a>
       <a href="#/parametres"><Icon name="tune" size={16} />{t('commun.nav.parametres')}</a>
       <a href="#/atelier"><Icon name="atelier" size={16} />{t('commun.nav.atelier')}</a>
       <button onclick={cycleTheme}><Icon name={theme === 'night' ? 'moon' : 'sun'} size={16} />{home.theme === 'auto' ? t('commun.theme.auto_pied') : themeName}</button>
-    </footer>
+    </footer>{/if}
   </main>
 
   {#if page !== 'moli'}
@@ -263,6 +266,7 @@
     position: sticky;
     top: 0;
     height: 100dvh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -339,10 +343,13 @@
 
   .content {
     padding: 28px 36px 120px 8px;
-    max-width: 1440px;
+    max-width: 1800px;
     width: 100%;
     min-width: 0;
   }
+
+  .content.network{height:100dvh;padding:12px;overflow:hidden}
+  @media(max-width:760px){.content.network{height:calc(100dvh - 76px)}}
 
   /* Moli, always one tap away. */
   .orb {
