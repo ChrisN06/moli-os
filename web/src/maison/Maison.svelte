@@ -266,6 +266,7 @@
     position: sticky;
     top: 0;
     height: 100dvh;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
