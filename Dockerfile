@@ -1,33 +1,22 @@
 # syntax=docker/dockerfile:1
-# Release image: static musl binary with the dashboard embedded, on scratch.
-
-FROM node:26.12.1-alpine@sha256:40cd011b55415bc894e45b02fdd5a5dfde056921b7d23a64c74f80497af48797 AS web
-WORKDIR /web
-COPY web/package.json web/package-lock.json ./
-RUN npm ci --no-audit --no-fund
-COPY web/ ./
-# The words (shared with the server): web/src/lib/i18n.svelte.js reads ../../../locales.
-COPY locales/ /locales/
-RUN npm run build
-
-FROM rust:1.99.1-alpine@sha256:7e9e2d068a107a2adafd19930011178d14a78326053cd4c3a9f7ad3fd049557d AS build
-RUN apk add --no-cache musl-dev
+# Same relay runtime, with the hlc7 startup SPS correction only.
+FROM --platform=$BUILDPLATFORM golang:1.27.3-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS build
+RUN apk add --no-cache patch
 WORKDIR /src
-ARG TARGETARCH
-# Generic x86-64 baseline: the NAS does not have AVX or SSE4.2.
-ENV CARGO_BUILD_JOBS=2
-COPY . .
-COPY --from=web /web/dist web/dist
-RUN --mount=type=cache,target=/usr/local/cargo/registry \
-    --mount=type=cache,target=/src/target \
-    if [ "$TARGETARCH" = "amd64" ]; then export RUSTFLAGS="-C target-cpu=x86-64" CFLAGS="-march=x86-64 -mtune=generic"; fi; \
-    cargo build --release --locked -p moli-os && cp target/release/moli-os /moli-os
+ADD --checksum=sha256:10027a1558746e02c9adc22ceea8ee5ad29a19e156d3dded23404103f0e7c636 https://codeload.github.com/AlexxIT/go2rtc/tar.gz/7c05066c90ab6ad1fccb506d5f0408aa31ebe60f /tmp/go2rtc.tar.gz
+RUN tar -xzf /tmp/go2rtc.tar.gz --strip-components=1
+COPY docker/go2rtc/hlc7-hd.patch /tmp/hlc7-hd.patch
+COPY docker/go2rtc/producer_test.go pkg/xiaomi/miss/producer_test.go
+RUN patch -p1 < /tmp/hlc7-hd.patch
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    GOMAXPROCS=2 go test ./pkg/xiaomi/miss ./pkg/h265
+ARG TARGETOS=linux
+ARG TARGETARCH=amd64
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH GOAMD64=v1 GOMAXPROCS=2 \
+    go build -trimpath -ldflags '-s -w' -o /out/go2rtc .
 
-FROM scratch
-COPY --from=build /moli-os /moli-os
-ENV MOLI_CONFIG=/data/moli.toml
-WORKDIR /data
-USER 1000:1000
-EXPOSE 8790
-ENTRYPOINT ["/moli-os"]
-CMD ["serve"]
+# Preserve tools, entrypoint, and configuration behavior of the pinned upstream runtime.
+FROM alexxit/go2rtc@sha256:233f25720b22bc808717085d6618425099dccd4713ecfc923e2dc627519b59fb
+COPY --from=build /out/go2rtc /usr/local/bin/go2rtc
+COPY docker/go2rtc/LICENSE /usr/local/share/licenses/go2rtc/LICENSE
