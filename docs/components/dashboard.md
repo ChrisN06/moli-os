@@ -294,6 +294,8 @@ qui lui appartient. Le compteur lié à l'historique ne peut pas changer silenci
 Les trois derniers mois sont lus à chaque synchronisation, au démarrage puis toutes
 les 12 heures ; une lecture manuelle est disponible, avec une minute entre tentatives.
 Les erreurs conservent les relevés existants et sont affichées sans données de connexion.
+Le collecteur retente une seule fois après une minute en cas d’erreur temporaire ;
+il ne retente pas un contrôle humain ni une lecture déjà limitée.
 Un contrôle humain imposé par le fournisseur reste un échec explicite, sans contournement.
 Le CSV reste utilisable. Référence de protocole :
 [py-mon-eau](https://github.com/laurent-martin/py-mon-eau).

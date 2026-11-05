@@ -104,11 +104,10 @@ pub(crate) fn routes(hub: Hub, shutdown: CancellationToken) -> Router<Hub> {
             tokio::select! {
                 () = shutdown.cancelled() => break,
                 _ = interval.tick() => {
-                    let Some(account) = account(&hub) else { continue; };
-                    tokio::select! {
-                        () = shutdown.cancelled() => break,
-                        _ = synchronize(&hub, &worker, account, false) => {}
-                    }
+                    retry_poll(&shutdown, || async {
+                        let Some(account) = account(&hub) else { return Ok(()); };
+                        synchronize(&hub, &worker, account, false).await
+                    }).await;
                 }
             }
         }
@@ -119,6 +118,28 @@ pub(crate) fn routes(hub: Hub, shutdown: CancellationToken) -> Router<Hub> {
         .route("/api/water/sync", post(refresh))
         .layer(Extension(writing))
         .layer(Extension(service))
+}
+// One transient login failure must not postpone the next reading for twelve hours.
+async fn retry_poll<F, Fut>(shutdown: &CancellationToken, mut fetch: F)
+where
+    F: FnMut() -> Fut,
+    Fut: std::future::Future<Output = water_suez::Result<()>>,
+{
+    for attempt in 0..2 {
+        let result = tokio::select! {
+            () = shutdown.cancelled() => return,
+            result = fetch() => result,
+        };
+        if matches!(result, Ok(()) | Err("water.human_required" | "water.wait")) {
+            return;
+        }
+        if attempt == 0 {
+            tokio::select! {
+                () = shutdown.cancelled() => return,
+                () = tokio::time::sleep(Duration::from_secs(60)) => {}
+            }
+        }
+    }
 }
 async fn history(
     State(hub): State<Hub>,
@@ -308,6 +329,40 @@ async fn refresh(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[tokio::test(start_paused = true)]
+    async fn polling_retries_once_after_a_minute_but_never_retries_a_human_challenge() {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        let calls = AtomicUsize::new(0);
+        let started = tokio::time::Instant::now();
+        retry_poll(&CancellationToken::new(), || async {
+            if calls.fetch_add(1, Ordering::SeqCst) == 0 {
+                Err("water.login_failed")
+            } else {
+                Ok(())
+            }
+        })
+        .await;
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+        assert_eq!(started.elapsed(), Duration::from_secs(60));
+        calls.store(0, Ordering::SeqCst);
+        retry_poll(&CancellationToken::new(), || async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Err("water.human_required")
+        })
+        .await;
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+        calls.store(0, Ordering::SeqCst);
+        retry_poll(&CancellationToken::new(), || async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Err("water.connection_failed")
+        })
+        .await;
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            2,
+            "a persistent failure is bounded too"
+        );
+    }
     fn input(csv: &str) -> Import {
         Import {
             csv: csv.into(),
