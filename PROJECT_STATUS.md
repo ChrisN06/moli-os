@@ -1,37 +1,53 @@
 # Moli OS — état du fork et reprise
 
-## Améliorations du 5 novembre 2026 — préparées, non déployées
+## Améliorations du 5 novembre 2026 — déployées, limites ci-dessous
 
-Branche `feat/climate-water-camera`, base publiée `b8845ca`. Les anciens checkouts
-modifiés sont préservés. Aucun remplacement de service effectué dans ce lot.
+Branche `feat/climate-water-camera`, base publiée `b8845ca`, code `40f778d`.
+[PR 4](https://github.com/ChrisN06/moli-os/pull/4) en brouillon, sans fusion.
+Les anciens checkouts modifiés sont préservés. Application construite sur `a0124df` ;
+les changements suivants concernent uniquement le relais vidéo.
 
-- Salon : courbes communes de température, humidité et consigne **rapportée**,
-  périodes 24 h / 7 j / 30 j, axe d'humidité séparé et consigne en paliers. Réutilise
-  les choix de sondes intérieures et l'API d'historique existante.
-- Eau : consommation journalière dans Énergie et somme du mois courant sur
-  l'accueil, avec dates manquantes explicites. Import CSV journalier depuis
-  Paramètres, protégé par la session propriétaire, fusion par date et conservation
-  dans le coffre natif. **Synchronisation automatique du compte non livrée** :
-  la connexion du fournisseur comporte un contrôle humain ; aucun contournement
-  ni récupération de cookie personnel n'est implémenté.
-- Robot : origine des coordonnées visibles placée sur la base orange. Le recalage
-  existant utilise déjà la base ; test ajouté pour prouver que le déplacement du
-  robot ne déplace pas la zone. Aucune nouvelle géométrie de zone imposée.
-- Caméra : contradiction SPS SD / images HD identifiée. Patch ciblé de go2rtc
-  1.9.15, construction reproductible et tests dans `docker/go2rtc/`. Il ne modifie
-  ni les autres modèles ni les demandes explicites SD/auto. Son déploiement exige
-  une nouvelle image du relais ; recette Safari Mac/iPhone encore à effectuer.
+- Salon : température, humidité et consigne **rapportée**, périodes 24 h / 7 j /
+  30 j, axes séparés et consigne en paliers. Historique réel et curseur clavier
+  vérifiés dans le navigateur interne. Une dérogation Somfy peut différer.
+- Eau : barres journalières dans Énergie, total du mois courant sur Accueil,
+  import CSV depuis Paramètres réservé au propriétaire. Import réel et affichage
+  vérifiés. Dates inconnues distinguées des mesures nulles, fusion par date et
+  stockage dans le coffre natif. **Synchronisation automatique non livrée** :
+  la connexion du fournisseur comporte un contrôle humain. Aucun contournement
+  ni récupération de cookie personnel.
+- Robot : coordonnées visibles depuis la base orange. Le recalage existant utilise
+  déjà la base ; test prouvant que déplacer le robot ne déplace pas la zone.
+  Aucune zone réelle modifiée, aucun moteur commandé. À la dernière recette,
+  découverte miIO en délai dépassé : carte réelle non vérifiable, robot hors ligne.
+- Caméra : relais go2rtc 1.9.15 corrigé pour le démarrage SD puis HD de `hlc7`.
+  Le premier essai a échoué à initialiser HLS et a été annulé. La seconde version
+  conserve aussi la première image clé HD consommée pendant la détection.
+  Flux réel : initialisation et SPS des images à **2304 × 1296**, lecture active
+  dans le navigateur interne. Cadrage correct confirmé par le propriétaire sur iPhone après
+  un chargement long. Safari Mac non confirmé séparément. Autres modèles et demandes SD/auto inchangés.
 
-Contrôles : 40 tests web, build web, traductions, PWA, contrôle générique de fuites,
-92 tests API et Clippy API strict réussis. Tests Go ciblés réussis ; binaire Linux
-amd64 statique compilé avec `GOAMD64=v1`. Application du patch vérifiée sur l'archive
-amont épinglée. Construction complète de l'image relais non exécutée localement
-(Docker indisponible) ; utiliser le workflow image existant pour sa validation. Format et Clippy du workspace réussis.
-Catalogue : 36 paquets, six avertissements existants, aucune erreur.
-Les tests globaux retrouvent les quatre
-échecs macOS préexistants de `moli-profile` liés aux adresses réseau. CI Linux
-non exécutée sur ce lot à ce stade. Aperçu navigateur local avec données de test ;
-il ne permet ni connexion aux comptes ni lecture des caméras réelles.
+Images déployées, épinglées par digest :
+- Application : `sha256:35139423f0784a41e6b79698936d01bfeb01ee2e117281405c212d0b594a57b0`.
+- Relais : `sha256:bb735ef5052eecdafb9b29d6120229ed153c5c13e350b88cfbd4ccbe7d18908b`,
+  branche de construction `release/xiaomi-hd-relay`, commit `ad545aa`.
+  Cette branche remplace le Dockerfile racine uniquement pour le workflow image ;
+  ne pas la fusionner dans l'application.
+
+Contrôles : 40 tests web, build, traductions, PWA, fuites, 92 tests API,
+format et Clippy workspace réussis. Tests Go ciblés réussis ; `GOAMD64=v1`, CGO
+désactivé. CI Linux [check](https://github.com/ChrisN06/moli-os/actions/runs/42106295397)
+et [audit](https://github.com/ChrisN06/moli-os/actions/runs/42106295458) réussis.
+[Application](https://github.com/ChrisN06/moli-os/actions/runs/42065210649) et
+[relais](https://github.com/ChrisN06/moli-os/actions/runs/42106370755) construits pour
+amd64/arm64. Catalogue : 36 paquets, six avertissements existants, aucune erreur.
+Quatre échecs macOS préexistants de `moli-profile` liés aux adresses réseau.
+
+Sauvegardes avant/après copiées dans le dossier privé ; intégrité des deux SQLite
+vérifiée. Toutes les anciennes mesures d'historique, heures d'énergie terminées,
+tarifs et abonnement préservés. Les neuf conteneurs voisins gardent leurs identifiants
+et états. Référence Compose synchronisée avec contrôle de l'empreinte initiale.
+Détails d'installation et échantillons vidéo exclusivement privés.
 
 ## Réseau Freebox et thème bleu nuit — point de reprise du 4 novembre 2026
 
