@@ -1,5 +1,14 @@
 # Moli OS — état du fork et reprise
 
+## Synchronisation So’EAU — en cours de recette
+
+Connexion directe en Rust ajoutée sur `feat/climate-water-camera` : formulaire normal
+avec CSRF, cookies en mémoire sur un hôte HTTPS fixe, découverte du compteur et
+consommations journalières des trois derniers mois. Coffre natif, propriétaire requis,
+actualisation toutes les 12 heures et erreurs explicites conservant les relevés.
+Aucune dépendance Home Assistant/MQTT, aucun contournement de contrôle humain.
+La connexion réelle et le déploiement de ce complément restent à vérifier.
+
 ## Améliorations du 5 novembre 2026 — déployées, limites ci-dessous
 
 Branche `feat/climate-water-camera`, base publiée `b8845ca`, code `40f778d`.

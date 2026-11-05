@@ -37,7 +37,8 @@
  </div>
  <p class="readout" aria-live="polite">{chosen?`${chosen.date} : ${chosen.value==null?t('water.missing'):`${num(chosen.value*1000,0)} L`}`:t('water.inspect')}</p>
  {/if}
- <p class="muted">{t('water.import_note')}</p>
+ <p class="muted">{t(history?.sync?.configured?'water.automatic_note':'water.import_note')}</p>
+ {#if history?.sync?.error}<p role="status">{history.sync.error}</p>{/if}
  <a href={chart?'#/parametres':'#/energie'}>{t(chart?'water.import':'water.view')}</a>
 </section>
 {/if}

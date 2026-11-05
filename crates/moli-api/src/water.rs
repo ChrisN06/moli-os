@@ -1,23 +1,30 @@
 //! Daily water imports. The encrypted core store also includes these readings in backups.
+use crate::water_suez::{self, Account};
 use crate::{caller::Caller, people::People, session::Sessions};
 use axum::{
     Extension, Json, Router,
     extract::State,
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Response},
-    routing::get,
+    routing::{get, post},
 };
 use moli_runtime::Hub;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
+use std::time::{Duration, Instant};
 use std::{collections::BTreeMap, sync::Arc};
 use tokio::sync::Mutex;
+use tokio_util::sync::CancellationToken;
 
 const SECRET: &str = "water_history";
 const MAX_DAYS: usize = 3660;
 #[derive(Default, Serialize, Deserialize)]
 struct History {
     imported_at: u64,
+    #[serde(default)]
+    synchronized_at: u64,
+    #[serde(default)]
+    meter: Option<String>,
     days: BTreeMap<String, f64>,
 }
 #[derive(Deserialize)]
@@ -35,7 +42,7 @@ fn read(hub: &Hub) -> anyhow::Result<History> {
         |text| Ok(serde_json::from_str(&text)?),
     )
 }
-fn date(text: &str) -> bool {
+pub(super) fn date(text: &str) -> bool {
     text.len() == 10 && text.parse::<jiff::civil::Date>().is_ok()
 }
 fn fields(line: &str) -> Vec<&str> {
@@ -84,12 +91,40 @@ fn parse(input: &Import) -> anyhow::Result<BTreeMap<String, f64>> {
     anyhow::ensure!(!days.is_empty(), "water no readings");
     Ok(days)
 }
-pub(crate) fn routes() -> Router<Hub> {
+pub(crate) fn routes(hub: Hub, shutdown: CancellationToken) -> Router<Hub> {
+    let writing = Arc::new(Mutex::new(()));
+    let service = Service {
+        state: Arc::new(Mutex::new(SyncState::default())),
+        writing: writing.clone(),
+    };
+    let worker = service.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(12 * 60 * 60));
+        loop {
+            tokio::select! {
+                () = shutdown.cancelled() => break,
+                _ = interval.tick() => {
+                    let Some(account) = account(&hub) else { continue; };
+                    tokio::select! {
+                        () = shutdown.cancelled() => break,
+                        _ = synchronize(&hub, &worker, account, false) => {}
+                    }
+                }
+            }
+        }
+    });
     Router::new()
         .route("/api/water", get(history).put(import))
-        .layer(Extension(Arc::new(Mutex::new(()))))
+        .route("/api/water/account", get(account_status).post(connect))
+        .route("/api/water/sync", post(refresh))
+        .layer(Extension(writing))
+        .layer(Extension(service))
 }
-async fn history(State(hub): State<Hub>, caller: Caller) -> Response {
+async fn history(
+    State(hub): State<Hub>,
+    Extension(service): Extension<Service>,
+    caller: Caller,
+) -> Response {
     if caller
         .person
         .as_ref()
@@ -98,7 +133,7 @@ async fn history(State(hub): State<Hub>, caller: Caller) -> Response {
         return fail(StatusCode::FORBIDDEN, "water.owner");
     }
     match read(&hub) {
-        Ok(history) => Json(history).into_response(),
+        Ok(history) => Json(public_history(&history, &hub, &service).await).into_response(),
         Err(_) => fail(StatusCode::INTERNAL_SERVER_ERROR, "water.failed"),
     }
 }
@@ -131,7 +166,144 @@ async fn import(
     if hub.store_core_secret(SECRET, &text).await.is_err() {
         return fail(StatusCode::INTERNAL_SERVER_ERROR, "water.failed");
     }
-    Json(history).into_response()
+    Json(json!({"days":history.days,"imported_at":history.imported_at,"synchronized_at":history.synchronized_at})).into_response()
+}
+const ACCOUNT: &str = "water_suez_account";
+#[derive(Default)]
+struct SyncState {
+    attempted: Option<Instant>,
+    error: Option<&'static str>,
+}
+#[derive(Clone)]
+struct Service {
+    state: Arc<Mutex<SyncState>>,
+    writing: Arc<Mutex<()>>,
+}
+fn account(hub: &Hub) -> Option<Account> {
+    hub.core_secret(ACCOUNT)
+        .and_then(|s| serde_json::from_str(&s).ok())
+}
+async fn public_history(history: &History, hub: &Hub, service: &Service) -> serde_json::Value {
+    let state = service.state.lock().await;
+    json!({"days":history.days,"imported_at":history.imported_at,"synchronized_at":history.synchronized_at,
+        "sync":{"configured":account(hub).is_some(),"error":state.error.map(moli_i18n::tr)}})
+}
+async fn account_status(
+    State(hub): State<Hub>,
+    Extension(service): Extension<Service>,
+    auth: (Extension<Arc<Sessions>>, Extension<Arc<People>>),
+    caller: Caller,
+    headers: HeaderMap,
+) -> Response {
+    if !crate::people_api::is_owner(&caller, &auth.0.0, &auth.1.0, &headers) {
+        return fail(StatusCode::FORBIDDEN, "water.owner");
+    }
+    match read(&hub) {
+        Ok(history) => {
+            let state = service.state.lock().await;
+            Json(json!({"configured":account(&hub).is_some(),"synchronized_at":history.synchronized_at,"error":state.error.map(moli_i18n::tr)})).into_response()
+        }
+        Err(_) => fail(StatusCode::INTERNAL_SERVER_ERROR, "water.failed"),
+    }
+}
+async fn synchronize(
+    hub: &Hub,
+    service: &Service,
+    mut account: Account,
+    save: bool,
+) -> water_suez::Result<()> {
+    let mut state = service.state.lock().await;
+    if state
+        .attempted
+        .is_some_and(|at| at.elapsed() < Duration::from_secs(60))
+    {
+        return Err("water.wait");
+    }
+    state.attempted = Some(Instant::now());
+    let result = async {
+        let (meter, days) = water_suez::fetch(&account).await?;
+        let _writing = service.writing.lock().await;
+        let mut history = read(hub).map_err(|_| "water.failed")?;
+        if history.meter.as_ref().is_some_and(|old| old != &meter) {
+            return Err("water.meter_changed");
+        }
+        history.days.extend(days);
+        if history.days.len() > MAX_DAYS {
+            return Err("water.invalid");
+        }
+        history.meter = Some(meter.clone());
+        history.synchronized_at = moli_core::now_ms();
+        let text = serde_json::to_string(&history).map_err(|_| "water.failed")?;
+        hub.store_core_secret(SECRET, &text)
+            .await
+            .map_err(|_| "water.failed")?;
+        if save {
+            account.meter = meter;
+            let text = serde_json::to_string(&account).map_err(|_| "water.failed")?;
+            hub.store_core_secret(ACCOUNT, &text)
+                .await
+                .map_err(|_| "water.failed")?;
+        }
+        Ok(())
+    }
+    .await;
+    state.error = result.as_ref().err().copied();
+    result
+}
+async fn connect(
+    State(hub): State<Hub>,
+    Extension(service): Extension<Service>,
+    auth: (Extension<Arc<Sessions>>, Extension<Arc<People>>),
+    caller: Caller,
+    headers: HeaderMap,
+    Json(input): Json<Account>,
+) -> Response {
+    if !crate::people_api::is_owner(&caller, &auth.0.0, &auth.1.0, &headers) {
+        return fail(StatusCode::FORBIDDEN, "water.owner");
+    }
+    if !input.valid() {
+        return fail(StatusCode::BAD_REQUEST, "water.account_invalid");
+    }
+    match synchronize(&hub, &service, input, true).await {
+        Ok(()) => Json(json!({"configured":true})).into_response(),
+        Err(key) => fail(
+            if key == "water.wait" {
+                StatusCode::TOO_MANY_REQUESTS
+            } else {
+                StatusCode::BAD_GATEWAY
+            },
+            key,
+        ),
+    }
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Refresh {}
+async fn refresh(
+    State(hub): State<Hub>,
+    Extension(service): Extension<Service>,
+    auth: (Extension<Arc<Sessions>>, Extension<Arc<People>>),
+    caller: Caller,
+    headers: HeaderMap,
+    Json(_): Json<Refresh>,
+) -> Response {
+    if !crate::people_api::is_owner(&caller, &auth.0.0, &auth.1.0, &headers) {
+        return fail(StatusCode::FORBIDDEN, "water.owner");
+    }
+    let Some(account) = account(&hub) else {
+        return fail(StatusCode::BAD_REQUEST, "water.account_invalid");
+    };
+    match synchronize(&hub, &service, account, false).await {
+        Ok(()) => Json(json!({"configured":true})).into_response(),
+        Err(key) => fail(
+            if key == "water.wait" {
+                StatusCode::TOO_MANY_REQUESTS
+            } else {
+                StatusCode::BAD_GATEWAY
+            },
+            key,
+        ),
+    }
 }
 #[cfg(test)]
 mod tests {
