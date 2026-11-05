@@ -283,9 +283,27 @@ Les valeurs sont stockées dans le coffre chiffré existant, inclus dans les
 sauvegardes natives. Aucun index ni historique électrique n'est modifié.
 L'accueil montre la somme disponible pour le mois civil courant ; Énergie affiche
 les jours du mois choisi, avec les dates manquantes explicitement distinctes des
-zéros. La dernière date mesurée est indiquée. Le compte n'est pas synchronisé
-automatiquement : le parcours de connexion du fournisseur doit être validé avant
-d'ajouter un collecteur. Aucun mot de passe ou cookie SUEZ n'est demandé par cet import.
+zéros. La dernière date mesurée est indiquée.
+
+La connexion So’EAU dans Paramètres utilise le formulaire HTTPS normal (CSRF et
+cookies limités à cet hôte), puis `meters-list` et `telemetry`, directement en Rust
+via `moli-net`. Aucun navigateur automatisé, Home Assistant ou MQTT n'est requis.
+Les identifiants ne sont conservés qu'après une récupération réussie, dans le coffre
+chiffré natif. Un compte avec plusieurs compteurs exige de choisir un identifiant
+qui lui appartient. Le compteur lié à l'historique ne peut pas changer silencieusement.
+Les trois derniers mois sont lus à chaque synchronisation, au démarrage puis toutes
+les 12 heures ; une lecture manuelle est disponible, avec une minute entre tentatives.
+Les erreurs conservent les relevés existants et sont affichées sans données de connexion.
+Un contrôle humain imposé par le fournisseur reste un échec explicite, sans contournement.
+Le CSV reste utilisable. Référence de protocole :
+[py-mon-eau](https://github.com/laurent-martin/py-mon-eau).
+
+`GET /api/water/account`, `POST /api/water/account` (`email`, `password`, `meter`
+facultatif) et `POST /api/water/sync` (`{}`) exigent une session propriétaire.
+Aucune réponse ne retourne les identifiants ou cookies. `GET /api/water` ajoute
+`synchronized_at` et `sync` (`configured`, `error`) aux relevés ; l'identifiant du
+compteur reste dans le coffre. Les routes d'écriture partagent la limite eau de
+cinq requêtes par dix secondes. Aucun ancien historique électrique n'est modifié.
 
 Les coordonnées précises de la zone aspirateur sont affichées en mètres depuis
 la base orange `(0, 0)`. La conversion vers les coordonnées absolues du protocole

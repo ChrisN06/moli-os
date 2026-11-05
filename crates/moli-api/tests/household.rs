@@ -537,3 +537,68 @@ async fn water_import_requires_owner_and_merges_without_losing_readings() {
     assert_eq!(hub.core_secret("water_history").unwrap(), stored);
     let _ = std::fs::remove_dir_all(dir);
 }
+
+#[tokio::test]
+async fn water_account_requires_owner_before_sending_credentials() {
+    let dir = std::env::temp_dir().join(format!("moli-water-account-{}", moli_core::now_ms()));
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    assert_eq!(
+        request(
+            &addr,
+            "POST",
+            "/api/water/account",
+            &json!({"email":"user@example.org","password":"synthetic"}),
+            UI
+        )
+        .await
+        .0,
+        403
+    );
+    assert_eq!(
+        request(&addr, "POST", "/api/water/sync", &json!({}), UI)
+            .await
+            .0,
+        403
+    );
+    assert_eq!(
+        request(&addr, "GET", "/api/water/account", &json!({}), UI)
+            .await
+            .0,
+        403
+    );
+    assert!(hub.core_secret("water_suez_account").is_none());
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    let (status, _, body) = request(&addr, "GET", "/api/water/account", &json!({}), &owner).await;
+    assert_eq!(status, 200);
+    assert_eq!(
+        serde_json::from_str::<Json>(&body).unwrap()["configured"],
+        false
+    );
+    assert_eq!(
+        request(
+            &addr,
+            "POST",
+            "/api/water/account",
+            &json!({"email":"","password":""}),
+            &owner
+        )
+        .await
+        .0,
+        400
+    );
+    hub.store_core_secret(
+        "water_history",
+        &json!({"days":{},"imported_at":0,"meter":"synthetic-private-meter"}).to_string(),
+    )
+    .await
+    .unwrap();
+    let (_, _, body) = request(&addr, "GET", "/api/water", &json!({}), &owner).await;
+    assert!(!body.contains("synthetic-private-meter"));
+    let _ = std::fs::remove_dir_all(dir);
+}

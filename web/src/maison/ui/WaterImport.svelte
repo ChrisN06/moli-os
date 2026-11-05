@@ -1,4 +1,5 @@
 <script>
+ import WaterAccount from './WaterAccount.svelte';
  import {login} from '../../lib/hub.svelte.js';
  import {t} from '../../lib/i18n.svelte.js';
  let file=$state(null),unit=$state('m3'),busy=$state(false),needPin=$state(false),pin=$state(''),message=$state('');
@@ -12,6 +13,7 @@
  }catch{message=t('water.failed');}finally{busy=false;}}
 </script>
 <section class="card"><h2>{t('water.setup')}</h2><p>{t('water.setup_note')}</p>
+ <WaterAccount/>
  <form onsubmit={e=>{e.preventDefault();send();}}>
  <label>{t('water.file')}<input type="file" accept=".csv,text/csv" onchange={e=>file=e.currentTarget.files?.[0]??null} required/></label>
  <label>{t('water.unit')}<select bind:value={unit}><option value="m3">m³</option><option value="L">L</option></select></label>
