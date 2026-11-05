@@ -7,12 +7,15 @@ A native HLS decoder may display only the upper-left part of the picture.
 
 This narrowly scoped patch waits for an SPS larger than 640 × 360 **only** for
 `isa.camera.hlc7` with subtype omitted, `hd`, or `2`. It uses the existing
-15-second probe deadline. Explicit SD/auto streams and other models retain their
+15-second probe deadline. The first HD keyframe consumed by probing is retained
+and delivered when streaming starts, so HLS does not have to wait for another GOP.
+Explicit SD/auto streams and other models retain their
 behavior. There is no transcoding, recording, motor command, or new network port.
 
 The patch applies to upstream commit `7c05066c90ab6ad1fccb506d5f0408aa31ebe60f`
 (v1.9.15). Synthetic SPS tests cover SD rejection, HD acceptance, missing metadata,
-explicit SD/auto, and an unrelated camera. The upstream MIT license is included.
+explicit SD/auto, an unrelated camera, and an SD-to-HD startup sequence whose
+first HD keyframe must remain available, with and without audio. The upstream MIT license is included.
 
 Build from the Moli repository root:
 
