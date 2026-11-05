@@ -1,0 +1,21 @@
+{
+  "water.owner": "Owner PIN required.",
+  "water.failed": "Water consumption unavailable.",
+  "water.invalid": "Invalid daily export. Check Date, Consommation, Index columns and unit.",
+  "water.daily": "Water · daily consumption",
+  "water.month": "Water · this month",
+  "water.period": "Water consumption month",
+  "water.through": "Readings available through {date}.",
+  "water.empty": "No readings available for this month.",
+  "water.missing": "Reading unavailable",
+  "water.inspect": "Select a day to read its consumption.",
+  "water.import_note": "Data imported from Tout sur mon eau. Days without readings remain unknown.",
+  "water.view": "View daily consumption",
+  "water.import": "Import water readings",
+  "water.setup": "Tout sur mon eau · consumption",
+  "water.setup_note": "In your account, select Days and download the CSV. Import readings from one meter only and choose the unit selected on the website. Later imports update existing days. Automatic account synchronization is not yet available.",
+  "water.file": "Daily CSV export",
+  "water.unit": "Export unit",
+  "water.pin": "Moli owner PIN",
+  "water.saved": "Readings saved. Charts are available in Energy."
+}

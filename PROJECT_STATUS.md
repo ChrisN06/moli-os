@@ -1,5 +1,38 @@
 # Moli OS — état du fork et reprise
 
+## Améliorations du 5 novembre 2026 — préparées, non déployées
+
+Branche `feat/climate-water-camera`, base publiée `b8845ca`. Les anciens checkouts
+modifiés sont préservés. Aucun remplacement de service effectué dans ce lot.
+
+- Salon : courbes communes de température, humidité et consigne **rapportée**,
+  périodes 24 h / 7 j / 30 j, axe d'humidité séparé et consigne en paliers. Réutilise
+  les choix de sondes intérieures et l'API d'historique existante.
+- Eau : consommation journalière dans Énergie et somme du mois courant sur
+  l'accueil, avec dates manquantes explicites. Import CSV journalier depuis
+  Paramètres, protégé par la session propriétaire, fusion par date et conservation
+  dans le coffre natif. **Synchronisation automatique du compte non livrée** :
+  la connexion du fournisseur comporte un contrôle humain ; aucun contournement
+  ni récupération de cookie personnel n'est implémenté.
+- Robot : origine des coordonnées visibles placée sur la base orange. Le recalage
+  existant utilise déjà la base ; test ajouté pour prouver que le déplacement du
+  robot ne déplace pas la zone. Aucune nouvelle géométrie de zone imposée.
+- Caméra : contradiction SPS SD / images HD identifiée. Patch ciblé de go2rtc
+  1.9.15, construction reproductible et tests dans `docker/go2rtc/`. Il ne modifie
+  ni les autres modèles ni les demandes explicites SD/auto. Son déploiement exige
+  une nouvelle image du relais ; recette Safari Mac/iPhone encore à effectuer.
+
+Contrôles : 40 tests web, build web, traductions, PWA, contrôle générique de fuites,
+92 tests API et Clippy API strict réussis. Tests Go ciblés réussis ; binaire Linux
+amd64 statique compilé avec `GOAMD64=v1`. Application du patch vérifiée sur l'archive
+amont épinglée. Construction complète de l'image relais non exécutée localement
+(Docker indisponible) ; utiliser le workflow image existant pour sa validation. Format et Clippy du workspace réussis.
+Catalogue : 36 paquets, six avertissements existants, aucune erreur.
+Les tests globaux retrouvent les quatre
+échecs macOS préexistants de `moli-profile` liés aux adresses réseau. CI Linux
+non exécutée sur ce lot à ce stade. Aperçu navigateur local avec données de test ;
+il ne permet ni connexion aux comptes ni lecture des caméras réelles.
+
 ## Réseau Freebox et thème bleu nuit — point de reprise du 4 novembre 2026
 
 Fonctionnalité livrée et vérifiée sur Mac ; projet Moli OS toujours actif.
