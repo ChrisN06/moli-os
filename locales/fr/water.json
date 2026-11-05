@@ -1,0 +1,21 @@
+{
+  "water.owner": "Le code propriétaire est requis.",
+  "water.failed": "Consommation d’eau indisponible.",
+  "water.invalid": "Export journalier invalide. Vérifiez les colonnes Date, Consommation, Index et l’unité.",
+  "water.daily": "Eau · consommation journalière",
+  "water.month": "Eau · ce mois-ci",
+  "water.period": "Mois des consommations d’eau",
+  "water.through": "Relevés disponibles jusqu’au {date}.",
+  "water.empty": "Aucun relevé disponible pour ce mois.",
+  "water.missing": "Relevé indisponible",
+  "water.inspect": "Touchez un jour pour lire sa consommation.",
+  "water.import_note": "Données importées depuis Tout sur mon eau. Les jours sans relevé restent inconnus.",
+  "water.view": "Voir les consommations journalières",
+  "water.import": "Importer les relevés d’eau",
+  "water.setup": "Tout sur mon eau · consommation",
+  "water.setup_note": "Dans votre espace client, sélectionnez Jours puis téléchargez le CSV. Importez les relevés d’un seul compteur et choisissez l’unité sélectionnée sur le site. Les imports suivants complètent les jours existants. La synchronisation automatique du compte n’est pas encore disponible.",
+  "water.file": "Export CSV journalier",
+  "water.unit": "Unité de l’export",
+  "water.pin": "Code propriétaire Moli",
+  "water.saved": "Relevés enregistrés. Les graphiques sont disponibles dans Énergie."
+}

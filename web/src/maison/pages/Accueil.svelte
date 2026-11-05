@@ -1,4 +1,5 @@
 <script>
+  import WaterCard from '../ui/WaterCard.svelte';
   import { onMount } from 'svelte';
   import { home, hub, value, device, clock, num, relative, lastSeen, nameOf, doorOpen, leak, lowBattery, act, pending } from '../lib/home.svelte.js';
   import { houseReading } from '../lib/readings.js';
@@ -139,6 +140,7 @@
   <div class="grid">
     <FreeboxRates />
     <EnergyCard />
+    <WaterCard />
     <Routines />
 
     <section class="card house-climate">

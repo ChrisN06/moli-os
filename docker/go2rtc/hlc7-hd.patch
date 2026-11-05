@@ -1,0 +1,30 @@
+diff --git a/pkg/xiaomi/miss/producer.go b/pkg/xiaomi/miss/producer.go
+index dcea284..29253f2 100644
+--- a/pkg/xiaomi/miss/producer.go
++++ b/pkg/xiaomi/miss/producer.go
+@@ -35 +35 @@ func Dial(rawURL string) (core.Producer, error) {
+-	medias, err := probe(client, query.Get("audio") != "0")
++	medias, err := probe(client, query.Get("audio") != "0", query.Get("subtype"))
+@@ -55 +55 @@ func Dial(rawURL string) (core.Producer, error) {
+-func probe(client *Client, audio bool) ([]*core.Media, error) {
++func probe(client *Client, audio bool, quality string) ([]*core.Media, error) {
+@@ -83 +83,5 @@ func probe(client *Client, audio bool) ([]*core.Media, error) {
+-					vcodec = h265.AVCCToCodec(buf)
++					candidate := h265.AVCCToCodec(buf)
++					// hlc7 starts in SD even when HD was requested; do not cache its startup SPS.
++					if readyH265(client.model, quality, candidate) {
++						vcodec = candidate
++					}
+@@ -127,0 +132,12 @@ func probe(client *Client, audio bool) ([]*core.Media, error) {
++func readyH265(model, quality string, codec *core.Codec) bool {
++	if model != "isa.camera.hlc7" || (quality != "" && quality != "hd" && quality != "2") {
++		return true
++	}
++	_, data, _ := h265.GetParameterSet(codec.FmtpLine)
++	if len(data) < 2 {
++		return false
++	}
++	sps := h265.DecodeSPS(data)
++	return sps != nil && sps.Width() > 640 && sps.Height() > 360
++}
++

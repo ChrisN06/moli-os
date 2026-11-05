@@ -498,3 +498,42 @@ async fn subscription_changes_require_owner_before_accessing_energy() {
         404
     );
 }
+
+#[tokio::test]
+async fn water_import_requires_owner_and_merges_without_losing_readings() {
+    let dir = std::env::temp_dir().join(format!("moli-water-owner-{}", moli_core::now_ms()));
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    let body = json!({"csv":"Date;Consommation;Index\n2026-11-01;0.125;100.125\n2026-11-02;0;0", "unit":"m3"});
+    assert_eq!(request(&addr, "PUT", "/api/water", &body, UI).await.0, 403);
+    assert!(hub.core_secret("water_history").is_none());
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    assert_eq!(
+        request(&addr, "PUT", "/api/water", &body, &owner).await.0,
+        200
+    );
+    let next = json!({"csv":"Date;Consommation;Index\n2026-11-02;0;100.125", "unit":"m3"});
+    assert_eq!(
+        request(&addr, "PUT", "/api/water", &next, &owner).await.0,
+        200
+    );
+    let (status, _, body) = request(&addr, "GET", "/api/water", &json!({}), "").await;
+    assert_eq!(status, 200);
+    let data: Json = serde_json::from_str(&body).unwrap();
+    assert_eq!(data["days"], json!({"2026-11-01":0.125,"2026-11-02":0.0}));
+    let stored = hub.core_secret("water_history").unwrap();
+    let invalid = json!({"csv":"Date;Consommation;Index\n2026-11-02;NaN;100.125", "unit":"m3"});
+    assert_eq!(
+        request(&addr, "PUT", "/api/water", &invalid, &owner)
+            .await
+            .0,
+        400
+    );
+    assert_eq!(hub.core_secret("water_history").unwrap(), stored);
+    let _ = std::fs::remove_dir_all(dir);
+}

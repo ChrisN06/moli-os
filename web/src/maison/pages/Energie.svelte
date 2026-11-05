@@ -1,4 +1,5 @@
 <script>
+  import WaterCard from '../ui/WaterCard.svelte';
   import CounterPower from '../ui/CounterPower.svelte';
   import { subscriptionCost } from '../lib/subscription.js';
   import { onMount } from 'svelte';
@@ -236,6 +237,7 @@
     <a class="demo" href="#/energie/solaire"><Icon name="sun" size={16} />{t('energie.demo_solaire')}</a>
   </header>
 
+  <WaterCard chart />
   {#if !s}
     <p class="muted">{energy.missing ? t('energie.aucun_compteur') : t('energie.chargement')}</p>
   {:else}

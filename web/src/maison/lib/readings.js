@@ -22,19 +22,21 @@ export function readingWord(key, value) {
 }
 
 /** Explicit references win; otherwise use a unique indoor sensor, never outdoor weather. */
-export function houseReading(devices, config, key) {
+export function housePoint(devices, config, key) {
   const point = config?.indoor?.[key];
-  const read = (d, k) => {
-    const v = d?.state?.[k]?.value;
-    return d?.online !== false && typeof v === 'number' && Number.isFinite(v) ? v : null;
-  };
-  if (point) {
-    const slash = point.indexOf('/');
-    return slash > 0 ? read(devices[point.slice(0, slash)], point.slice(slash + 1)) : null;
-  }
+  if (point) return point;
   const outdoor = new Set(Object.values(config?.outdoor ?? {}).filter((v) => typeof v === 'string'));
-  const candidates = Object.values(devices).filter((d) => !outdoor.has(d.id) && d.points?.some((p) => p.key === key && p.semantic === key));
-  return candidates.length === 1 ? read(candidates[0], key) : null;
+  const candidates = Object.values(devices).filter((d) => !outdoor.has(d.id) && d.points?.some((p) => p.key === key && (p.semantic === key || key === 'reported_setpoint')));
+  return candidates.length === 1 ? `${candidates[0].id}/${key}` : null;
+}
+
+export function houseReading(devices, config, key) {
+  const point = housePoint(devices, config, key);
+  if (!point) return null;
+  const slash = point.indexOf('/');
+  const device = devices[point.slice(0, slash)];
+  const value = device?.state?.[point.slice(slash + 1)]?.value;
+  return slash > 0 && device?.online !== false && typeof value === 'number' && Number.isFinite(value) ? value : null;
 }
 
 /** Index under the finger, including gaps and the two plot edges. */

@@ -198,5 +198,14 @@
   "salon.apercu_montrer": "Show",
   "salon.apercu_masquer": "Hide",
   "salon.eclairage_description": "Living room lighting.",
-  "salon.eclairage_vide": "No connected light configured yet."
+  "salon.eclairage_vide": "No connected light configured yet.",
+  "salon.climate.title": "Temperature, humidity and heating",
+  "salon.climate.period": "Period",
+  "salon.climate.days": "{n} days",
+  "salon.climate.note": "History recorded by Moli. Setpoint reported by Somfy; an active override may differ.",
+  "salon.climate.temperature": "Temperature",
+  "salon.climate.humidity": "Humidity",
+  "salon.climate.reported_setpoint": "Reported setpoint",
+  "salon.climate.inspect": "Explore chart",
+  "salon.climate.setpoint_dense": "Too many changes to show the exact setpoint: choose a shorter period."
 }
