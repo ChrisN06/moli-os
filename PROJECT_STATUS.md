@@ -25,7 +25,9 @@ les changements suivants concernent uniquement le relais vidéo.
   conserve aussi la première image clé HD consommée pendant la détection.
   Flux réel : initialisation et SPS des images à **2304 × 1296**, lecture active
   dans le navigateur interne. Cadrage correct confirmé par le propriétaire sur iPhone après
-  un chargement long. Safari Mac non confirmé séparément. Autres modèles et demandes SD/auto inchangés.
+  un chargement long. Safari Mac non confirmé séparément pour Xiaomi. Les deux Tapo sont
+  confirmées par le propriétaire sur Safari et iPhone, avec démarrage parfois lent.
+  Autres modèles et demandes SD/auto inchangés.
 
 Images déployées, épinglées par digest :
 - Application : `sha256:35139423f0784a41e6b79698936d01bfeb01ee2e117281405c212d0b594a57b0`.
