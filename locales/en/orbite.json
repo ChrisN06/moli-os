@@ -1,0 +1,20 @@
+{
+  "orbite.brand": "Moli OS",
+  "orbite.name": "Orbit",
+  "orbite.display": "Display",
+  "orbite.auto": "Automatic",
+  "orbite.desktop": "Desktop",
+  "orbite.tablet": "Wall tablet",
+  "orbite.phone": "Phone",
+  "orbite.tv": "4K TV",
+  "orbite.more": "More",
+  "orbite.explore": "Explore the home",
+  "orbite.robot_missing": "No vacuum connected",
+  "orbite.energy_missing": "Energy is not configured",
+  "orbite.detail": "View details",
+  "orbite.humidity": "Humidity",
+  "orbite.readings": "Indoor climate",
+  "orbite.period": "Today’s breakdown",
+  "orbite.load_failed": "Breakdown unavailable",
+  "orbite.remote_help": "Arrows: navigate · OK: open · Back: close"
+}
