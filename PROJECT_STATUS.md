@@ -1,15 +1,40 @@
 # Moli OS — état du fork et reprise
 
-## Synchronisation So’EAU — en cours de recette
+## Synchronisation So’EAU — livrée et vérifiée les 5–6 novembre 2026
 
-Connexion directe en Rust ajoutée sur `feat/climate-water-camera` : formulaire normal
-avec CSRF, cookies en mémoire sur un hôte HTTPS fixe, découverte du compteur et
-consommations journalières des trois derniers mois. Coffre natif, propriétaire requis,
-actualisation toutes les 12 heures et erreurs explicites conservant les relevés.
-Aucune dépendance Home Assistant/MQTT, aucun contournement de contrôle humain.
-La connexion réelle et le déploiement de ce complément restent à vérifier.
+Code `a9be6fe`, branche `feat/climate-water-camera`, [PR 4](https://github.com/ChrisN06/moli-os/pull/4)
+en brouillon, sans fusion. Image applicative déployée :
+`sha256:8f59109d4d3471875adf9ccf6b583f996b7bbf5e03825e1681780aa369341c7e`.
+Le relais vidéo précédemment corrigé est conservé.
 
-## Améliorations du 5 novembre 2026 — déployées, limites ci-dessous
+- Connexion directe Rust par le formulaire HTTPS normal (CSRF, cookies temporaires
+  sur un hôte fixe), découverte du compteur et télémétrie journalière. Aucun ajout
+  de dépendance Home Assistant/MQTT, aucun contournement de contrôle humain.
+- Identifiants saisis par le propriétaire, conservés dans le coffre chiffré natif
+  après validation. Aucun identifiant ou cookie retourné par l'API. Droits propriétaire
+  requis pour connecter ou actualiser le compte.
+- Trois derniers mois récupérés, puis actualisés au démarrage et toutes les 12 h.
+  Un refus temporaire observé pendant la recette a motivé un unique nouvel essai
+  après une minute ; jamais de nouvel essai devant un contrôle humain.
+- Connexion réelle confirmée par le propriétaire, historique et total mensuel vérifiés
+  dans Énergie et Accueil. Reprise autonome après remplacement de l'application
+  confirmée sans ressaisie ni clic d'actualisation. Les anciennes dates sont conservées.
+- Sauvegarde native avec compte chiffré copiée dans le dossier privé, SQLite intègres.
+  Anciennes mesures, heures d'énergie terminées, tarifs et abonnement préservés.
+  Référence Compose synchronisée ; autres services conservés. La tentative de
+  sauvegarde supplémentaire du lendemain n'a pas été confirmée après expiration
+  de la session Portainer ; la sauvegarde avec compte vérifiée reste disponible.
+
+Validation : 99 tests API, 40 tests web, build, i18n, PWA, format et Clippy stricts.
+CI Linux [check](https://github.com/ChrisN06/moli-os/actions/runs/42114905731),
+[audit](https://github.com/ChrisN06/moli-os/actions/runs/42114905728) et
+[image amd64/arm64](https://github.com/ChrisN06/moli-os/actions/runs/42114903495) réussis.
+Les quatre échecs réseau macOS préexistants de `moli-profile` restent inchangés.
+Le cycle réel de douze heures n'a pas encore été observé ; le déclenchement au
+démarrage et la temporisation de reprise sont vérifiés. Les données plus anciennes
+restent importables en CSV. Détails privés dans le dossier de la maison.
+
+## Améliorations du 5 novembre 2026 — livraison initiale, complétée ci-dessus
 
 Branche `feat/climate-water-camera`, base publiée `b8845ca`, code `40f778d`.
 [PR 4](https://github.com/ChrisN06/moli-os/pull/4) en brouillon, sans fusion.
