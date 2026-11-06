@@ -7,7 +7,18 @@ L'API répond et l'appairage est valide, mais une liste de stations Wi-Fi peut �
 Freebox indisponible. Une liste nulle est désormais traitée comme une liste vide,
 sans modifier l'autre radio ni les ports Ethernet. Régression couverte par fixture
 synthétique ; 41 tests web, build, i18n, PWA et Clippy strict réussis. Les quatre
-échecs réseau macOS préexistants restent inchangés. Déploiement encore à vérifier.
+échecs réseau macOS préexistants restent inchangés.
+
+Code `55a480b` déployé, image applicative
+`sha256:9ba5a58844bcfec9c50c71f502070ae9141b5bb6a46db5415b0f57f4e12c13a3`.
+CI Linux [check](https://github.com/ChrisN06/moli-os/actions/runs/42175214108),
+[audit](https://github.com/ChrisN06/moli-os/actions/runs/42175214098) et
+[image](https://github.com/ChrisN06/moli-os/actions/runs/42175213064) réussis.
+Recette dans le navigateur interne : ligne connectée, débits et topologie affichés.
+Appairage existant conservé, aucun changement sur la Freebox. Sauvegarde native
+créée sur le serveur avant remplacement ; la copie SSH n'a pas été confirmée
+(authentification de l'agent indisponible). Le fichier Compose géré par Portainer
+est à jour ; la copie de référence sur le NAS n'a pas été synchronisée par SSH.
 
 ## Synchronisation So’EAU — livrée et vérifiée les 5–6 novembre 2026
 
