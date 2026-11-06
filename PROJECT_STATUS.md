@@ -16,9 +16,10 @@ CI Linux [check](https://github.com/ChrisN06/moli-os/actions/runs/42175214108),
 [image](https://github.com/ChrisN06/moli-os/actions/runs/42175213064) réussis.
 Recette dans le navigateur interne : ligne connectée, débits et topologie affichés.
 Appairage existant conservé, aucun changement sur la Freebox. Sauvegarde native
-créée sur le serveur avant remplacement ; la copie SSH n'a pas été confirmée
-(authentification de l'agent indisponible). Le fichier Compose géré par Portainer
-est à jour ; la copie de référence sur le NAS n'a pas été synchronisée par SSH.
+créée sur le serveur avant remplacement ; sa copie SSH n'avait pas été confirmée
+au moment du déploiement. Le 6 novembre, la connexion SSH est rétablie et la référence
+Compose du NAS est alignée avec celle de Portainer après comparaison du contenu
+et contrôle des empreintes. L'ancien fichier est conservé ; aucun service redémarré.
 
 ### Point de reprise du 6 novembre 2026 — fonctionnalité Freebox close
 
@@ -40,10 +41,9 @@ préexistant, reste exclu de la sauvegarde Git. Seul ce point de reprise documen
 est ajouté ; aucune règle permanente ni procédure d'utilisation ne change.
 
 Prochaines étapes :
-1. Avant toute prochaine relance manuelle, comparer la référence Compose du NAS
-   avec celle de Portainer, puis les aligner quand l'authentification SSH est disponible.
-   Ne pas relancer depuis la copie NAS actuellement ancienne.
-2. Vérifier le prochain cycle réel de douze heures de SUEZ, sans modifier la collecte.
+1. Vérifier le prochain cycle réel de douze heures de SUEZ, sans modifier la collecte.
+2. Lors d'un futur déploiement, maintenir les références Compose du NAS et de
+   Portainer alignées. La divergence signalée lors de la clôture est résolue.
 
 ## Synchronisation So’EAU — livrée et vérifiée les 5–6 novembre 2026
 
