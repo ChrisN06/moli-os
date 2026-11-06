@@ -1,7 +1,9 @@
 <script>
   import '@fontsource-variable/figtree';
   import './maison.css';
-  import { onMount } from 'svelte';
+  import './orbite.css';
+  import { attachRemoteNavigation } from './lib/remote-navigation.js';
+  import { onMount, tick } from 'svelte';
   import { home, hub, start, value, savePref, watches, hidden } from './lib/home.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import Icon from './ui/Icon.svelte';
@@ -28,6 +30,8 @@
   import { moli } from './lib/moli.svelte.js';
 
   let { route } = $props();
+  let shell, moreDialog;
+  let display = $state('auto');
 
   // Shown only if the link stays down a few seconds (a blink is not news).
   let offline = $state(false);
@@ -61,16 +65,19 @@
   ];
   const nav = $derived(NAV.filter((item) => (!item.shown || item.shown()) && (!Array.isArray(home.config?.navigation) || home.config.navigation.includes(item.path))));
 
+  const primary = $derived(['', 'salon', 'energie', 'aspirateur', 'moli'].map(path => nav.find(item => item.path === path)).filter(Boolean));
   let moliOpen = $state(false);
   let prefersDark = $state(false);
 
   onMount(() => {
     start();
+    try { const saved = localStorage.getItem('maison-display'); if (['auto', 'desktop', 'tablet', 'phone', 'tv'].includes(saved)) display = saved; } catch { /* Private browsing keeps the automatic layout. */ }
+    const stopRemote = attachRemoteNavigation(shell);
     const media = matchMedia('(prefers-color-scheme: dark)');
     prefersDark = media.matches;
     const update = (e) => (prefersDark = e.matches);
     media.addEventListener('change', update);
-    return () => media.removeEventListener('change', update);
+    return () => { media.removeEventListener('change', update); stopRemote(); };
   });
 
   // Auto: night after sunset (the house's own daylight), else the system's.
@@ -111,47 +118,30 @@
   }
 
   const page = $derived(route.split('/')[0] ?? '');
+  $effect(() => {
+    const destination = route;
+    let cancelled = false;
+    tick().then(() => { if (!cancelled && route === destination) window.scrollTo({ top: 0, behavior: 'instant' }); });
+    return () => { cancelled = true; };
+  });
 </script>
 
-<div class="maison" data-theme={theme}>
-  <nav class="rail" aria-label={t('commun.nav.aria')}>
-    <a class="brand" href="#/" aria-label={t('commun.nav.logo')}>
-      <svg viewBox="0 0 32 32" aria-hidden="true">
-        <circle cx="16" cy="16" r="15" fill="var(--sun)" />
-        <circle cx="16" cy="16" r="8.5" fill="none" stroke="#161512" stroke-width="4.3" />
-      </svg>
-    </a>
-    <ul>
-      {#each nav as item (item.path)}
-        <li>
-          <a href="#/{item.path}" class:active={page === item.path} aria-current={page === item.path ? 'page' : undefined}>
-            <span class="glyph">
-              {#if item.orb}<Orb size={22} state={moli.busy ? 'thinking' : 'idle'} />{:else}<Icon name={item.icon} size={24} />{/if}
-            </span>
-            <span class="label">{item.name ?? t(item.label)}</span>
-          </a>
-        </li>
-      {/each}
-    </ul>
-    <div class="rail-foot">
-      <button class="theme" onclick={cycleTheme} title={themeTitle}>
-        <Icon name={theme === 'night' ? 'moon' : 'sun'} size={20} />
-        <span class="label">{themeName}</span>
-      </button>
-      <a href="#/systeme" class:active={page === 'systeme'} title={t('commun.nav.systeme_titre')}>
-        <Icon name="branch" size={20} />
-        <span class="label">{t('commun.nav.systeme')}</span>
-      </a>
-      <a class="atelier" href="#/parametres" title={t('commun.nav.parametres')}>
-        <Icon name="tune" size={20} /><span class="label">{t('commun.nav.parametres')}</span>
-      </a>
-      <a class="atelier" href="#/atelier" title={t('commun.nav.atelier_titre')}>
-        <Icon name="atelier" size={20} />
-        <span class="label">{t('commun.nav.atelier')}</span>
-      </a>
+<div class="maison orbite" data-theme={theme} data-display={display} data-page={page || 'accueil'} bind:this={shell}>
+  <header class="orbite-bar">
+    <a class="orbite-brand" href="#/" aria-label={t('commun.nav.logo')}>{t('orbite.brand')}<span>{t('orbite.name')}</span></a>
+    <div class="orbite-tools">
+      <label>{t('orbite.display')}<select aria-label={t('orbite.display')} value={display} onchange={(event) => { display = event.currentTarget.value; savePref('maison-display', display); }}>
+        <option value="auto">{t('orbite.auto')}</option><option value="desktop">{t('orbite.desktop')}</option><option value="tablet">{t('orbite.tablet')}</option><option value="phone">{t('orbite.phone')}</option><option value="tv">{t('orbite.tv')}</option>
+      </select></label>
+      <button class="theme" onclick={cycleTheme} title={themeTitle}><Icon name={theme === 'night' ? 'moon' : 'sun'} size={20} /><span>{themeName}</span></button>
     </div>
+  </header>
+  <nav class="orbite-dock" aria-label={t('commun.nav.aria')}>
+    {#each primary as item (item.path)}
+      <a href="#/{item.path}" aria-current={page === item.path ? 'page' : undefined} data-section={item.path || 'accueil'}>{#if item.orb}<Orb size={22} state={moli.busy ? 'thinking' : 'idle'}/>{:else}<Icon name={item.icon} size={22}/>{/if}<span>{item.name ?? t(item.label)}</span></a>
+    {/each}
+    <button onclick={() => moreDialog.showModal()} aria-haspopup="dialog" class:active={!primary.some(item => item.path === page)}><Icon name="rooms" size={22}/><span>{t('orbite.more')}</span></button>
   </nav>
-
   <main class="content" class:network={page === 'reseau'}>
     {#if page === 'salon'}
       <Salon />
@@ -194,14 +184,19 @@
     {:else}
       <Accueil />
     {/if}
-    <!-- On a phone the rail's foot is hidden: the same three, at the bottom. -->
-    {#if page !== 'reseau'}<footer class="phone-foot">
-      <a href="#/systeme"><Icon name="branch" size={16} />{t('commun.nav.comment_ca_marche')}</a>
-      <a href="#/parametres"><Icon name="tune" size={16} />{t('commun.nav.parametres')}</a>
-      <a href="#/atelier"><Icon name="atelier" size={16} />{t('commun.nav.atelier')}</a>
-      <button onclick={cycleTheme}><Icon name={theme === 'night' ? 'moon' : 'sun'} size={16} />{home.theme === 'auto' ? t('commun.theme.auto_pied') : themeName}</button>
-    </footer>{/if}
   </main>
+  <dialog class="orbite-more" bind:this={moreDialog} aria-labelledby="orbite-more-title">
+    <header><h2 id="orbite-more-title">{t('orbite.explore')}</h2><button onclick={() => moreDialog.close()}>{t('commun.fermer')}</button></header>
+    <div class="orbite-more-grid">
+      {#each nav.filter(item => !primary.some(p => p.path === item.path)) as item (item.path)}
+        <a href="#/{item.path}" onclick={() => moreDialog.close()}><Icon name={item.icon ?? 'robot'} size={24}/>{item.name ?? t(item.label)}</a>
+      {/each}
+      <a href="#/systeme" onclick={() => moreDialog.close()}><Icon name="branch" size={24}/>{t('commun.nav.systeme')}</a>
+      <a href="#/parametres" onclick={() => moreDialog.close()}><Icon name="tune" size={24}/>{t('commun.nav.parametres')}</a>
+      <a href="#/atelier" onclick={() => moreDialog.close()}><Icon name="atelier" size={24}/>{t('commun.nav.atelier')}</a>
+    </div>
+  </dialog>
+
 
   {#if page !== 'moli'}
     <button class="orb" onclick={() => (moliOpen = true)} aria-label={t('commun.demander_moli')}>
@@ -257,100 +252,6 @@
 </div>
 
 <style>
-  .maison {
-    display: grid;
-    grid-template-columns: 104px minmax(0, 1fr);
-  }
-
-  .rail {
-    position: sticky;
-    top: 0;
-    height: 100dvh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 22px 0 18px;
-    gap: 18px;
-  }
-
-  .brand svg {
-    width: 40px;
-    height: 40px;
-    display: block;
-  }
-
-  .rail ul {
-    list-style: none;
-    margin: 12px 0 0;
-    padding: 0;
-    display: grid;
-    gap: 6px;
-  }
-
-  .rail a,
-  .rail button {
-    display: grid;
-    justify-items: center;
-    gap: 4px;
-    width: 80px;
-    padding: 10px 0 8px;
-    border-radius: 20px;
-    border: 0;
-    background: none;
-    color: var(--ink-3);
-    text-decoration: none;
-    transition: color 0.2s var(--ease), background 0.2s var(--ease);
-  }
-
-  .rail .glyph {
-    width: 52px;
-    height: 34px;
-    border-radius: 999px;
-    display: grid;
-    place-items: center;
-    transition: background 0.25s var(--ease);
-  }
-
-  .rail a.active {
-    color: var(--ink);
-  }
-
-  .rail a.active .glyph {
-    background: var(--surface);
-    box-shadow: var(--shadow);
-  }
-
-  .rail a:hover {
-    color: var(--ink-2);
-  }
-
-  .label {
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .rail-foot {
-    margin-top: auto;
-    display: grid;
-    gap: 4px;
-  }
-
-  .rail-foot a,
-  .rail-foot button {
-    padding: 8px 0;
-  }
-
-  .content {
-    padding: 28px 36px 120px 8px;
-    max-width: 1800px;
-    width: 100%;
-    min-width: 0;
-  }
-
-  .content.network{height:100dvh;padding:12px;overflow:hidden}
-  @media(max-width:760px){.content.network{height:calc(100dvh - 76px)}}
-
   /* Moli, always one tap away. */
   .orb {
     position: fixed;
@@ -484,99 +385,10 @@
     color: #fff;
   }
 
-  /* Phones: the rail becomes a bottom bar. */
+  /* On phones the Orbite dock owns navigation; notifications stay clear of it. */
   @media (max-width: 760px) {
-    /* minmax(0, …): a `1fr` column grows to the widest page content and
-       pushes every page sideways on a phone. */
-    .maison {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .rail {
-      position: fixed;
-      inset: auto 0 0 0;
-      height: auto;
-      flex-direction: row;
-      justify-content: center;
-      padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
-      background: var(--surface);
-      box-shadow: var(--shadow-lift);
-      z-index: 25;
-    }
-
-    .rail .brand,
-    .rail-foot {
-      display: none;
-    }
-
-    .rail ul {
-      grid-auto-flow: column;
-      grid-auto-columns: 62px;
-      width: 100%;
-      margin: 0;
-      gap: 0;
-      overflow-x: auto;
-      scrollbar-width: none;
-      justify-content: safe center;
-    }
-
-    .rail a {
-      width: auto;
-      padding: 4px 0;
-    }
-
-    .label {
-      font-size: 10.5px;
-      max-width: 60px;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    .rail .glyph {
-      width: 44px;
-      height: 30px;
-    }
-
-    .content {
-      padding: 20px 16px 140px;
-    }
-
-    .phone-foot {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 8px 18px;
-      margin-top: 28px;
-      font-size: 13px;
-    }
-
-    .phone-foot a,
-    .phone-foot button {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      border: none;
-      background: none;
-      color: var(--ink-3);
-      font: inherit;
-      text-decoration: none;
-      cursor: pointer;
-    }
-
-    .orb {
-      right: 16px;
-      bottom: 86px;
-      padding: 8px;
-    }
-
-    .orb-text {
-      display: none;
-    }
-
-    .notes {
-      bottom: 150px;
-      width: calc(100% - 32px);
-    }
+    .orb { right: 16px; bottom: 100px; padding: 8px; }
+    .orb-text { display: none; }
+    .notes { bottom: 150px; width: calc(100% - 32px); }
   }
 </style>
