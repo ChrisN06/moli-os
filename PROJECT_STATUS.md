@@ -20,6 +20,31 @@ créée sur le serveur avant remplacement ; la copie SSH n'a pas été confirmé
 (authentification de l'agent indisponible). Le fichier Compose géré par Portainer
 est à jour ; la copie de référence sur le NAS n'a pas été synchronisée par SSH.
 
+### Point de reprise du 6 novembre 2026 — fonctionnalité Freebox close
+
+Le propriétaire confirme le bon fonctionnement après déploiement. Relecture ciblée
+du normaliseur, de son appel dans le rafraîchissement et des tests : aucun autre
+changement nécessaire. Branche `feat/climate-water-camera`, code `55a480b`,
+référence documentaire de départ `25e064a`.
+
+Depuis la racine du dépôt : `node --test web/src/maison/lib/freebox-data.test.js`
+relancé lors de cette clôture : **3 tests réussis**. `git diff --check` réussi.
+Les 41 tests web, le build, i18n, PWA, format et Clippy ainsi que les CI Linux
+ci-dessus sont réutilisés : aucun code n'a changé depuis leur exécution.
+Les preuves des autres fonctionnalités restent celles de leurs sections datées ;
+elles ne sont pas revérifiées dans cette clôture. Aucun nouveau déploiement requis.
+
+Git était synchronisé au début de la clôture (`FETCH_HEAD` et `HEAD` identiques),
+sans différence indexée ni modification suivie. Le fichier `.DS_Store` non suivi,
+préexistant, reste exclu de la sauvegarde Git. Seul ce point de reprise documentaire
+est ajouté ; aucune règle permanente ni procédure d'utilisation ne change.
+
+Prochaines étapes :
+1. Avant toute prochaine relance manuelle, comparer la référence Compose du NAS
+   avec celle de Portainer, puis les aligner quand l'authentification SSH est disponible.
+   Ne pas relancer depuis la copie NAS actuellement ancienne.
+2. Vérifier le prochain cycle réel de douze heures de SUEZ, sans modifier la collecte.
+
 ## Synchronisation So’EAU — livrée et vérifiée les 5–6 novembre 2026
 
 Code `a9be6fe`, branche `feat/climate-water-camera`, [PR 4](https://github.com/ChrisN06/moli-os/pull/4)
