@@ -1,5 +1,14 @@
 # Moli OS — état du fork et reprise
 
+## Compatibilité des stations Freebox — correctif du 6 novembre 2026
+
+L'API répond et l'appairage est valide, mais une liste de stations Wi-Fi peut être
+`null`. Le normaliseur web appelait `forEach` sur cette valeur et affichait toute la
+Freebox indisponible. Une liste nulle est désormais traitée comme une liste vide,
+sans modifier l'autre radio ni les ports Ethernet. Régression couverte par fixture
+synthétique ; 41 tests web, build, i18n, PWA et Clippy strict réussis. Les quatre
+échecs réseau macOS préexistants restent inchangés. Déploiement encore à vérifier.
+
 ## Synchronisation So’EAU — livrée et vérifiée les 5–6 novembre 2026
 
 Code `a9be6fe`, branche `feat/climate-water-camera`, [PR 4](https://github.com/ChrisN06/moli-os/pull/4)
