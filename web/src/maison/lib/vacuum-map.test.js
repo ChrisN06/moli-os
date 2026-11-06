@@ -20,3 +20,13 @@ test('saved zone follows the dock without resizing or clipping',async()=>{
  assert.equal(rebase({...map,dock:[100,100]},zone),null);
  assert.equal(rebase(map,{...zone,confirmed_at:0}),null);
 });
+
+test('dock is the only origin even while the robot moves',async()=>{
+ const {rebase,dockOffset,dockBound}=await import('./vacuum-map.js');
+ const map={left:5000,bottom:5000,width:500,height:500,dock:[15000,15000],robot:[15000,15000]};
+ const zone={bounds:[10000,11000,14700,14300],dock:map.dock,confirmed_at:1};
+ assert.deepEqual(rebase({...map,robot:[22000,24000]},zone),zone.bounds);
+ assert.equal(dockOffset(map,zone.bounds,0),-5);
+ assert.equal(dockOffset(map,zone.bounds,1),-4);
+ for(let i=0;i<4;i++) assert.equal(dockBound(map,dockOffset(map,zone.bounds,i),i),zone.bounds[i]);
+});

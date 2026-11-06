@@ -2,6 +2,7 @@
   import { home, hub, roomList, num } from '../lib/home.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
   import { houseReading } from '../lib/readings.js';
+  import ClimateHistory from '../ui/ClimateHistory.svelte';
   import CoverTile from '../ui/CoverTile.svelte';
   import Icon from '../ui/Icon.svelte';
   import LightTile from '../ui/LightTile.svelte';
@@ -24,6 +25,7 @@
     <div><span>{t('maison.accueil.temperature_interieure')}</span><strong>{num(temperature, 1)} °C</strong></div>
     <div><span>{t('maison.accueil.humidite')}</span><strong>{num(humidity)} %</strong></div>
   </section>
+  <ClimateHistory />
   {#if covers.length}<section class="card lamps">{#each covers as cover (cover.id)}<CoverTile id={cover.id} />{/each}</section>{/if}
   <section class="card lighting">
     <h2><Icon name="light-group" size={22} />{t('salon.ambiance')}</h2>

@@ -25,3 +25,7 @@ export function rebase(map, zone) {
   if (bounds.some(v => !Number.isFinite(v) || v < 0 || v > 51200) || bounds[0]<map.left || bounds[1]<map.bottom || bounds[2]>map.left+map.width*50 || bounds[3]>map.bottom+map.height*50) return null;
   return bounds;
 }
+
+/** The dock is the fixed origin shown to people; protocol coordinates stay absolute. */
+export function dockOffset(map, bounds, index) { return (bounds[index]-map.dock[index%2])/1000; }
+export function dockBound(map, metres, index) { return Math.round(Number(metres)*1000+map.dock[index%2]); }

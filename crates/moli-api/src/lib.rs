@@ -41,6 +41,8 @@ mod session;
 pub mod settings;
 mod sse;
 mod system;
+mod water;
+mod water_suez;
 mod weather;
 
 use std::sync::Arc;
@@ -353,6 +355,7 @@ pub fn router(hub: Hub, shutdown: CancellationToken, options: &Options) -> Route
         .merge(cameras::routes(options.cameras.clone()))
         .merge(xiaomi::routes(options.xiaomi.clone()))
         .merge(freebox::routes())
+        .merge(water::routes(hub.clone(), shutdown.clone()))
         .route("/api/energy", get(rest::energy))
         .route("/api/energy/price", put(rest::energy_price))
         .route("/api/energy/subscription", put(rest::energy_subscription))

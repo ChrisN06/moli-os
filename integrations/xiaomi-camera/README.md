@@ -62,3 +62,17 @@ Compatibilité du matériel non démontrée par ces seuls liens.
 
 Une connexion Xiaomi réussie redémarre aussi le relais pour actualiser son cache de
 session cloud. Les lecteurs déjà ouverts peuvent être interrompus brièvement.
+
+## Recadrage HEVC au démarrage
+
+Certains démarrages du modèle `isa.camera.hlc7` envoient d'abord un SPS SD
+640 × 360, puis des images HD 2304 × 1296. Un lecteur natif peut conserver les
+mauvaises dimensions de l'initialisation HLS. Agrandir le conteneur CSS ou appliquer
+une rotation ne corrige pas cette contradiction.
+
+Le correctif ciblé du relais, ses tests synthétiques, sa construction et sa recette
+sont décrits dans [docker/go2rtc](../../docker/go2rtc/README.md). Il attend le SPS HD
+avant de publier le codec, sous le délai de probe existant. Il n'est actif que si
+l'image du relais est remplacée par l'image corrigée ; une mise à jour du seul
+binaire Moli ne suffit pas. Pas de transcodage, de port supplémentaire ou de
+modification des paramètres de sécurité.

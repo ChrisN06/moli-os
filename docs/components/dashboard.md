@@ -258,3 +258,55 @@ il conserve la fenêtre de 24 heures en leur absence. Aucun point futur n’est 
 Mi-Light conserve les valeurs déjà restaurées par le cache serveur au lieu de les effacer
 au redémarrage du pilote. Elles restent des états supposés, sans retour physique des lampes.
 Une commande incertaine continue d’invalider les valeurs concernées.
+
+## Courbes intérieures et eau
+
+La page Salon superpose l'historique local de température, d'humidité (axe séparé
+0–100 %) et de `reported_setpoint` (paliers), sur 24 h, 7 ou 30 jours. Les choix
+`indoor.temperature` et `indoor.humidity` servent aussi aux courbes ; sans choix,
+seul un capteur intérieur unique est retenu. Une consigne ambiguë reste absente.
+Il s'agit de la consigne rapportée par Overkiz, pas d'une garantie sur une dérogation
+active dans l'application du fabricant. La sélection temporelle fonctionne au
+clavier et au toucher. Aucun ancien historique Somfy n'est téléchargé.
+
+L'eau utilise `GET /api/water` et un import propriétaire `PUT /api/water`
+(`csv`, `unit` valant `m3` ou `L`). Paramètres accepte l'export **journalier** de
+Tout sur mon eau : `Date;Consommation;Index`, séparateur point-virgule, avec ou sans
+guillemets et BOM. L'unité doit correspondre à celle choisie sur le site. Un import
+mensuel, une date invalide, un doublon, un nombre négatif/non fini ou un fichier
+trop volumineux est refusé sans écriture partielle. Les jours sans index (exportés
+avec index et volume nuls) ne remplacent pas une mesure par zéro. Un zéro avec
+index valide reste une consommation mesurée de zéro.
+
+Les imports d'un seul compteur fusionnent par date, dans la limite de 3 660 jours.
+Les valeurs sont stockées dans le coffre chiffré existant, inclus dans les
+sauvegardes natives. Aucun index ni historique électrique n'est modifié.
+L'accueil montre la somme disponible pour le mois civil courant ; Énergie affiche
+les jours du mois choisi, avec les dates manquantes explicitement distinctes des
+zéros. La dernière date mesurée est indiquée.
+
+La connexion So’EAU dans Paramètres utilise le formulaire HTTPS normal (CSRF et
+cookies limités à cet hôte), puis `meters-list` et `telemetry`, directement en Rust
+via `moli-net`. Aucun navigateur automatisé, Home Assistant ou MQTT n'est requis.
+Les identifiants ne sont conservés qu'après une récupération réussie, dans le coffre
+chiffré natif. Un compte avec plusieurs compteurs exige de choisir un identifiant
+qui lui appartient. Le compteur lié à l'historique ne peut pas changer silencieusement.
+Les trois derniers mois sont lus à chaque synchronisation, au démarrage puis toutes
+les 12 heures ; une lecture manuelle est disponible, avec une minute entre tentatives.
+Les erreurs conservent les relevés existants et sont affichées sans données de connexion.
+Le collecteur retente une seule fois après une minute en cas d’erreur temporaire ;
+il ne retente pas un contrôle humain ni une lecture déjà limitée.
+Un contrôle humain imposé par le fournisseur reste un échec explicite, sans contournement.
+Le CSV reste utilisable. Référence de protocole :
+[py-mon-eau](https://github.com/laurent-martin/py-mon-eau).
+
+`GET /api/water/account`, `POST /api/water/account` (`email`, `password`, `meter`
+facultatif) et `POST /api/water/sync` (`{}`) exigent une session propriétaire.
+Aucune réponse ne retourne les identifiants ou cookies. `GET /api/water` ajoute
+`synchronized_at` et `sync` (`configured`, `error`) aux relevés ; l'identifiant du
+compteur reste dans le coffre. Les routes d'écriture partagent la limite eau de
+cinq requêtes par dix secondes. Aucun ancien historique électrique n'est modifié.
+
+Les coordonnées précises de la zone aspirateur sont affichées en mètres depuis
+la base orange `(0, 0)`. La conversion vers les coordonnées absolues du protocole
+reste interne ; le mouvement du robot violet n'entre jamais dans le recalage.

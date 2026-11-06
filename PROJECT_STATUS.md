@@ -1,5 +1,135 @@
 # Moli OS — état du fork et reprise
 
+## Compatibilité des stations Freebox — correctif du 6 novembre 2026
+
+L'API répond et l'appairage est valide, mais une liste de stations Wi-Fi peut être
+`null`. Le normaliseur web appelait `forEach` sur cette valeur et affichait toute la
+Freebox indisponible. Une liste nulle est désormais traitée comme une liste vide,
+sans modifier l'autre radio ni les ports Ethernet. Régression couverte par fixture
+synthétique ; 41 tests web, build, i18n, PWA et Clippy strict réussis. Les quatre
+échecs réseau macOS préexistants restent inchangés.
+
+Code `55a480b` déployé, image applicative
+`sha256:9ba5a58844bcfec9c50c71f502070ae9141b5bb6a46db5415b0f57f4e12c13a3`.
+CI Linux [check](https://github.com/ChrisN06/moli-os/actions/runs/42175214108),
+[audit](https://github.com/ChrisN06/moli-os/actions/runs/42175214098) et
+[image](https://github.com/ChrisN06/moli-os/actions/runs/42175213064) réussis.
+Recette dans le navigateur interne : ligne connectée, débits et topologie affichés.
+Appairage existant conservé, aucun changement sur la Freebox. Sauvegarde native
+créée sur le serveur avant remplacement ; sa copie SSH n'avait pas été confirmée
+au moment du déploiement. Le 6 novembre, la connexion SSH est rétablie et la référence
+Compose du NAS est alignée avec celle de Portainer après comparaison du contenu
+et contrôle des empreintes. L'ancien fichier est conservé ; aucun service redémarré.
+
+### Point de reprise du 6 novembre 2026 — fonctionnalité Freebox close
+
+Le propriétaire confirme le bon fonctionnement après déploiement. Relecture ciblée
+du normaliseur, de son appel dans le rafraîchissement et des tests : aucun autre
+changement nécessaire. Branche `feat/climate-water-camera`, code `55a480b`,
+référence documentaire de départ `25e064a`.
+
+Depuis la racine du dépôt : `node --test web/src/maison/lib/freebox-data.test.js`
+relancé lors de cette clôture : **3 tests réussis**. `git diff --check` réussi.
+Les 41 tests web, le build, i18n, PWA, format et Clippy ainsi que les CI Linux
+ci-dessus sont réutilisés : aucun code n'a changé depuis leur exécution.
+Les preuves des autres fonctionnalités restent celles de leurs sections datées ;
+elles ne sont pas revérifiées dans cette clôture. Aucun nouveau déploiement requis.
+
+Git était synchronisé au début de la clôture (`FETCH_HEAD` et `HEAD` identiques),
+sans différence indexée ni modification suivie. Le fichier `.DS_Store` non suivi,
+préexistant, reste exclu de la sauvegarde Git. Seul ce point de reprise documentaire
+est ajouté ; aucune règle permanente ni procédure d'utilisation ne change.
+
+Prochaines étapes :
+1. Vérifier le prochain cycle réel de douze heures de SUEZ, sans modifier la collecte.
+2. Lors d'un futur déploiement, maintenir les références Compose du NAS et de
+   Portainer alignées. La divergence signalée lors de la clôture est résolue.
+
+## Synchronisation So’EAU — livrée et vérifiée les 5–6 novembre 2026
+
+Code `a9be6fe`, branche `feat/climate-water-camera`, [PR 4](https://github.com/ChrisN06/moli-os/pull/4)
+en brouillon, sans fusion. Image applicative déployée :
+`sha256:8f59109d4d3471875adf9ccf6b583f996b7bbf5e03825e1681780aa369341c7e`.
+Le relais vidéo précédemment corrigé est conservé.
+
+- Connexion directe Rust par le formulaire HTTPS normal (CSRF, cookies temporaires
+  sur un hôte fixe), découverte du compteur et télémétrie journalière. Aucun ajout
+  de dépendance Home Assistant/MQTT, aucun contournement de contrôle humain.
+- Identifiants saisis par le propriétaire, conservés dans le coffre chiffré natif
+  après validation. Aucun identifiant ou cookie retourné par l'API. Droits propriétaire
+  requis pour connecter ou actualiser le compte.
+- Trois derniers mois récupérés, puis actualisés au démarrage et toutes les 12 h.
+  Un refus temporaire observé pendant la recette a motivé un unique nouvel essai
+  après une minute ; jamais de nouvel essai devant un contrôle humain.
+- Connexion réelle confirmée par le propriétaire, historique et total mensuel vérifiés
+  dans Énergie et Accueil. Reprise autonome après remplacement de l'application
+  confirmée sans ressaisie ni clic d'actualisation. Les anciennes dates sont conservées.
+- Sauvegarde native avec compte chiffré copiée dans le dossier privé, SQLite intègres.
+  Anciennes mesures, heures d'énergie terminées, tarifs et abonnement préservés.
+  Référence Compose synchronisée ; autres services conservés. La tentative de
+  sauvegarde supplémentaire du lendemain n'a pas été confirmée après expiration
+  de la session Portainer ; la sauvegarde avec compte vérifiée reste disponible.
+
+Validation : 99 tests API, 40 tests web, build, i18n, PWA, format et Clippy stricts.
+CI Linux [check](https://github.com/ChrisN06/moli-os/actions/runs/42114905731),
+[audit](https://github.com/ChrisN06/moli-os/actions/runs/42114905728) et
+[image amd64/arm64](https://github.com/ChrisN06/moli-os/actions/runs/42114903495) réussis.
+Les quatre échecs réseau macOS préexistants de `moli-profile` restent inchangés.
+Le cycle réel de douze heures n'a pas encore été observé ; le déclenchement au
+démarrage et la temporisation de reprise sont vérifiés. Les données plus anciennes
+restent importables en CSV. Détails privés dans le dossier de la maison.
+
+## Améliorations du 5 novembre 2026 — livraison initiale, complétée ci-dessus
+
+Branche `feat/climate-water-camera`, base publiée `b8845ca`, code `40f778d`.
+[PR 4](https://github.com/ChrisN06/moli-os/pull/4) en brouillon, sans fusion.
+Les anciens checkouts modifiés sont préservés. Application construite sur `a0124df` ;
+les changements suivants concernent uniquement le relais vidéo.
+
+- Salon : température, humidité et consigne **rapportée**, périodes 24 h / 7 j /
+  30 j, axes séparés et consigne en paliers. Historique réel et curseur clavier
+  vérifiés dans le navigateur interne. Une dérogation Somfy peut différer.
+- Eau : barres journalières dans Énergie, total du mois courant sur Accueil,
+  import CSV depuis Paramètres réservé au propriétaire. Import réel et affichage
+  vérifiés. Dates inconnues distinguées des mesures nulles, fusion par date et
+  stockage dans le coffre natif. **Synchronisation automatique non livrée** :
+  la connexion du fournisseur comporte un contrôle humain. Aucun contournement
+  ni récupération de cookie personnel.
+- Robot : coordonnées visibles depuis la base orange. Le recalage existant utilise
+  déjà la base ; test prouvant que déplacer le robot ne déplace pas la zone.
+  Aucune zone réelle modifiée, aucun moteur commandé. À la dernière recette,
+  découverte miIO en délai dépassé : carte réelle non vérifiable, robot hors ligne.
+- Caméra : relais go2rtc 1.9.15 corrigé pour le démarrage SD puis HD de `hlc7`.
+  Le premier essai a échoué à initialiser HLS et a été annulé. La seconde version
+  conserve aussi la première image clé HD consommée pendant la détection.
+  Flux réel : initialisation et SPS des images à **2304 × 1296**, lecture active
+  dans le navigateur interne. Cadrage correct confirmé par le propriétaire sur iPhone après
+  un chargement long. Safari Mac non confirmé séparément pour Xiaomi. Les deux Tapo sont
+  confirmées par le propriétaire sur Safari et iPhone, avec démarrage parfois lent.
+  Autres modèles et demandes SD/auto inchangés.
+
+Images déployées, épinglées par digest :
+- Application : `sha256:35139423f0784a41e6b79698936d01bfeb01ee2e117281405c212d0b594a57b0`.
+- Relais : `sha256:bb735ef5052eecdafb9b29d6120229ed153c5c13e350b88cfbd4ccbe7d18908b`,
+  branche de construction `release/xiaomi-hd-relay`, commit `ad545aa`.
+  Cette branche remplace le Dockerfile racine uniquement pour le workflow image ;
+  ne pas la fusionner dans l'application.
+
+Contrôles : 40 tests web, build, traductions, PWA, fuites, 92 tests API,
+format et Clippy workspace réussis. Tests Go ciblés réussis ; `GOAMD64=v1`, CGO
+désactivé. CI Linux [check](https://github.com/ChrisN06/moli-os/actions/runs/42106295397)
+et [audit](https://github.com/ChrisN06/moli-os/actions/runs/42106295458) réussis.
+[Application](https://github.com/ChrisN06/moli-os/actions/runs/42065210649) et
+[relais](https://github.com/ChrisN06/moli-os/actions/runs/42106370755) construits pour
+amd64/arm64. Catalogue : 36 paquets, six avertissements existants, aucune erreur.
+Quatre échecs macOS préexistants de `moli-profile` liés aux adresses réseau.
+
+Sauvegardes avant/après copiées dans le dossier privé ; intégrité des deux SQLite
+vérifiée. Toutes les anciennes mesures d'historique, heures d'énergie terminées,
+tarifs et abonnement préservés. Les neuf conteneurs voisins gardent leurs identifiants
+et états. Référence Compose synchronisée avec contrôle de l'empreinte initiale.
+Détails d'installation et échantillons vidéo exclusivement privés.
+
 ## Réseau Freebox et thème bleu nuit — point de reprise du 4 novembre 2026
 
 Fonctionnalité livrée et vérifiée sur Mac ; projet Moli OS toujours actif.

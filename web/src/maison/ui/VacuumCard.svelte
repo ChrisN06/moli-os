@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { hub,home,value,act } from '../lib/home.svelte.js';
   import {t} from '../../lib/i18n.svelte.js';
-  import {at,rectangle,overlay,picture,rebase} from '../lib/vacuum-map.js';
+  import {at,rectangle,overlay,picture,rebase,dockOffset,dockBound} from '../lib/vacuum-map.js';
   let {id}=$props();
   const device=$derived(hub.devices[id]), instance=$derived(device?.instance), writable=$derived(device?.points?.some(p=>p.key==='action' && p.access?.write));
   let map=$state(null), image=$state(''), bounds=$state(null), saved=$state(false), busy=$state(false), message=$state(''), start=$state(null);
@@ -64,7 +64,7 @@
       {#if box}<rect x={box.x} y={box.y} width={box.width} height={box.height} fill="#f7b73144" stroke="#bd6c00" stroke-width="1"/>{/if}
     </svg>
     {#if bounds}<p>{((bounds[2]-bounds[0])/1000).toFixed(2)} × {((bounds[3]-bounds[1])/1000).toFixed(2)} m · {t(saved?'xiaomi.zone.confirmed':'xiaomi.zone.unconfirmed')}</p>{/if}
-    {#if bounds}<details><summary>{t('xiaomi.zone.coordinates')}</summary><div class="coordinates">{#each ['X min','Y min','X max','Y max'] as label,i}<label>{label}<input type="number" step="0.05" min="0" max="51.2" value={bounds[i]/1000} onchange={e=>{bounds=bounds.map((v,j)=>j===i?Math.round(Number(e.currentTarget.value)*1000):v);saved=false;}}/></label>{/each}</div></details>{/if}
+    {#if bounds}<details><summary>{t('xiaomi.zone.coordinates')}</summary><div class="coordinates">{#each ['X min','Y min','X max','Y max'] as label,i}<label>{label}<input type="number" step="0.05" min="-51.2" max="51.2" value={dockOffset(map,bounds,i)} onchange={e=>{bounds=bounds.map((v,j)=>j===i?dockBound(map,e.currentTarget.value,i):v);saved=false;}}/></label>{/each}</div></details>{/if}
     <button disabled={busy || !bounds || bounds[2]-bounds[0]<500 || bounds[3]-bounds[1]<500} onclick={save}>{t('xiaomi.zone.confirm')}</button>
   {/if}
   {#if message}<p role="status">{message}</p>{/if}

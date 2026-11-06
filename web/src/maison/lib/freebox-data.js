@@ -11,7 +11,7 @@ export function normalizeFreebox(raw) {
   const hosts=raw.hosts||[], index=new Map(hosts.map(h=>[h.l2ident?.id?.toLowerCase(),h]));
   const ports=(raw.ports||[]).map(p=>({...p,stats:raw.stats?.[p.id]||{},mac_list:(p.mac_list||[]).map(d=>({...d,...hostInfo(index.get(d.mac?.toLowerCase())),mac:d.mac,hostname:index.get(d.mac?.toLowerCase())?.primary_name||d.hostname,port_speed:p.link==='up'?Number(p.speed):0}))}));
   const wifi=new Map();
-  (raw.radios||[]).forEach((stations,radio)=>stations.forEach(s=>wifi.set(s.mac,{...hostInfo(s.host),hostname:s.hostname||s.host?.primary_name,mac:s.mac,signal:s.signal,band:radio===0?'2d4g':'5g',link_down:(s.last_tx?.bitrate||0)/10,link_up:(s.last_rx?.bitrate||0)/10,rx_rate:s.rx_rate||0,tx_rate:s.tx_rate||0})));
+  (raw.radios||[]).forEach((stations,radio)=>(stations??[]).forEach(s=>wifi.set(s.mac,{...hostInfo(s.host),hostname:s.hostname||s.host?.primary_name,mac:s.mac,signal:s.signal,band:radio===0?'2d4g':'5g',link_down:(s.last_tx?.bitrate||0)/10,link_up:(s.last_rx?.bitrate||0)/10,rx_rate:s.rx_rate||0,tx_rate:s.tx_rate||0})));
   const repeaters=new Map();
   for(const h of hosts)if(h.active&&h.host_type==='freebox_wifi'){
     const mac=h.l2ident.id.toLowerCase(),p=ports.find(p=>p.link==='up'&&p.mac_list.some(d=>d.mac.toLowerCase()===mac));
