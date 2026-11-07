@@ -17,12 +17,22 @@ const idsOf = (room) =>
 /** Where each room of `rooms` is: the floor whose plan draws it (a plan
  *  room's `room`, through `named` for the aliases), « Dehors » when the plan
  *  draws it only outside, else the floor where most of its devices are
- *  pinned (the attic), else « Toute la maison » (the alarm). Without a plan,
- *  one section with no name.
+ *  pinned (the attic), else « Toute la maison » (the alarm).
  *  Returns `{ sections: [{ id, name }], of: Map<room name, section id> }`. */
 export function floorsOf(rooms, plan, named) {
   const floors = plan?.floors ?? [];
-  if (!floors.length) return { sections: [{ id: 'all', name: null }], of: new Map(rooms.map((r) => [r.name, 'all'])) };
+  const groundRooms = new Set(['RDC', 'Salon', 'Cuisine'].map(named));
+  const ground = floors.find(f => f.id === 'rdc' || /^(rdc|rez.de.chauss[eé]e)$/i.test(f.name ?? ''));
+  if (!floors.length && rooms.some(r => groundRooms.has(r.name))) {
+    return {
+      sections: [
+        { id: 'rdc', name: t('orbite.ground_floor') },
+        { id: ANYWHERE, name: t('commun.etage.toute_la_maison') },
+      ],
+      of: new Map(rooms.map(r => [r.name, groundRooms.has(r.name) ? 'rdc' : ANYWHERE])),
+    };
+  }
+  if (!floors.length) return { sections: [{ id: 'all', name: null }], of: new Map(rooms.map(r => [r.name, 'all'])) };
 
   // Room name → { floor, inside }: a room drawn inside wins over its driveway.
   const drawn = new Map();
@@ -39,8 +49,7 @@ export function floorsOf(rooms, plan, named) {
   for (const f of floors) for (const p of f.devices ?? []) pinned.set(p.id, f.id);
 
   const where = (room) => {
-    const ground = floors.find(f => f.id === 'rdc' || /rez.de.chauss[eé]e/i.test(f.name ?? ''));
-    if (ground && [named('Salon'), named('Cuisine')].includes(room.name)) return ground.id;
+    if (ground && groundRooms.has(room.name)) return ground.id;
     const d = drawn.get(room.name);
     if (d) return d.inside ? d.floor : OUT;
     const votes = new Map();

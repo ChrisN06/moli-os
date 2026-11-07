@@ -274,10 +274,13 @@ fn readings(reply: &Value) -> anyhow::Result<BTreeMap<String, f64>> {
     }
     Ok(days)
 }
-pub(super) async fn fetch(
-    account: &Account,
-    backfill: bool,
-) -> Result<(String, BTreeMap<String, f64>)> {
+pub(super) struct Readings {
+    pub(super) meter: String,
+    pub(super) days: BTreeMap<String, f64>,
+    pub(super) backfill_error: Option<&'static str>,
+}
+
+pub(super) async fn fetch(account: &Account, backfill: bool) -> Result<Readings> {
     tokio::time::timeout(
         Duration::from_secs(90),
         fetch_with(&mut Client::new(), account, backfill),
@@ -285,11 +288,8 @@ pub(super) async fn fetch(
     .await
     .map_err(|_| "water.connection_failed")?
 }
-async fn fetch_with(
-    client: &mut Client,
-    account: &Account,
-    backfill: bool,
-) -> Result<(String, BTreeMap<String, f64>)> {
+async fn fetch_with(client: &mut Client, account: &Account, backfill: bool) -> Result<Readings> {
+    let started = tokio::time::Instant::now();
     client.login(account).await?;
     let meter = select_meter(&client.json(METERS).await?, &account.meter)?;
     let today = jiff::Zoned::now().date();
@@ -302,7 +302,12 @@ async fn fetch_with(
     } else {
         3
     };
-    for offset in (0..months.max(3)).rev() {
+    let mut backfill_error = None;
+    for offset in 0..months.max(3) {
+        if offset >= 3 && started.elapsed() >= Duration::from_secs(65) {
+            backfill_error = Some("water.connection_failed");
+            break;
+        }
         let start = first
             .checked_sub(jiff::Span::new().months(offset))
             .map_err(|_| "water.data_failed")?;
@@ -315,15 +320,30 @@ async fn fetch_with(
             "{TELEMETRY}?mode=daily&id_PDS={}&start_date={start}&end_date={end}",
             encode(&meter)
         );
-        let chunk = readings(&client.json(&path).await?).map_err(|_| "water.data_failed")?;
-        if !chunk.keys().all(|d| {
-            d.as_str() >= start.to_string().as_str() && d.as_str() <= end.to_string().as_str()
-        }) {
-            return Err("water.data_failed");
-        }
+        let chunk = client.json(&path).await.and_then(|reply| {
+            let chunk = readings(&reply).map_err(|_| "water.data_failed")?;
+            let start = start.to_string();
+            let end = end.to_string();
+            if chunk.keys().any(|date| date < &start || date > &end) {
+                return Err("water.data_failed");
+            }
+            Ok(chunk)
+        });
+        let chunk = match chunk {
+            Ok(chunk) => chunk,
+            Err(error) if offset >= 3 => {
+                backfill_error = Some(error);
+                break;
+            }
+            Err(error) => return Err(error),
+        };
         days.extend(chunk);
     }
-    Ok((meter, days))
+    Ok(Readings {
+        meter,
+        days,
+        backfill_error,
+    })
 }
 #[cfg(test)]
 mod tests {
@@ -369,7 +389,7 @@ mod tests {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let port = listener.local_addr().unwrap().port();
         let server = tokio::spawn(async move {
-            for step in 0..6 {
+            for step in 0..7 {
                 let (mut stream, _) = listener.accept().await.unwrap();
                 let mut bytes = Vec::new();
                 let mut buffer = [0; 4096];
@@ -421,6 +441,7 @@ mod tests {
                         assert!(request.to_ascii_lowercase().contains("auth=synthetic"));
                         ("200 OK", "", json!({"content":{"nbMeters":1,"clientCompteursPro":[{"compteursPro":[{"idPDS":"123456"}]}]}}).to_string())
                     }
+                    6 => ("503 Service Unavailable", "", String::new()),
                     _ => {
                         assert!(
                             request
@@ -454,15 +475,16 @@ mod tests {
             password: "a+b&c".into(),
             meter: String::new(),
         };
-        let (meter, days) = tokio::time::timeout(
+        let result = tokio::time::timeout(
             Duration::from_secs(5),
-            fetch_with(&mut client, &account, false),
+            fetch_with(&mut client, &account, true),
         )
         .await
         .unwrap()
         .unwrap();
-        assert_eq!(meter, "123456");
-        assert_eq!(days.len(), 3);
+        assert_eq!(result.meter, "123456");
+        assert_eq!(result.days.len(), 3);
+        assert_eq!(result.backfill_error, Some("water.connection_failed"));
         server.await.unwrap();
     }
     #[test]
