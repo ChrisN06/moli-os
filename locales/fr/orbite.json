@@ -21,5 +21,9 @@
   "orbite.next_day": "Jour suivant",
   "orbite.monthly": "Vue mensuelle",
   "orbite.daily": "Vue journalière",
-  "orbite.partial": "Mois incomplet"
+  "orbite.partial": "Mois incomplet",
+  "orbite.ground_floor": "Rez-de-chaussée",
+  "orbite.light_period": "Période d’éclairement",
+  "orbite.weekly": "Vue hebdomadaire",
+  "orbite.light_history": "Historique de l’éclairement"
 }

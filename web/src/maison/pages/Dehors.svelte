@@ -149,8 +149,8 @@
 
   {#if sun}
     <div class="sun-period">
-      <select aria-label={t('water.period')} bind:value={sunPeriod}>
-        {#each [24, 168, 720] as hours}<option value={hours}>{t('salon.climate.days', { n: hours / 24 })}</option>{/each}
+      <select aria-label={t('orbite.light_period')} bind:value={sunPeriod}>
+        {#each [24, 168, 720] as hours}<option value={hours}>{t(hours === 24 ? 'orbite.daily' : hours === 168 ? 'orbite.weekly' : 'orbite.monthly')}</option>{/each}
       </select>
       {#if sunPeriod === 24}
         <button onclick={() => sunDay++} aria-label={t('orbite.previous_day')}>←</button>
@@ -158,7 +158,7 @@
         <button disabled={!sunDay} onclick={() => sunDay--} aria-label={t('orbite.next_day')}>→</button>
       {/if}
     </div>
-    <HistoryCard point={`${sun}/illuminance`} hours={sunPeriod} from={sunPeriod === 24 ? sunStart : null} to={sunPeriod === 24 ? sunEnd : null} title={t('maison.dehors.sun_sensor')} />
+    <HistoryCard point={`${sun}/illuminance`} hours={sunPeriod} from={sunPeriod === 24 ? sunStart : null} to={sunPeriod === 24 ? sunEnd : null} title={t('orbite.light_history')} />
   {/if}
 
   {#if outsideCams.length}
