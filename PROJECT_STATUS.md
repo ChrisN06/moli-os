@@ -1,5 +1,31 @@
 # Moli OS — état du fork et reprise
 
+## Orbite — version locale du 6 novembre 2026
+
+Clone dédié `moli-orbite`, branche `feat/orbite-local`, base `59d3213` du clone
+`moli-improvements`. Les checkouts antérieurs sont préservés. Aucun commit, push
+ni déploiement de cette version locale.
+
+- Habillage Orbite validé par le propriétaire : accueil horloge/météo/climat,
+  couleurs par usage, synthèse énergétique multicolore avec les séries existantes.
+- Pages et commandes natives conservées, navigation basse et menu Plus ; thèmes
+  jour/nuit corrigés face à l'ancien habillage global. Le format téléphone forcé
+  se replie indépendamment de la largeur du moniteur. Navigation par flèches,
+  contrôles natifs et focus des dialogues conservés.
+- Exécution locale via `scripts/orbite-local.sh`, sur `127.0.0.1:8791` uniquement.
+  La villa de démonstration fournit les appareils et l'historique simulés.
+  Données sous `.local/orbite-data`, ignorées par Git. Voir `LOCAL_ORBITE.md`.
+- Validation : compilation Rust locale, build web, 51 tests web, traductions et PWA.
+  Dans le navigateur : volet simulé fermé puis rouvert à 100 %, flèche droite entre
+  commandes, menu modal, énergie multicolore et caméras de démonstration.
+  Absence de débordement horizontal constatée sur Accueil et Énergie à 320 px,
+  sur Énergie à 3840 px ; format téléphone forcé et thèmes jour/nuit vérifiés.
+- Limites : données de démonstration seulement. Aucun robot, Freebox, fournisseur
+  d'eau ni assistant distant raccordé dans cette configuration locale. Les vues
+  existent et conservent leurs états indisponibles. Télécommande physique,
+  raccordement à la maison et recette NAS restent à faire avant production.
+
+
 ## Compatibilité des stations Freebox — correctif du 6 novembre 2026
 
 L'API répond et l'appairage est valide, mais une liste de stations Wi-Fi peut être

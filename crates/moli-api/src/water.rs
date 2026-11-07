@@ -25,6 +25,8 @@ struct History {
     synchronized_at: u64,
     #[serde(default)]
     meter: Option<String>,
+    #[serde(default)]
+    backfilled: bool,
     days: BTreeMap<String, f64>,
 }
 #[derive(Deserialize)]
@@ -242,7 +244,12 @@ async fn synchronize(
     }
     state.attempted = Some(Instant::now());
     let result = async {
-        let (meter, days) = water_suez::fetch(&account).await?;
+        let backfill = !save && !read(hub).map_err(|_| "water.failed")?.backfilled;
+        let water_suez::Readings {
+            meter,
+            days,
+            backfill_error,
+        } = water_suez::fetch(&account, backfill).await?;
         let _writing = service.writing.lock().await;
         let mut history = read(hub).map_err(|_| "water.failed")?;
         if history.meter.as_ref().is_some_and(|old| old != &meter) {
@@ -253,6 +260,7 @@ async fn synchronize(
             return Err("water.invalid");
         }
         history.meter = Some(meter.clone());
+        history.backfilled |= backfill && backfill_error.is_none();
         history.synchronized_at = moli_core::now_ms();
         let text = serde_json::to_string(&history).map_err(|_| "water.failed")?;
         hub.store_core_secret(SECRET, &text)
@@ -265,7 +273,7 @@ async fn synchronize(
                 .await
                 .map_err(|_| "water.failed")?;
         }
-        Ok(())
+        backfill_error.map_or(Ok(()), Err)
     }
     .await;
     state.error = result.as_ref().err().copied();

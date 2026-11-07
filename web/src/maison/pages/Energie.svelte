@@ -78,7 +78,6 @@
           .sort((a, b) => b.w - a.w),
       }));
   });
-  const drawMax = $derived(Math.max(1, ...draws.map((d) => d.w)));
 
   const isHc = $derived(/hc/i.test(s?.period ?? ''));
   const vsYesterday = $derived.by(() => {
@@ -333,31 +332,7 @@
       </section>
     {/if}
 
-    <div class="split">
-      <section class="card">
-        <div class="card-head"><h2><Icon name="flash" size={18} />{t('energie.direct.titre')}</h2></div>
-        {#if draws.length}
-          <ul class="bars">
-            {#each draws as d (d.id)}
-              <li class:rest={d.rest}>
-                <span class="name">{d.name}{#if d.estimated} <small class="muted" title={t('energie.estime_ampoules')}>{t('energie.estime')}</small>{/if}</span>
-                <span class="track"><i style="width:{(d.w / drawMax) * 100}%"></i></span>
-                <b class="num">{watts(d.w)}</b>
-              </li>
-              {#each d.subs as a (a.id)}
-                <li class="sub">
-                  <span class="name">{t('energie.dont', { name: a.name })}{#if a.estimated} <small class="muted" title={t('energie.estime_ampoule')}>{t('energie.estime')}</small>{/if}</span>
-                  <span class="track"><i style="width:{(a.w / drawMax) * 100}%"></i></span>
-                  <b class="num">{watts(a.w)}</b>
-                </li>
-              {/each}
-            {/each}
-          </ul>
-        {:else}
-          <p class="muted">{t('energie.direct.vide')}</p>
-        {/if}
-      </section>
-
+    <div>
       <section class="card">
         <div class="card-head">
           <h2><Icon name="bolt" size={18} />{t('energie.repartition.titre')}</h2>
@@ -660,11 +635,6 @@
     color: var(--ink-2);
   }
 
-  .split {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-  }
 
   .bars {
     list-style: none;
@@ -784,17 +754,11 @@
   }
 
   @media (max-width: 900px) {
-    .split {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
 
   @media (max-width: 560px) {
     .energie,
     .heads,
-    .split {
-      gap: 14px;
-    }
 
     /* Two by two: the figures stay readable without a long scroll. */
     .heads {
