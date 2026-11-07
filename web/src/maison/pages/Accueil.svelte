@@ -2,7 +2,6 @@
   import WaterCard from '../ui/WaterCard.svelte';
   import { onMount } from 'svelte';
   import { home, hub, value, device, clock, num, relative, lastSeen, nameOf, doorOpen, leak, lowBattery, act, pending } from '../lib/home.svelte.js';
-  import { houseReading } from '../lib/readings.js';
   import { isPrinter, phase } from '../lib/printers.js';
   import { t, locale } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
@@ -16,8 +15,6 @@
 
   const cfg = $derived(home.config ?? {});
   const out = $derived(cfg.outdoor ?? {});
-  const houseTemp = $derived(houseReading(hub.devices, cfg, 'temperature'));
-  const houseHumidity = $derived(houseReading(hub.devices, cfg, 'humidity'));
 
   // The house's mode (a helper, « Mode Maison »): one tap, like Home
   // Assistant's mode buttons.
@@ -150,14 +147,6 @@
     <WaterCard />
     <Routines />
 
-    <section class="card house-climate">
-      <div class="card-head"><h2><Icon name="thermometer" size={18}/>{t('maison.accueil.temperature_maison')}</h2></div>
-      <div class="facts">
-        <div><small>{t('maison.accueil.temperature_interieure')}</small><b class="num">{houseTemp == null ? '—' : `${num(houseTemp, 1)} °C`}</b></div>
-        <div><small>{t('maison.accueil.humidite')}</small><b class="num">{houseHumidity == null ? '—' : `${num(houseHumidity)} %`}</b></div>
-      </div>
-    </section>
-
     {#if (cfg.favorites?.climate ?? []).length}
       <section class="card climate">
         <div class="card-head"><h2><Icon name="air-conditioner" size={18} />{t('maison.accueil.clim')}</h2></div>
@@ -266,24 +255,6 @@
   .small {
     font-size: 13px;
     margin-top: 10px;
-  }
-
-  .facts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .facts small {
-    display: block;
-    font-size: 11px;
-    color: var(--ink-3);
-    font-weight: 650;
-  }
-
-  .facts b {
-    font-size: 17px;
-    font-weight: 650;
   }
 
   .grid > * { min-width: 0; }

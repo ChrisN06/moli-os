@@ -274,10 +274,13 @@ fn readings(reply: &Value) -> anyhow::Result<BTreeMap<String, f64>> {
     }
     Ok(days)
 }
-pub(super) async fn fetch(account: &Account) -> Result<(String, BTreeMap<String, f64>)> {
+pub(super) async fn fetch(
+    account: &Account,
+    backfill: bool,
+) -> Result<(String, BTreeMap<String, f64>)> {
     tokio::time::timeout(
         Duration::from_secs(90),
-        fetch_with(&mut Client::new(), account),
+        fetch_with(&mut Client::new(), account, backfill),
     )
     .await
     .map_err(|_| "water.connection_failed")?
@@ -285,6 +288,7 @@ pub(super) async fn fetch(account: &Account) -> Result<(String, BTreeMap<String,
 async fn fetch_with(
     client: &mut Client,
     account: &Account,
+    backfill: bool,
 ) -> Result<(String, BTreeMap<String, f64>)> {
     client.login(account).await?;
     let meter = select_meter(&client.json(METERS).await?, &account.meter)?;
@@ -292,8 +296,13 @@ async fn fetch_with(
     let first =
         jiff::civil::Date::new(today.year(), today.month(), 1).map_err(|_| "water.data_failed")?;
     let mut days = BTreeMap::new();
-    // shortcut: fetch the current and two previous months; extend only when older daily history is needed.
-    for offset in (0..3).rev() {
+    // Fetch older months once, then keep the rolling refresh at three months.
+    let months = if backfill {
+        (i64::from(first.year()) - 2024) * 12 + i64::from(first.month()) - 10
+    } else {
+        3
+    };
+    for offset in (0..months.max(3)).rev() {
         let start = first
             .checked_sub(jiff::Span::new().months(offset))
             .map_err(|_| "water.data_failed")?;
@@ -445,11 +454,13 @@ mod tests {
             password: "a+b&c".into(),
             meter: String::new(),
         };
-        let (meter, days) =
-            tokio::time::timeout(Duration::from_secs(5), fetch_with(&mut client, &account))
-                .await
-                .unwrap()
-                .unwrap();
+        let (meter, days) = tokio::time::timeout(
+            Duration::from_secs(5),
+            fetch_with(&mut client, &account, false),
+        )
+        .await
+        .unwrap()
+        .unwrap();
         assert_eq!(meter, "123456");
         assert_eq!(days.len(), 3);
         server.await.unwrap();

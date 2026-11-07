@@ -117,6 +117,7 @@
   }
 
   const sensorChips = $derived(room.sensors.flatMap(chips));
+  const humidity = $derived(sensorChips.find(chip => chip.icon === 'humidity'));
   const lamps = $derived(lampsOf(room));
   let showLooks = $state(false);
 
@@ -238,6 +239,7 @@
         <span class="muted">{unknownLights ? t('commun.lampe.etat_inconnu') : room.lit ? t('commun.piece.allumees', { count: room.lit }) : t('commun.piece.tout_eteint')}</span>
       {/if}
     </div>
+    {#if humidity}<span class="chip cool" title={humidity.title}><Icon name="humidity" size={15} />{humidity.text}</span>{/if}
     {#if temp != null}
       <span class="temp {tone(temp)}" title={t('commun.piece.temperature')}><b class="num">{num(temp, 1)}°</b><i class="gauge"><i style="left:{gaugeAt(temp)}%"></i></i></span>
     {/if}
@@ -308,9 +310,9 @@
     {/if}
   {/each}
 
-  {#if sensorChips.length}
+  {#if sensorChips.some(c => c.icon !== 'humidity')}
     <div class="chips">
-      {#each sensorChips as c, i (i)}
+      {#each sensorChips.filter(c => c.icon !== 'humidity') as c, i (i)}
         {#if c.href}
           <a class="chip {c.tone}" href={c.href} title={c.title ?? c.text}><Icon name={c.icon} size={15} />{c.text}</a>
         {:else}

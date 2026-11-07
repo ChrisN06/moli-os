@@ -16,5 +16,10 @@
   "orbite.readings": "Climat intérieur",
   "orbite.period": "Répartition du jour",
   "orbite.load_failed": "Répartition indisponible",
-  "orbite.remote_help": "Flèches : naviguer · OK : ouvrir · Retour : fermer"
+  "orbite.remote_help": "Flèches : naviguer · OK : ouvrir · Retour : fermer",
+  "orbite.previous_day": "Jour précédent",
+  "orbite.next_day": "Jour suivant",
+  "orbite.monthly": "Vue mensuelle",
+  "orbite.daily": "Vue journalière",
+  "orbite.partial": "Mois incomplet"
 }

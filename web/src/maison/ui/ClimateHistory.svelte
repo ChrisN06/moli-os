@@ -11,8 +11,11 @@
   const to = $derived(Object.values(series)[0]?.to ?? 1);
   const time = $derived(from + (to-from)*cursor/1000);
   const temperatures = $derived([...points[0], ...points[2]].map(p => p[1]));
-  const min = $derived(Math.min(15, ...temperatures.map(v => Math.floor(v/5)*5)));
-  const max = $derived(Math.max(25, ...temperatures.map(v => Math.ceil(v/5)*5)));
+  const min = $derived(temperatures.length ? Math.floor(Math.min(...temperatures)) - 1 : 15);
+  const max = $derived(temperatures.length ? Math.ceil(Math.max(...temperatures)) + 1 : 25);
+  const humidity = $derived(points[1].map(p => p[1]));
+  const humidityMin = $derived(humidity.length ? Math.max(0, Math.floor(Math.min(...humidity)) - 1) : 0);
+  const humidityMax = $derived(humidity.length ? Math.min(100, Math.ceil(Math.max(...humidity)) + 1) : 100);
   const date = ts => new Date(ts).toLocaleString(undefined, {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
   $effect(() => {
     const selected = [...refs], span = hours;
@@ -53,10 +56,10 @@
       <div class="scale"><span>{max} °C</span><span>{(max+min)/2} °C</span><span>{min} °C</span></div>
       <svg viewBox="0 0 800 240" preserveAspectRatio="none" role="img" aria-label={t('salon.climate.title')}>
         {#each [0,120,240] as y}<line x1="0" x2="800" y1={y} y2={y} class="grid"/>{/each}
-        {#each points as list,i}<path d={curve(list,from,to,i===1?0:min,i===1?100:max,i===2)} stroke={['#ed7d8b','#3296ff','var(--ink)'][i]} />{/each}
+        {#each points as list,i}<path d={curve(list,from,to,i===1?humidityMin:min,i===1?humidityMax:max,i===2)} stroke={['#ed7d8b','#3296ff','var(--ink)'][i]} />{/each}
         <line x1={cursor*.8} x2={cursor*.8} y1="0" y2="240" class="cursor"/>
       </svg>
-      <div class="scale humidity"><span>100 %</span><span>50 %</span><span>0 %</span></div>
+      <div class="scale humidity"><span>{humidityMax} %</span><span>{(humidityMax + humidityMin) / 2} %</span><span>{humidityMin} %</span></div>
     </div>
     <input class="scrub" type="range" min="0" max="1000" step="1" bind:value={cursor} aria-label={t('salon.climate.inspect')} aria-valuetext={date(time)} />
     <div class="dates"><span>{date(from)}</span><strong>{date(time)}</strong><span>{date(to)}</span></div>

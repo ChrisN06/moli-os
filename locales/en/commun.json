@@ -53,7 +53,7 @@
   "commun.theme.auto_pied": "Auto theme",
   "commun.theme.jour": "Day",
   "commun.theme.nuit": "Night",
-  "commun.theme.titre_auto": "Theme: automatic (follows the sun)",
+  "commun.theme.titre_auto": "Automatic theme: follows the device",
   "commun.theme.titre_jour": "Theme: day",
   "commun.theme.titre_nuit": "Theme: night",
 

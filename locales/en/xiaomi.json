@@ -40,7 +40,7 @@
   "xiaomi.vacuum.invalid": "Unknown command.",
   "xiaomi.vacuum.unavailable": "Local vacuum unreachable or model not recognised.",
   "xiaomi.zone.title": "Kitchen zone",
-  "xiaomi.zone.note": "The vacuum may cross the living room to reach the kitchen. Confirm the zone again if the map or dock changes. No whole-floor fallback.",
+  "xiaomi.zone.note": "The vacuum may cross the living room to reach the kitchen. The map and saved zone refresh every minute. No whole-floor fallback.",
   "xiaomi.zone.draw": "Draw the zone on the map. The orange dock is the fixed reference; the purple robot can move without moving the zone.",
   "xiaomi.zone.coordinates": "Coordinates in metres from the orange dock (0, 0)",
   "xiaomi.zone.confirm": "Confirm and save this zone",
