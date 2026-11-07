@@ -52,10 +52,10 @@
 
   const outsideCams = $derived((home.config?.favorites?.cameras ?? []).filter((c) => !/sonnette|doorbell/i.test(c.name)));
 
-  const sunrise = $derived(Date.parse(v(w, 'sunrise')));
-  const sunset = $derived(Date.parse(v(w, 'sunset')));
-  const sunFrom = $derived(Number.isFinite(sunrise) && Number.isFinite(sunset) && sunset > sunrise ? sunrise - 3600000 : null);
-  const sunTo = $derived(sunFrom != null ? sunset + 3600000 : null);
+  let sunPeriod = $state(24);
+  let sunDay = $state(0);
+  const sunEnd = $derived(new Date(new Date(home.now).setHours(0, 0, 0, 0)).setDate(new Date(home.now).getDate() + 1 - sunDay));
+  const sunStart = $derived(new Date(sunEnd).setDate(new Date(sunEnd).getDate() - 1));
   const sunPos = $derived.by(() => {
     const rise = Date.parse(v(w, 'sunrise'));
     const set = Date.parse(v(w, 'sunset'));
@@ -105,14 +105,6 @@
       {#if since(air, 'aqi') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(since(air, 'aqi'), home.now) })}</p>{/if}
     </section>
 
-    {#if sun}
-      <section class="card">
-        <div class="card-head"><h2><Icon name="sun" size={18} />{t('maison.dehors.sun_sensor')}</h2></div>
-        <strong class="num">{num(reachable(sun) ? v(sun, 'illuminance') : null)} lx</strong>
-        {#if v(sun, 'last_received') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(v(sun, 'last_received') * 1000, home.now) })}</p>{/if}
-        <p class="muted small">{t('maison.dehors.sun_unit')}</p>
-      </section>
-    {/if}
 
     {#if pool}
       <section class="card">
@@ -156,7 +148,17 @@
   </div>
 
   {#if sun}
-    <HistoryCard point={`${sun}/illuminance`} hours={24} from={sunFrom} to={sunTo} title={t('maison.dehors.sun_history')} />
+    <div class="sun-period">
+      <select aria-label={t('water.period')} bind:value={sunPeriod}>
+        {#each [24, 168, 720] as hours}<option value={hours}>{t('salon.climate.days', { n: hours / 24 })}</option>{/each}
+      </select>
+      {#if sunPeriod === 24}
+        <button onclick={() => sunDay++} aria-label={t('orbite.previous_day')}>←</button>
+        <span>{new Date(sunStart).toLocaleDateString()}</span>
+        <button disabled={!sunDay} onclick={() => sunDay--} aria-label={t('orbite.next_day')}>→</button>
+      {/if}
+    </div>
+    <HistoryCard point={`${sun}/illuminance`} hours={sunPeriod} from={sunPeriod === 24 ? sunStart : null} to={sunPeriod === 24 ? sunEnd : null} title={t('maison.dehors.sun_sensor')} />
   {/if}
 
   {#if outsideCams.length}
@@ -174,6 +176,8 @@
 </div>
 
 <style>
+  .sun-period { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sun-period :is(select, button) { min-height: 44px; min-width: 44px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
   .credit {
     color: var(--ink-3);
     font-size: 12px;

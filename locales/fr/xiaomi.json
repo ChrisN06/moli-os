@@ -40,7 +40,7 @@
   "xiaomi.vacuum.invalid": "Commande non reconnue.",
   "xiaomi.vacuum.unavailable": "Robot local non joignable ou modèle non reconnu.",
   "xiaomi.zone.title": "Zone cuisine",
-  "xiaomi.zone.note": "Le robot peut traverser le salon pour rejoindre la cuisine. Si la carte ou la base change, la zone doit être confirmée de nouveau. Aucun nettoyage général de remplacement.",
+  "xiaomi.zone.note": "Le robot peut traverser le salon pour rejoindre la cuisine. La carte et la zone mémorisée sont relues chaque minute. Aucun nettoyage général de remplacement.",
   "xiaomi.zone.draw": "Dessinez la zone sur la carte. La base orange est le repère fixe ; le robot violet peut se déplacer sans déplacer la zone.",
   "xiaomi.zone.coordinates": "Coordonnées en mètres depuis la base orange (0, 0)",
   "xiaomi.zone.confirm": "Confirmer et mémoriser cette zone",

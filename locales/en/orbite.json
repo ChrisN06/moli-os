@@ -16,5 +16,10 @@
   "orbite.readings": "Indoor climate",
   "orbite.period": "Today’s breakdown",
   "orbite.load_failed": "Breakdown unavailable",
-  "orbite.remote_help": "Arrows: navigate · OK: open · Back: close"
+  "orbite.remote_help": "Arrows: navigate · OK: open · Back: close",
+  "orbite.previous_day": "Previous day",
+  "orbite.next_day": "Next day",
+  "orbite.monthly": "Monthly view",
+  "orbite.daily": "Daily view",
+  "orbite.partial": "Incomplete month"
 }

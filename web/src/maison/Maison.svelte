@@ -4,7 +4,7 @@
   import './orbite.css';
   import { attachRemoteNavigation } from './lib/remote-navigation.js';
   import { onMount, tick } from 'svelte';
-  import { home, hub, start, value, savePref, watches, hidden } from './lib/home.svelte.js';
+  import { home, hub, start, savePref, watches, hidden } from './lib/home.svelte.js';
   import { t } from '../lib/i18n.svelte.js';
   import Icon from './ui/Icon.svelte';
   import PinSheet from './ui/PinSheet.svelte';
@@ -22,7 +22,6 @@
   import Impression from './pages/Impression.svelte';
   import Dehors from './pages/Dehors.svelte';
   import Moli from './pages/Moli.svelte';
-  import MoliSheet from './moli/MoliSheet.svelte';
   import Automatismes from './pages/Automatismes.svelte';
   import Systeme from './pages/Systeme.svelte';
   import Parler from './pages/Parler.svelte';
@@ -35,6 +34,8 @@
 
   // Shown only if the link stays down a few seconds (a blink is not news).
   let offline = $state(false);
+  const theme = $derived((home.theme === 'auto' ? prefersDark : home.theme === 'dark') ? 'night' : 'day');
+
   $effect(() => {
     if (hub.connected) {
       offline = false;
@@ -66,7 +67,6 @@
   const nav = $derived(NAV.filter((item) => (!item.shown || item.shown()) && (!Array.isArray(home.config?.navigation) || home.config.navigation.includes(item.path))));
 
   const primary = $derived(['', 'salon', 'energie', 'aspirateur', 'moli'].map(path => nav.find(item => item.path === path)).filter(Boolean));
-  let moliOpen = $state(false);
   let prefersDark = $state(false);
 
   onMount(() => {
@@ -79,22 +79,6 @@
     media.addEventListener('change', update);
     return () => { media.removeEventListener('change', update); stopRemote(); };
   });
-
-  // Auto: night after sunset (the house's own daylight), else the system's.
-  const daylight = $derived(value(home.config?.outdoor?.weather, 'daylight'));
-  const theme = $derived(
-    home.theme === 'light'
-      ? 'day'
-      : home.theme === 'dark'
-        ? 'night'
-        : daylight === false
-          ? 'night'
-          : daylight === true
-            ? 'day'
-            : prefersDark
-              ? 'night'
-              : 'day',
-  );
 
   $effect(() => {
     const root = document.documentElement.style;
@@ -113,7 +97,7 @@
   );
 
   function cycleTheme() {
-    home.theme = home.theme === 'auto' ? (theme === 'night' ? 'light' : 'dark') : 'auto';
+    home.theme = home.theme === 'auto' ? 'light' : home.theme === 'light' ? 'dark' : 'auto';
     savePref('maison-theme', home.theme);
   }
 
@@ -198,17 +182,6 @@
   </dialog>
 
 
-  {#if page !== 'moli'}
-    <button class="orb" onclick={() => (moliOpen = true)} aria-label={t('commun.demander_moli')}>
-      <Orb size={38} state={moli.busy ? 'thinking' : 'idle'} />
-      <span class="orb-text">{t('commun.demander_moli')}</span>
-    </button>
-  {/if}
-
-  {#if moliOpen}
-    <MoliSheet onclose={() => (moliOpen = false)} />
-  {/if}
-
   {#if moli.fix}
     <Correct />
   {/if}
@@ -252,39 +225,6 @@
 </div>
 
 <style>
-  /* Moli, always one tap away. */
-  .orb {
-    position: fixed;
-    right: 28px;
-    bottom: 28px;
-    z-index: 30;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 22px 10px 10px;
-    border: 0;
-    border-radius: 999px;
-    background: var(--surface);
-    box-shadow: var(--shadow-lift);
-    font-weight: 650;
-    transition: transform 0.2s var(--ease);
-  }
-
-  .orb:hover {
-    transform: translateY(-2px);
-  }
-
-  .notes {
-    position: fixed;
-    left: 50%;
-    bottom: 28px;
-    transform: translateX(-50%);
-    display: grid;
-    gap: 8px;
-    z-index: 40;
-    pointer-events: none;
-  }
-
   /* The link to Moli dropped (a restart, the Wi-Fi): say so instead of a
      dashboard that silently stops moving. */
   .offline {
@@ -387,8 +327,6 @@
 
   /* On phones the Orbite dock owns navigation; notifications stay clear of it. */
   @media (max-width: 760px) {
-    .orb { right: 16px; bottom: 100px; padding: 8px; }
-    .orb-text { display: none; }
     .notes { bottom: 150px; width: calc(100% - 32px); }
   }
 </style>

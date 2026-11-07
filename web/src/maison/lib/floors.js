@@ -39,6 +39,8 @@ export function floorsOf(rooms, plan, named) {
   for (const f of floors) for (const p of f.devices ?? []) pinned.set(p.id, f.id);
 
   const where = (room) => {
+    const ground = floors.find(f => f.id === 'rdc' || /rez.de.chauss[eé]e/i.test(f.name ?? ''));
+    if (ground && [named('Salon'), named('Cuisine')].includes(room.name)) return ground.id;
     const d = drawn.get(room.name);
     if (d) return d.inside ? d.floor : OUT;
     const votes = new Map();
