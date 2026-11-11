@@ -71,7 +71,7 @@ Les chiffres anciens des README amont ne constituent pas un inventaire actuel ni
 | `tools/somfy`, `scripts/`, `.github/workflows/` | Import et contrôles ; CI et construction des images |
 | `mobile/`, `agent/` | Clients et agents amont ; ne pas les confondre avec une interface Android TV livrée |
 
-Technologies déclarées : workspace Rust édition 2024, minimum 1.88 ; Tokio, Axum,
+Technologies déclarées : workspace Rust édition 2024, minimum 1.89 ; Tokio, Axum,
 Serde, rusqlite/SQLite embarqué, rustls/ring, rumqttc et rmcp. Dashboard Svelte 5,
 Vite 7, Three.js pour la 3D, hls.js pour les navigateurs sans HLS natif.
 `Cargo.lock` et `web/package-lock.json` fixent les dépendances résolues.
