@@ -20,7 +20,7 @@ const problems = [];
 // ---- catalogues ---------------------------------------------------------------
 const locales = join(root, 'locales');
 const catalogues = {};
-for (const language of readdirSync(locales)) {
+for (const language of readdirSync(locales).filter((name) => name !== '.DS_Store')) {
   catalogues[language] = {};
   for (const file of readdirSync(join(locales, language)).filter((f) => f.endsWith('.json'))) {
     const area = file.replace(/\.json$/, '');
@@ -67,7 +67,7 @@ const STRING = /(['"`])((?:(?!\1)[^\\]|\\.){3,})\1/g;
 const hard = new Map();
 
 function walk(dir) {
-  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+  for (const entry of readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.name !== '.DS_Store')) {
     const path = join(dir, entry.name);
     if (entry.isDirectory()) walk(path);
     else if (/\.(svelte|js)$/.test(entry.name) && !/\.test\.|\.check\./.test(entry.name)) scan(path);
