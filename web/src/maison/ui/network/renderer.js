@@ -29,7 +29,7 @@ function topologyGroups(data, compact = false) {
   let top = compact ? 280 : 35;
   for (const group of groups) {
     group.top = top;
-    group.height = Math.max(100, Math.ceil(group.devices.length / (compact ? 2 : 3)) * 46 + 44);
+    group.height = compact ? 100 : Math.max(100, Math.ceil(group.devices.length / 3) * 46 + 44);
     group.y = compact ? top - 45 : top + group.height / 2;
     top += group.height + (compact ? 100 : 26);
   }
@@ -125,7 +125,7 @@ function renderTopology(data){const compact=root.host.clientWidth<700,layout=top
     else{edge('devices-'+group.id,588,group.y,680,group.y,false);}
     seenLinks.add('devices-'+group.id);
     const cardX=compact?30:680,cardWidth=compact?540:490;let card=root.getElementById('card-'+group.id);if(!card)card=el('rect',{id:'card-'+group.id,class:'group-card',x:cardX,width:cardWidth,rx:13},root.querySelector('#cards'));card.setAttribute('y',group.top);card.setAttribute('height',group.height);card.dataset.seen='yes';
-    group.devices.forEach((device,index)=>{const columns=compact?2:3,key=device.mac||group.id+'-'+device.name+'-'+index;seenRows.add(key);let row=deviceRows.get(key);if(!row){row=el('g',{class:'device-entry'},root.querySelector('#nodes'));text(row,0,0,'','device-name');text(row,0,12,'','device-meta');text(row,0,24,'','device-speed');clickable(row,()=>{selectedDevice=key;renderDetails();root.querySelector('.detail').classList.add('open')});deviceRows.set(key,row)}row.style.opacity='1';row.style.transform=`translate(${compact?42+(index%columns)*265:694+(index%columns)*162}px,${group.top+25+Math.floor(index/columns)*46}px)`;row.dataset.key=key;updateDeviceRow(row,device,group.id);});
+    if(!compact)group.devices.forEach((device,index)=>{const columns=3,key=device.mac||group.id+'-'+device.name+'-'+index;seenRows.add(key);let row=deviceRows.get(key);if(!row){row=el('g',{class:'device-entry'},root.querySelector('#nodes'));text(row,0,0,'','device-name');text(row,0,12,'','device-meta');text(row,0,24,'','device-speed');clickable(row,()=>{selectedDevice=key;renderDetails();root.querySelector('.detail').classList.add('open')});deviceRows.set(key,row)}row.style.opacity='1';row.style.transform=`translate(${694+(index%columns)*162}px,${group.top+25+Math.floor(index/columns)*46}px)`;row.dataset.key=key;updateDeviceRow(row,device,group.id);});
   }
   for(const[key,row]of deviceRows)if(!seenRows.has(key)){row.remove();deviceRows.delete(key)}
   for(const[id,n]of groupNodes)if(!seenNodes.has(id)){n.remove();groupNodes.delete(id)}

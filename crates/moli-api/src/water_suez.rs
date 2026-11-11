@@ -35,6 +35,17 @@ fn meter_valid(s: &str) -> bool {
         && s.bytes()
             .all(|c| c.is_ascii_alphanumeric() || b"_-".contains(&c))
 }
+fn login_result(status: StatusCode) -> Result<()> {
+    if status == StatusCode::FORBIDDEN {
+        Err("water.human_required")
+    } else if status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error() {
+        Err("water.connection_failed")
+    } else if status == StatusCode::OK || status.is_redirection() {
+        Ok(())
+    } else {
+        Err("water.login_failed")
+    }
+}
 fn encode(text: &str) -> String {
     let mut out = String::new();
     for b in text.bytes() {
@@ -203,13 +214,7 @@ impl Client {
             .request(LOGIN, Some(form))
             .await
             .map_err(|_| "water.connection_failed")?;
-        if status == StatusCode::FORBIDDEN {
-            return Err("water.human_required");
-        }
-        if status != StatusCode::OK && !status.is_redirection() {
-            return Err("water.login_failed");
-        }
-        Ok(())
+        login_result(status)
     }
 }
 fn select_meter(data: &Value, wanted: &str) -> Result<String> {
@@ -383,6 +388,25 @@ mod tests {
         };
         assert_eq!(client.login(&account).await, Err("water.human_required"));
         server.await.unwrap();
+    }
+    #[test]
+    fn temporary_provider_errors_are_not_reported_as_bad_credentials() {
+        assert_eq!(
+            login_result(StatusCode::TOO_MANY_REQUESTS),
+            Err("water.connection_failed")
+        );
+        assert_eq!(
+            login_result(StatusCode::SERVICE_UNAVAILABLE),
+            Err("water.connection_failed")
+        );
+        assert_eq!(
+            login_result(StatusCode::UNAUTHORIZED),
+            Err("water.login_failed")
+        );
+        assert_eq!(
+            login_result(StatusCode::FORBIDDEN),
+            Err("water.human_required")
+        );
     }
     #[tokio::test]
     async fn normal_login_keeps_session_cookies_and_fetches_daily_json_without_following_redirects()
