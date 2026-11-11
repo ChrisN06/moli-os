@@ -7,12 +7,21 @@ branche `600a8c2`. Image épinglée :
 `ghcr.io/chrisn06/moli-os@sha256:b09a30a26888eb4285e3a90365c968daf2dae69273832bcc67bc100435da5c05`.
 Workflows check, audit et image réussis. Sauvegarde native avant mise à jour vérifiée :
 manifeste valide avec neuf fichiers.
-Retour à l’image précédente `sha256:26e70014bd3f3e07aaa1daff2d758e23763e0cd85a94305513255c34df74b803`
+Retour à l’image précédente de `925abb5` (`sha256:26e70014bd3f3e07aaa1daff2d758e23763e0cd85a94305513255c34df74b803`)
 vérifié ; aucune restauration de données requise.
 
 Après déploiement, `/api/health` répond : 35 appareils, 10/10 pilotes actifs,
 244 points et zéro échec journal. Moli et go2rtc sont actifs. Aucune commande physique.
-Affichage mobile après déploiement non vérifié.
+Le propriétaire confirme la vérification visuelle mobile après déploiement.
+
+## Déploiement précédent — `925abb5`, 11 novembre 2026
+
+La recette avait confirmé l'accueil Orbite, les pages Énergie et Réseau, et l'absence de
+débordement aux largeurs 390 et 3840 px. La sauvegarde native contenait neuf fichiers ;
+`history.db` et `energy.db` avaient passé `PRAGMA quick_check`, sans clé maître dans la copie.
+Un échantillon de 200 lignes de journal montrait une erreur liée à un pilote et un
+avertissement, sans panic ni fatal ; leur cause n'avait pas été isolée. Ce relevé historique
+n'a pas été répété après PR #7 ; la santé actuelle est documentée ci-dessus.
 
 ## Consolidation locale — 11 novembre 2026
 
@@ -30,10 +39,9 @@ le panneau de sécurité caméra et l'éclairement instantané. Les modification
 So'EAU/CSRF, commandes groupées des volets, adaptations mobiles, rendu réseau et règles
 de reprise sont aussi intégrées dans le lot local suivant.
 
-Dernier déploiement documenté : `ee86d85`, image amd64
-`sha256:3e74b639214f79375b46e9dff538da3731d46b80b05cdd07c5cb4965a79780f6`, le 7 novembre.
-État Portainer non relu pendant cette consolidation. Cette référence ne prouve pas l'image
-actuellement active.
+Déploiement précédent : `ee86d85`, image amd64
+`sha256:3e74b639214f79375b46e9dff538da3731d46b80b05cdd07c5cb4965a79780f6`.
+Portainer n'avait pas été relu pendant la consolidation ; l'état actuel figure ci-dessus.
 
 Validations observées : 51 tests web, build, i18n (3 438 clés), PWA, catalogue, fuite,
 8 tests Somfy, build `moli-os`, Clippy strict et tests ciblés API (61), énergie (31),
