@@ -134,8 +134,8 @@ Les échecs connus et les résultats effectivement observés sont dans `PROJECT_
 ## Plusieurs conversations Codex et entretien documentaire
 
 - Les conversations de ce projet sont séquentielles : réutiliser le checkout permanent `moli-os` et sa branche active. Ne pas créer de clone ou worktree pour une conversation seule.
-- Une tâche par branche et par worktree lorsque plusieurs conversations travaillent
-  simultanément. Ne pas partager un checkout modifié, un port de développement ou des données de test.
+- Créer une branche ou un worktree séparé seulement si le propriétaire demande un travail
+  simultané. Ne pas partager un checkout modifié, un port de développement ou des données de test.
   Examiner aussi les instructions privées applicables avant de préparer un environnement.
 - Avant de modifier un fichier, vérifier qu’il n’a pas changé depuis sa lecture.
   Ne jamais utiliser reset/clean/stash pour effacer le travail d’une autre conversation.
