@@ -1,5 +1,19 @@
 # Moli OS — état du fork et reprise
 
+## Dernier déploiement — PR #7, 11 novembre 2026
+
+Commit fusionné sur `main` : `de935f60a5080a7432b2abf8869666e305b2845c` ; commit de
+branche `600a8c2`. Image épinglée :
+`ghcr.io/chrisn06/moli-os@sha256:b09a30a26888eb4285e3a90365c968daf2dae69273832bcc67bc100435da5c05`.
+Workflows check, audit et image réussis. Sauvegarde native avant mise à jour vérifiée :
+manifeste valide avec neuf fichiers.
+Retour à l’image précédente `sha256:26e70014bd3f3e07aaa1daff2d758e23763e0cd85a94305513255c34df74b803`
+vérifié ; aucune restauration de données requise.
+
+Après déploiement, `/api/health` répond : 35 appareils, 10/10 pilotes actifs,
+244 points et zéro échec journal. Moli et go2rtc sont actifs. Aucune commande physique.
+Affichage mobile après déploiement non vérifié.
+
 ## Consolidation locale — 11 novembre 2026
 
 Branche consolidée `codex/consolidation-20261111`, issue de `personal/main` (`1603bbb`),
