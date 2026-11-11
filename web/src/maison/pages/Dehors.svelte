@@ -148,6 +148,12 @@
   </div>
 
   {#if sun}
+    <section class="card">
+      <div class="card-head"><h2><Icon name="sun" size={18} />{t('maison.dehors.sun_sensor')}</h2></div>
+      <strong class="num">{num(reachable(sun) ? v(sun, 'illuminance') : null)} lx</strong>
+      {#if v(sun, 'last_received') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(v(sun, 'last_received') * 1000, home.now) })}</p>{/if}
+      <p class="muted small">{t('maison.dehors.sun_unit')}</p>
+    </section>
     <div class="sun-period">
       <select aria-label={t('orbite.light_period')} bind:value={sunPeriod}>
         {#each [24, 168, 720] as hours}<option value={hours}>{t(hours === 24 ? 'orbite.daily' : hours === 168 ? 'orbite.weekly' : 'orbite.monthly')}</option>{/each}

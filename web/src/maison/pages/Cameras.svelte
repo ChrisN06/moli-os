@@ -3,6 +3,7 @@
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
+  import SecurityPanel from '../ui/SecurityPanel.svelte';
 
   // The layout's cameras first (their names, pace, battery), then any other.
   const cameras = $derived.by(() => {
@@ -70,6 +71,8 @@
     <h1 class="page-title">{t('salon.cameras.titre')}</h1>
     <p class="page-sub">{t('salon.cameras.sous_titre')}</p>
   </header>
+
+  <SecurityPanel />
 
 
   <div class="wall">
