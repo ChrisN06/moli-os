@@ -114,9 +114,9 @@
   <header class="orbite-bar">
     <a class="orbite-brand" href="#/" aria-label={t('commun.nav.logo')}>{t('orbite.brand')}<span>{t('orbite.name')}</span></a>
     <div class="orbite-tools">
-      <label>{t('orbite.display')}<select aria-label={t('orbite.display')} value={display} onchange={(event) => { display = event.currentTarget.value; savePref('maison-display', display); }}>
+      <select aria-label={t('orbite.display')} value={display} onchange={(event) => { display = event.currentTarget.value; savePref('maison-display', display); }}>
         <option value="auto">{t('orbite.auto')}</option><option value="desktop">{t('orbite.desktop')}</option><option value="tablet">{t('orbite.tablet')}</option><option value="phone">{t('orbite.phone')}</option><option value="tv">{t('orbite.tv')}</option>
-      </select></label>
+      </select>
       <button class="theme" onclick={cycleTheme} title={themeTitle}><Icon name={theme === 'night' ? 'moon' : 'sun'} size={20} /><span>{themeName}</span></button>
     </div>
   </header>

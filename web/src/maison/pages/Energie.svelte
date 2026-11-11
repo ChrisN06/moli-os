@@ -234,7 +234,6 @@
       <h1 class="page-title">{t('energie.titre')}</h1>
       <p class="page-sub">{t('energie.sous_titre')}</p>
     </div>
-    <a class="demo" href="#/energie/solaire"><Icon name="sun" size={16} />{t('energie.demo_solaire')}</a>
   </header>
 
   <WaterCard chart />
@@ -430,21 +429,6 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px 16px;
-  }
-
-  /* The way to the solar demo: discreet, out of the real figures' way. */
-  .demo {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 7px 14px 7px 11px;
-    border-radius: 999px;
-    background: var(--surface);
-    box-shadow: var(--shadow);
-    color: var(--ink-2);
-    font-size: 13px;
-    font-weight: 650;
-    text-decoration: none;
   }
 
   .heads {
@@ -775,9 +759,6 @@
   @media (max-width: 560px) {
     .energie { grid-template-columns: minmax(0, 1fr); }
     .head > div { min-width: 0; }
-    .energie,
-    .heads,
-
     /* Two by two: the figures stay readable without a long scroll. */
     .heads {
       grid-template-columns: repeat(2, minmax(0, 1fr));

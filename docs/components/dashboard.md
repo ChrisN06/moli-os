@@ -210,9 +210,9 @@ une application externe restent inconnus lorsqu'un pont ne fournit aucun retour.
 **Paramètres** accueille la connexion Xiaomi et le captcha/second facteur.
 Les commandes sont disponibles après vérification du compte et du modèle par le pilote,
 sans option de déplacement supplémentaire. **Aspirateur** lit sa télémétrie,
-affiche la carte sur demande et mémorise un rectangle cuisine confirmé. Le bouton
-**Démarrer le nettoyage** lance un nettoyage classique indépendant de cette carte. Aucun
-nettoyage ne démarre lors de la connexion ni de l'enregistrement du rectangle.
+affiche la carte sur demande et la zone cuisine déjà mémorisée. Le tableau de bord
+n'expose plus l'édition ou la confirmation de cette zone. Le bouton **Démarrer le
+nettoyage** lance un nettoyage classique indépendant de cette carte.
 La caméra Xiaomi réutilise la page caméras et son démarrage à l'ouverture.
 Voir `integrations/xiaomi-vacuum/` et `integrations/xiaomi-camera/` pour les limites
 cloud, HEVC, firmware et stabilité du repère.
@@ -224,7 +224,10 @@ répéteurs rattachés à leur port Ethernet, appareils, signal, bande et vitess
 PHY. Les flux verts descendants et rouges montants restent animés entre les
 relevés de cinq secondes ; débit, largeur et densité sont interpolés sans changer
 l'amplitude d'ondulation. Les éléments gardent une identité MAC lors des
-changements de point d'accès. Un second clic sur le même port ferme son panneau.
+changements de point d'accès. Sur mobile, les ports et points d'accès restent
+visibles ; toucher l'un d'eux ouvre sa liste de clients. Sur écran large, les
+clients restent affichés dans la topologie. Un second clic sur le même port ferme
+son panneau.
 
 Le rendu est chargé à la visite et isolé dans un Shadow DOM pour ne pas modifier
 les interactions des autres pages. Quitter la page libère le canevas et son
@@ -273,14 +276,15 @@ Il s'agit de la consigne rapportée par Overkiz, pas d'une garantie sur une dér
 active dans l'application du fabricant. La sélection temporelle fonctionne au
 clavier et au toucher. Aucun ancien historique Somfy n'est téléchargé.
 
-L'eau utilise `GET /api/water` et un import propriétaire `PUT /api/water`
-(`csv`, `unit` valant `m3` ou `L`). Paramètres accepte l'export **journalier** de
-Tout sur mon eau : `Date;Consommation;Index`, séparateur point-virgule, avec ou sans
-guillemets et BOM. L'unité doit correspondre à celle choisie sur le site. Un import
-mensuel, une date invalide, un doublon, un nombre négatif/non fini ou un fichier
-trop volumineux est refusé sans écriture partielle. Les jours sans index (exportés
-avec index et volume nuls) ne remplacent pas une mesure par zéro. Un zéro avec
-index valide reste une consommation mesurée de zéro.
+L'eau utilise `GET /api/water` et conserve l'import propriétaire `PUT /api/water`
+(`csv`, `unit` valant `m3` ou `L`) pour les clients API. Paramètres ne propose plus
+de formulaire d'import ; il permet de connecter ou reconnecter Tout sur mon eau.
+L'API accepte l'export **journalier** : `Date;Consommation;Index`, séparateur
+point-virgule, avec ou sans guillemets et BOM. L'unité doit correspondre à celle
+choisie sur le site. Un import mensuel, une date invalide, un doublon, un nombre
+négatif/non fini ou un fichier trop volumineux est refusé sans écriture partielle.
+Les jours sans index (exportés avec index et volume nuls) ne remplacent pas une
+mesure par zéro. Un zéro avec index valide reste une consommation mesurée de zéro.
 
 Les imports d'un seul compteur fusionnent par date, dans la limite de 3 660 jours.
 Les valeurs sont stockées dans le coffre chiffré existant, inclus dans les
@@ -298,10 +302,11 @@ qui lui appartient. Le compteur lié à l'historique ne peut pas changer silenci
 Les trois derniers mois sont lus à chaque synchronisation, au démarrage puis toutes
 les 12 heures ; une lecture manuelle est disponible, avec une minute entre tentatives.
 Les erreurs conservent les relevés existants et sont affichées sans données de connexion.
-Le collecteur retente une seule fois après une minute en cas d’erreur temporaire ;
-il ne retente pas un contrôle humain ni une lecture déjà limitée.
+Le collecteur retente les erreurs de connexion après une minute puis cinq minutes ;
+une erreur d'identifiants reçoit un seul nouvel essai après une minute. Les erreurs
+HTTP 429 et 5xx sont classées comme temporaires. Il ne retente pas un contrôle humain.
 Un contrôle humain imposé par le fournisseur reste un échec explicite, sans contournement.
-Le CSV reste utilisable. Référence de protocole :
+L'endpoint d'import CSV reste disponible aux clients API. Référence de protocole :
 [py-mon-eau](https://github.com/laurent-martin/py-mon-eau).
 
 `GET /api/water/account`, `POST /api/water/account` (`email`, `password`, `meter`
@@ -311,6 +316,7 @@ Aucune réponse ne retourne les identifiants ou cookies. `GET /api/water` ajoute
 compteur reste dans le coffre. Les routes d'écriture partagent la limite eau de
 cinq requêtes par dix secondes. Aucun ancien historique électrique n'est modifié.
 
-Les coordonnées précises de la zone aspirateur sont affichées en mètres depuis
-la base orange `(0, 0)`. La conversion vers les coordonnées absolues du protocole
-reste interne ; le mouvement du robot violet n'entre jamais dans le recalage.
+La zone aspirateur mémorisée reste visible sur la carte. L'édition et l'affichage
+des coordonnées précises ont été retirés du tableau de bord. La conversion vers les
+coordonnées absolues du protocole reste interne ; le mouvement du robot violet
+n'entre jamais dans le recalage.
