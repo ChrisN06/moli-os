@@ -523,6 +523,14 @@ async fn exchange(
 ) -> anyhow::Result<Bytes> {
     let (host, port) = (target.host.as_str(), target.port);
     let fetch = async {
+        #[cfg(test)]
+        let tcp = {
+            let connect_host = tests::connect_host(host, port)?;
+            TcpStream::connect((connect_host.as_str(), port))
+                .await
+                .with_context(|| format!("cannot reach {host}:{port}"))?
+        };
+        #[cfg(not(test))]
         let tcp = TcpStream::connect((host, port))
             .await
             .with_context(|| format!("cannot reach {host}:{port}"))?;
@@ -1246,6 +1254,31 @@ fn publish(ctx: &DriverCtx, profile: &Compiled, device: &DeviceId, request: &str
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::collections::HashSet;
+
+    static TEST_ROUTES: std::sync::LazyLock<Mutex<HashSet<(Ipv4Addr, u16)>>> =
+        std::sync::LazyLock::new(|| Mutex::new(HashSet::new()));
+
+    pub(super) fn connect_host(host: &str, port: u16) -> anyhow::Result<String> {
+        let Ok(ip) = host.parse::<Ipv4Addr>() else {
+            return Ok(host.to_owned());
+        };
+        if !ip.is_loopback() {
+            return Ok(host.to_owned());
+        }
+        if !TEST_ROUTES
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .contains(&(ip, port))
+        {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::ConnectionRefused,
+                "no simulated adapter at this address",
+            )
+            .into());
+        }
+        Ok(Ipv4Addr::LOCALHOST.to_string())
+    }
 
     #[test]
     fn only_image_bytes_are_an_image() {
@@ -1448,14 +1481,22 @@ mod tests {
     /// Another adapter of the same kind.
     const OTHER: &str = "020000000099";
 
-    /// A Daikin adapter answering the fixtures at `ip` (port 0: any), `mac`
-    /// replacing the one its basic info gives. Returns its port.
-    async fn adapter(ip: Ipv4Addr, port: u16, mac: &'static str) -> u16 {
+    /// Daikin fixtures routed by the requested Host header through one
+    /// localhost listener. Loopback aliases are not always bindable on macOS.
+    async fn adapter(devices: &[(Ipv4Addr, &'static str)]) -> u16 {
         use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
-        let listener = tokio::net::TcpListener::bind((ip, port)).await.unwrap();
+        let listener = tokio::net::TcpListener::bind((Ipv4Addr::LOCALHOST, 0))
+            .await
+            .unwrap();
         let port = listener.local_addr().unwrap().port();
+        let devices = devices.to_vec();
+        TEST_ROUTES
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .extend(devices.iter().map(|(ip, _)| (*ip, port)));
         tokio::spawn(async move {
             while let Ok((mut tcp, _)) = listener.accept().await {
+                let devices = devices.clone();
                 tokio::spawn(async move {
                     let mut request = Vec::new();
                     let mut buf = [0u8; 1024];
@@ -1466,6 +1507,17 @@ mod tests {
                         }
                     }
                     let line = String::from_utf8_lossy(&request);
+                    let host = line
+                        .lines()
+                        .find_map(|line| line.strip_prefix("Host: "))
+                        .unwrap_or_default()
+                        .split(':')
+                        .next()
+                        .unwrap_or_default();
+                    let mac = devices
+                        .iter()
+                        .find_map(|(ip, mac)| (ip.to_string() == host).then_some(*mac));
+                    let Some(mac) = mac else { return };
                     let fixture = |name: &str| {
                         let path = format!(
                             "{}/../../integrations/daikin-brp069/fixtures/{name}",
@@ -1637,8 +1689,8 @@ mod tests {
 
     #[tokio::test]
     async fn a_device_that_changed_address_is_found_and_followed() {
-        let port = adapter(Ipv4Addr::LOCALHOST, 0, MAC).await;
-        let house = House::new("moved", port, LOOPBACK, None);
+        let port = adapter(&[(Ipv4Addr::LOCALHOST, MAC)]).await;
+        let house = House::new("moved", port, LOOPBACK, Some(book(CONFIGURED)));
         assert!(house.online(MAC).await, "found at its new address");
         assert_eq!(
             house.moves(),
@@ -1658,7 +1710,7 @@ mod tests {
 
     #[tokio::test]
     async fn another_device_with_its_mac_is_not_followed() {
-        let port = adapter(Ipv4Addr::LOCALHOST, 0, OTHER).await;
+        let port = adapter(&[(Ipv4Addr::LOCALHOST, OTHER)]).await;
         let house = House::new("impostor", port, LOOPBACK, None);
         assert!(!house.online(OTHER).await, "not the same identity");
         assert!(house.moves().is_empty(), "nothing journaled");
@@ -1671,7 +1723,7 @@ mod tests {
 
     #[tokio::test]
     async fn another_device_at_the_address_found_earlier_is_never_taken() {
-        let port = adapter(Ipv4Addr::LOCALHOST, 0, OTHER).await;
+        let port = adapter(&[(Ipv4Addr::LOCALHOST, OTHER)]).await;
         let house = House::new("taken", port, NOBODY, Some(book(Ipv4Addr::LOCALHOST)));
         assert!(!house.online(OTHER).await, "not adopted");
         assert!(!house.online(MAC).await, "and the adapter is nowhere");
@@ -1686,8 +1738,7 @@ mod tests {
     #[tokio::test]
     async fn the_device_whose_address_another_one_took_is_found_elsewhere() {
         // Another adapter got the configured address; ours is at .3.
-        let port = adapter(ELSEWHERE, 0, MAC).await;
-        adapter(CONFIGURED, port, OTHER).await;
+        let port = adapter(&[(ELSEWHERE, MAC), (CONFIGURED, OTHER)]).await;
         let house = House::new("twin", port, TWIN, Some(book(CONFIGURED)));
         assert!(house.online(MAC).await, "followed to its new address");
         assert!(
@@ -1707,7 +1758,7 @@ mod tests {
     #[tokio::test]
     async fn another_device_at_its_configured_address_is_not_taken_before_a_long_search() {
         // Ours is off (nowhere); another one got its address.
-        let port = adapter(CONFIGURED, 0, OTHER).await;
+        let port = adapter(&[(CONFIGURED, OTHER)]).await;
         let house = House::new("off", port, NOBODY, Some(book(CONFIGURED)));
         assert!(!house.online(OTHER).await, "not taken at once");
         assert_eq!(house.remembered(), book(CONFIGURED));
@@ -1717,7 +1768,7 @@ mod tests {
     #[tokio::test]
     async fn an_address_a_person_changed_is_obeyed() {
         // Learned for another configured address: the person's word wins.
-        let port = adapter(CONFIGURED, 0, OTHER).await;
+        let port = adapter(&[(CONFIGURED, OTHER)]).await;
         let mut before = book(Ipv4Addr::LOCALHOST);
         before["clim"]["configured"] = "127.0.0.9".into();
         let house = House::new("edited", port, LOOPBACK, Some(before));

@@ -21,9 +21,10 @@ actuellement active.
 
 Validations observées : 51 tests web, build, i18n (3 438 clés), PWA, catalogue, fuite,
 8 tests Somfy, build `moli-os`, Clippy strict et tests ciblés API (61), énergie (31),
-Xiaomi (17) passent. `sh scripts/check.sh` échoue sur quatre tests `moli-profile` qui
-tentent d'utiliser des adresses macOS non attribuées (`AddrNotAvailable`). Build web garde
-les avertissements Svelte et taille de bundle préexistants. Ne pas pousser, déployer,
+Xiaomi (17) passent. Les 33 tests `moli-profile` passent après portabilisation du harnais
+loopback. `sh scripts/check.sh` atteint ensuite `moli-tuya` et échoue sur 17 tests qui
+tentent encore de binder des adresses macOS non attribuées (`AddrNotAvailable`). Build web
+garde les avertissements Svelte et taille de bundle préexistants. Ne pas pousser, déployer,
 déplacer ou supprimer les anciens checkouts sans accord explicite. Aucun appareil physique
 n'a été testé.
 
