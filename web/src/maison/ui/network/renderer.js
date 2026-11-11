@@ -1,11 +1,5 @@
 export function createNetwork(root,t,locale){
 let animation;
-let flowColors;
-function refreshColors(){const style=getComputedStyle(root.host);flowColors=[['down',style.getPropertyValue('--network-down').trim()||'#32ffa0'],['up',style.getPropertyValue('--network-up').trim()||'#ff6677']]}
-refreshColors();
-const themeObserver=new MutationObserver(refreshColors);
-const themeHost=root.host.closest('[data-theme]');
-if(themeHost)themeObserver.observe(themeHost,{attributes:true,attributeFilter:['data-theme']});
 function wifiDetail(device) {
   const band = device.band === '5g' ? '5 GHz' : device.band === '2d4g' ? '2,4 GHz' : '—';
   return `${device.signal ?? '—'} dBm · ${band}`;
@@ -13,7 +7,7 @@ function wifiDetail(device) {
 function smoothValue(current, target, seconds) {
   return current + (target - current) * (1 - Math.exp(-Math.max(0, seconds) / 0.45));
 }
-function topologyGroups(data) {
+function topologyGroups(data, compact = false) {
   const ports = [...data.ports].sort((a, b) => a.id - b.id);
   const groups = ports.map(port => ({
     id: port.id,
@@ -32,14 +26,14 @@ function topologyGroups(data) {
     const index = groups.findIndex(port => port.id === repeater.port);
     groups.splice(index >= 0 ? index + 1 : groups.length, 0, group);
   }
-  let top = 35;
+  let top = compact ? 280 : 35;
   for (const group of groups) {
     group.top = top;
-    group.height = Math.max(100, Math.ceil(group.devices.length / 3) * 46 + 44);
-    group.y = top + group.height / 2;
-    top += group.height + 26;
+    group.height = Math.max(100, Math.ceil(group.devices.length / (compact ? 2 : 3)) * 46 + 44);
+    group.y = compact ? top - 45 : top + group.height / 2;
+    top += group.height + (compact ? 100 : 26);
   }
-  return {groups, height: Math.max(600, top)};
+  return {groups, height: Math.max(compact ? 720 : 600, top)};
 }
 
 function flowStyle(bytesPerSecond) {
@@ -83,7 +77,7 @@ function particleFrame(time) {
   ctx.setTransform(dpr*scale,0,0,dpr*scale,dpr*(bounds.width-view.width*scale)/2,dpr*(bounds.height-view.height*scale)/2);
   for(const link of particleLinks){
     if(!link.points.length||performance.now()<link.resampleUntil){const length=link.path.getTotalLength();link.points=Array.from({length:101},(_,i)=>link.path.getPointAtLength(length*i/100))}
-    for(const[direction,color]of flowColors){
+    for(const[direction,color]of [['down','#32ffa0'],['up','#ff6677']]){
       const rate=Number(link.group.querySelector('.'+direction).dataset.rate)||0;
       const state=link.state[direction];state.rate=smoothValue(state.rate,rate,elapsed);
       const style=flowStyle(state.rate);if(state.rate<.1)continue;
@@ -121,11 +115,17 @@ function clickable(node,action){node.setAttribute('tabindex','0');node.setAttrib
 function node(id,x,y,title,sub,symbol,action){let n=groupNodes.get(id);if(!n){n=el('g',{class:'node',id},root.querySelector('#nodes'));el('rect',{x:-58,y:-36,width:116,height:72,rx:13},n);text(n,0,-7,symbol,'symbol');text(n,0,14,title);text(n,0,55,sub,'sub');if(action)clickable(n,action);groupNodes.set(id,n)}n.style.transform=`translate(${x}px,${y}px)`;n.querySelector('.sub').textContent=sub;return n}
 function edge(id,x1,y1,x2,y2,animated=true){let g=linkNodes.get(id);if(!g){g=el('g',{id},root.querySelector('#edges'));el('path',{class:animated?'wire':'wire unknown'},g);if(animated){el('path',{class:'flow down'},g);el('path',{class:'flow up'},g);text(g,0,0,'','link-rate green');text(g,0,13,'','link-rate red')}linkNodes.set(id,g)}const d=`M ${x1} ${y1} C ${(x1+x2)/2} ${y1}, ${(x1+x2)/2} ${y2}, ${x2} ${y2}`;g.querySelectorAll('path').forEach(p=>p.setAttribute('d',d));g.querySelectorAll('.link-rate').forEach((n,i)=>{n.setAttribute('x',x1>x2?600:Math.max(x1+8,x2-95));n.setAttribute('y',y2-25+i*13)});return g}
 function allDevices(){if(!latest)return [];return [...latest.ports.flatMap(p=>(p.mac_list||[]).map(d=>({...d,point:t('freebox.ethernet',{id:p.id}),wireless:false}))),...latest.wifi.map(d=>({...d,point:t('freebox.wifi_pop'),wireless:true})),...latest.repeaters.flatMap(r=>r.stations.map(d=>({...d,point:r.hostname,wireless:true})))]}
-function renderTopology(data){const layout=topologyGroups(data),seenRows=new Set(),seenNodes=new Set(),seenLinks=new Set();root.querySelector('svg').setAttribute('viewBox',`0 0 1200 ${layout.height}`);const center=layout.height/2;
-  edge('wan',130,center,222,center);seenLinks.add('wan');node('internet',72,center,t('freebox.internet'),'FTTH','◎');node('box',280,center,'Freebox',t('freebox.gateway'),'▰');seenNodes.add('internet');seenNodes.add('box');
-  for(const group of layout.groups){const id=group.id==='wifi'?'wifi':'p'+group.id,parent=layout.groups.find(g=>g.id===group.parent);edge(id,parent?588:338,parent?parent.y:center,472,group.y);seenLinks.add(id);const nodeId=group.id==='wifi'?'wifinode':'port'+group.id;node(nodeId,530,group.y,group.title,group.subtitle,typeof group.id==='string'?'◉':'▤',()=>choose(group.id));seenNodes.add(nodeId);edge('devices-'+group.id,588,group.y,680,group.y,false);seenLinks.add('devices-'+group.id);
-    let card=root.getElementById('card-'+group.id);if(!card)card=el('rect',{id:'card-'+group.id,class:'group-card',x:680,width:490,rx:13},root.querySelector('#cards'));card.setAttribute('y',group.top);card.setAttribute('height',group.height);card.dataset.seen='yes';
-    group.devices.forEach((device,index)=>{const key=device.mac||group.id+'-'+device.name+'-'+index;seenRows.add(key);let row=deviceRows.get(key);if(!row){row=el('g',{class:'device-entry'},root.querySelector('#nodes'));text(row,0,0,'','device-name');text(row,0,12,'','device-meta');text(row,0,24,'','device-speed');clickable(row,()=>{selectedDevice=key;renderDetails();root.querySelector('.detail').classList.add('open')});deviceRows.set(key,row)}row.style.opacity='1';row.style.transform=`translate(${694+(index%3)*162}px,${group.top+25+Math.floor(index/3)*46}px)`;row.dataset.key=key;updateDeviceRow(row,device,group.id);});
+function renderTopology(data){const compact=root.host.clientWidth<700,layout=topologyGroups(data,compact),seenRows=new Set(),seenNodes=new Set(),seenLinks=new Set(),svg=root.querySelector('svg');svg.setAttribute('viewBox',`0 0 ${compact?600:1200} ${layout.height}`);svg.style.position=compact?'relative':'absolute';svg.style.height=compact?'auto':'100%';
+  if(compact){edge('wan',300,92,300,119);seenLinks.add('wan');node('internet',300,55,t('freebox.internet'),'FTTH','◎');node('box',300,155,'Freebox',t('freebox.gateway'),'▰');seenNodes.add('internet');seenNodes.add('box');}
+  else{const center=layout.height/2;edge('wan',130,center,222,center);seenLinks.add('wan');node('internet',72,center,t('freebox.internet'),'FTTH','◎');node('box',280,center,'Freebox',t('freebox.gateway'),'▰');seenNodes.add('internet');seenNodes.add('box');}
+  for(const group of layout.groups){const id=group.id==='wifi'?'wifi':'p'+group.id,parent=layout.groups.find(g=>g.id===group.parent);if(compact){edge(id,300,parent?parent.y+36:191,300,group.y-36);}
+    else{const center=layout.height/2;edge(id,parent?588:338,parent?parent.y:center,472,group.y);}
+    seenLinks.add(id);const nodeId=group.id==='wifi'?'wifinode':'port'+group.id;node(nodeId,compact?300:530,group.y,group.title,group.subtitle,typeof group.id==='string'?'◉':'▤',()=>choose(group.id));seenNodes.add(nodeId);
+    if(compact){edge('devices-'+group.id,300,group.y+36,300,group.top,false);}
+    else{edge('devices-'+group.id,588,group.y,680,group.y,false);}
+    seenLinks.add('devices-'+group.id);
+    const cardX=compact?30:680,cardWidth=compact?540:490;let card=root.getElementById('card-'+group.id);if(!card)card=el('rect',{id:'card-'+group.id,class:'group-card',x:cardX,width:cardWidth,rx:13},root.querySelector('#cards'));card.setAttribute('y',group.top);card.setAttribute('height',group.height);card.dataset.seen='yes';
+    group.devices.forEach((device,index)=>{const columns=compact?2:3,key=device.mac||group.id+'-'+device.name+'-'+index;seenRows.add(key);let row=deviceRows.get(key);if(!row){row=el('g',{class:'device-entry'},root.querySelector('#nodes'));text(row,0,0,'','device-name');text(row,0,12,'','device-meta');text(row,0,24,'','device-speed');clickable(row,()=>{selectedDevice=key;renderDetails();root.querySelector('.detail').classList.add('open')});deviceRows.set(key,row)}row.style.opacity='1';row.style.transform=`translate(${compact?42+(index%columns)*265:694+(index%columns)*162}px,${group.top+25+Math.floor(index/columns)*46}px)`;row.dataset.key=key;updateDeviceRow(row,device,group.id);});
   }
   for(const[key,row]of deviceRows)if(!seenRows.has(key)){row.remove();deviceRows.delete(key)}
   for(const[id,n]of groupNodes)if(!seenNodes.has(id)){n.remove();groupNodes.delete(id)}
@@ -142,5 +142,5 @@ root.querySelector('.close-detail').onclick=()=>root.querySelector('.detail').cl
 
 
 function update(data){latest=data;if(!data){root.getElementById('status')?.remove();root.getElementById('state').textContent=t('freebox.failed');for(const id of ['download','upload'])root.getElementById(id).textContent='—';root.querySelectorAll('.link-rate,.device-speed').forEach(n=>n.textContent='—');root.querySelector('.detail').classList.remove('open');root.querySelectorAll('.flow').forEach(n=>n.dataset.rate='0');return}renderTopology(data);const c=data.connection;root.getElementById('state').textContent=t(c.state==='up'?'freebox.connected':'freebox.disconnected');root.getElementById('download').textContent=rateText(c.rate_down);root.getElementById('upload').textContent=rateText(c.rate_up);animate('wan',c.rate_down,c.rate_up);for(const p of data.ports)animate('p'+p.id,p.stats.tx_bytes_rate,p.stats.rx_bytes_rate);for(const r of data.repeaters)animate('p'+r.id,r.stations.reduce((n,d)=>n+(d.tx_rate||0),0),r.stations.reduce((n,d)=>n+(d.rx_rate||0),0));animate('wifi',data.wifi.reduce((n,d)=>n+(d.tx_rate||0),0),data.wifi.reduce((n,d)=>n+(d.rx_rate||0),0));root.getElementById('updated').textContent=t('freebox.updated')+' · '+new Date(data.timestamp*1000).toLocaleTimeString(locale());if(root.querySelector('.detail.open'))renderDetails()}
-return {update,destroy(){themeObserver.disconnect();cancelAnimationFrame(animation);root.replaceChildren()}};
+return {update,destroy(){cancelAnimationFrame(animation);root.replaceChildren()}};
 }

@@ -20,4 +20,4 @@
   <p class="setup">{t('freebox.not_configured')} <a href="#/parametres">{t('freebox.settings')}</a></p>
 {/if}
 </div>
-<style>.network-view{height:100%;position:relative}.topology{height:100%;min-height:0}.setup{position:absolute;top:180px;left:20px;right:20px;color:var(--ink-2);padding:16px;background:var(--surface);border-radius:12px}</style>
+<style>.network-view{height:100%;min-height:0;position:relative;border:1px solid var(--line);border-radius:var(--r-lg);overflow:hidden;background:var(--surface)}.topology{height:100%;min-height:0}.setup{position:absolute;top:180px;left:20px;right:20px;color:var(--ink-2);padding:16px;background:var(--surface);border-radius:12px}@media(max-width:700px){.network-view{height:calc(100dvh - 172px);min-height:620px}.topology{height:100%;min-height:0}}</style>

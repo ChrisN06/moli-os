@@ -10,6 +10,11 @@ compressé à l'envoi). Deux visages sur le même hub, routés par le hash (`web
 
 Le flux SSE `/api/events` est ouvert **une seule fois** et partagé (`web/src/lib/hub.svelte.js`).
 
+L'habillage **Orbite** est l'interface Maison par défaut (`web/src/maison/Maison.svelte`).
+Il conserve ses cinq entrées principales, son menu Plus, ses thèmes et ses formats
+d'affichage ; les pages Maison restent accessibles dans cette navigation. L'ancien
+Accueil n'est pas remis en page d'accueil.
+
 ## Maison : pages (`web/src/maison/pages/`)
 
 | Page | Route | Contenu |
@@ -258,7 +263,6 @@ il conserve la fenêtre de 24 heures en leur absence. Aucun point futur n’est 
 Mi-Light conserve les valeurs déjà restaurées par le cache serveur au lieu de les effacer
 au redémarrage du pilote. Elles restent des états supposés, sans retour physique des lampes.
 Une commande incertaine continue d’invalider les valeurs concernées.
-
 ## Courbes intérieures et eau
 
 La page Salon superpose l'historique local de température, d'humidité (axe séparé

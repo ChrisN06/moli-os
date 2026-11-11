@@ -121,25 +121,33 @@ pub(crate) fn routes(hub: Hub, shutdown: CancellationToken) -> Router<Hub> {
         .layer(Extension(writing))
         .layer(Extension(service))
 }
-// One transient login failure must not postpone the next reading for twelve hours.
+// Retry transient provider failures briefly; never retry human challenges or repeated login failures.
 async fn retry_poll<F, Fut>(shutdown: &CancellationToken, mut fetch: F)
 where
     F: FnMut() -> Fut,
     Fut: std::future::Future<Output = water_suez::Result<()>>,
 {
-    for attempt in 0..2 {
+    for attempt in 0..3 {
         let result = tokio::select! {
             () = shutdown.cancelled() => return,
             result = fetch() => result,
         };
-        if matches!(result, Ok(()) | Err("water.human_required" | "water.wait")) {
+        if result.is_ok()
+            || result
+                .as_ref()
+                .err()
+                .is_some_and(|error| matches!(*error, "water.human_required" | "water.wait"))
+        {
             return;
         }
-        if attempt == 0 {
-            tokio::select! {
-                () = shutdown.cancelled() => return,
-                () = tokio::time::sleep(Duration::from_secs(60)) => {}
-            }
+        let delay = match (attempt, result) {
+            (0, Err("water.login_failed" | "water.connection_failed")) => 60,
+            (1, Err("water.connection_failed")) => 300,
+            _ => return,
+        };
+        tokio::select! {
+            () = shutdown.cancelled() => return,
+            () = tokio::time::sleep(Duration::from_secs(delay)) => {}
         }
     }
 }
@@ -338,7 +346,7 @@ async fn refresh(
 mod tests {
     use super::*;
     #[tokio::test(start_paused = true)]
-    async fn polling_retries_once_after_a_minute_but_never_retries_a_human_challenge() {
+    async fn polling_uses_bounded_retries_and_stops_for_credentials_or_human_challenges() {
         use std::sync::atomic::{AtomicUsize, Ordering};
         let calls = AtomicUsize::new(0);
         let started = tokio::time::Instant::now();
@@ -353,6 +361,7 @@ mod tests {
         assert_eq!(calls.load(Ordering::SeqCst), 2);
         assert_eq!(started.elapsed(), Duration::from_secs(60));
         calls.store(0, Ordering::SeqCst);
+        let network_started = tokio::time::Instant::now();
         retry_poll(&CancellationToken::new(), || async {
             calls.fetch_add(1, Ordering::SeqCst);
             Err("water.human_required")
@@ -367,9 +376,28 @@ mod tests {
         .await;
         assert_eq!(
             calls.load(Ordering::SeqCst),
-            2,
-            "a persistent failure is bounded too"
+            3,
+            "network failures get one longer recovery attempt"
         );
+        assert_eq!(network_started.elapsed(), Duration::from_secs(60 + 300));
+        calls.store(0, Ordering::SeqCst);
+        retry_poll(&CancellationToken::new(), || async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Err("water.login_failed")
+        })
+        .await;
+        assert_eq!(
+            calls.load(Ordering::SeqCst),
+            2,
+            "do not repeat rejected credentials"
+        );
+        calls.store(0, Ordering::SeqCst);
+        retry_poll(&CancellationToken::new(), || async {
+            calls.fetch_add(1, Ordering::SeqCst);
+            Err("water.data_failed")
+        })
+        .await;
+        assert_eq!(calls.load(Ordering::SeqCst), 1, "do not retry invalid data");
     }
     fn input(csv: &str) -> Import {
         Import {

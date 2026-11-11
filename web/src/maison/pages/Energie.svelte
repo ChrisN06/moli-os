@@ -418,7 +418,11 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
+    width: 100%;
+    min-width: 0;
   }
+
+  .energie > * { min-width: 0; }
 
   .head {
     display: flex;
@@ -769,6 +773,8 @@
   }
 
   @media (max-width: 560px) {
+    .energie { grid-template-columns: minmax(0, 1fr); }
+    .head > div { min-width: 0; }
     .energie,
     .heads,
 

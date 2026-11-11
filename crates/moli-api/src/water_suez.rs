@@ -47,12 +47,14 @@ fn encode(text: &str) -> String {
     out
 }
 fn csrf(page: &str) -> anyhow::Result<String> {
-    for marker in [
-        r"\\u0022csrfToken\\u0022\\u003A\\u0022",
-        r"\u0022csrfToken\u0022\u003A\u0022",
+    for (marker, separator) in [
+        (r"\\u0022csrfToken\\u0022\\u003A\\u0022", '\\'),
+        (r"\u0022csrfToken\u0022\u003A\u0022", '\\'),
+        ("\"csrfToken\":\"", '"'),
+        ("\"csrfToken\": \"", '"'),
     ] {
         if let Some((_, rest)) = page.split_once(marker) {
-            let token = rest.split('\\').next().unwrap_or_default();
+            let token = rest.split(separator).next().unwrap_or_default();
             ensure!(
                 !token.is_empty()
                     && token.len() <= 512
@@ -491,6 +493,14 @@ mod tests {
     fn csrf_and_form_values_are_not_confused_with_html_or_form_syntax() {
         assert_eq!(
             csrf(r"prefix \\u0022csrfToken\\u0022\\u003A\\u0022abc.def-123\\u0022 end").unwrap(),
+            "abc.def-123"
+        );
+        assert_eq!(
+            csrf(r#"{"csrfToken":"abc.def-123"}"#).unwrap(),
+            "abc.def-123"
+        );
+        assert_eq!(
+            csrf(r#"{"csrfToken": "abc.def-123"}"#).unwrap(),
             "abc.def-123"
         );
         assert!(csrf(r"\u0022csrfToken\u0022\u003A\u0022bad&token\u0022").is_err());

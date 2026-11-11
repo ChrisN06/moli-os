@@ -1,5 +1,32 @@
 # Moli OS — état du fork et reprise
 
+## Consolidation locale — 11 novembre 2026
+
+Branche de travail `codex/consolidation-20261111`, issue de `personal/main` (`1603bbb`),
+avec les branches publiées intégrées jusqu'à Orbite (`ee86d85`). `main` reste inchangée.
+Point de retour local : `codex/rollback-20261111` ; état local initial sauvegardé sur
+`codex/local-checkpoint-20261111`. Archives validées hors projet :
+`../moli-os-backups/2026-11-11/`.
+
+Orbite est l'interface Maison par défaut. Commit local `dcc8338` restaure dans ses pages
+les zones Xiaomi avec confirmation, la ventilation instantanée de puissance, l'import CSV,
+le panneau de sécurité caméra et l'éclairement instantané. Les modifications locales
+So'EAU/CSRF, commandes groupées des volets, adaptations mobiles, rendu réseau et règles
+de reprise sont aussi intégrées dans le lot local suivant.
+
+Dernier déploiement documenté : `ee86d85`, image amd64
+`sha256:3e74b639214f79375b46e9dff538da3731d46b80b05cdd07c5cb4965a79780f6`, le 7 novembre.
+État Portainer non relu pendant cette consolidation. Cette référence ne prouve pas l'image
+actuellement active.
+
+Validations observées : 51 tests web, build, i18n (3 438 clés), PWA, catalogue, fuite,
+8 tests Somfy, build `moli-os`, Clippy strict et tests ciblés API (61), énergie (31),
+Xiaomi (17) passent. `sh scripts/check.sh` échoue sur quatre tests `moli-profile` qui
+tentent d'utiliser des adresses macOS non attribuées (`AddrNotAvailable`). Build web garde
+les avertissements Svelte et taille de bundle préexistants. Ne pas pousser, déployer,
+déplacer ou supprimer les anciens checkouts sans accord explicite. Aucun appareil physique
+n'a été testé.
+
 ## Orbite — version locale du 6 novembre 2026
 
 Clone dédié `moli-orbite`, branche `feat/orbite-local`, base `59d3213` du clone
