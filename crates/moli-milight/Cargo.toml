@@ -1,0 +1,16 @@
+[package]
+name = "moli-milight"
+description = "Local Mi-Light v6 RGBW zones, with explicit assumed state."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+[dependencies]
+moli-core.workspace = true
+moli-runtime.workspace = true
+moli-i18n.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+tokio.workspace = true
+[lints]
+workspace = true

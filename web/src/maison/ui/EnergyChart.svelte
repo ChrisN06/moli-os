@@ -1,16 +1,21 @@
 <script>
+  import { subscriptionCost } from '../lib/subscription.js';
   import { kwh, euros } from '../lib/energy-live.svelte.js';
   import { deviceSeries } from '../lib/energy-series.js';
+  import { barIndex } from '../lib/readings.js';
   import { t, locale } from '../../lib/i18n.svelte.js';
 
   /** Bars over 24 h / 30 days / 12 months, stacked by what drew it
    *  (`by` = 'devices': circuits, appliances, lights, the rest) or as
    *  billed ('tariff': off-peak and peak). Hovering a bar, the legend says
    *  what each part drew in it. */
+  import { energy } from '../lib/energy-live.svelte.js';
+
   let { range = 'day', by = 'devices' } = $props();
 
   const RANGES = {
     hour: { step: 'hour', count: 24 },
+    week: { step: 'day', count: 7 },
     day: { step: 'day', count: 30 },
     month: { step: 'month', count: 12 },
   };
@@ -22,6 +27,8 @@
 
   $effect(() => {
     const { step, count } = RANGES[range];
+    void energy.summary?.fixed_price;
+    void energy.summary?.monthly_fee;
     error = '';
     hover = null;
     fetch(`/api/energy/series?step=${step}&count=${count}`)
@@ -65,10 +72,11 @@
   };
 
   const bars = $derived(
-    (report?.buckets ?? []).map((b) => {
+    (report?.buckets ?? []).map((b, i, buckets) => {
       const parts = series.map((s) => ({ s, a: amount(b, s) }));
       return {
         start: b.start,
+        fee: subscriptionCost(report.monthly_fee, b.start, Math.min(Date.now(), buckets[i + 1]?.start ?? report.to), report.timezone),
         parts,
         total: parts.reduce((t, p) => t + p.a.kwh, 0),
         cost: parts.some((p) => p.a.cost != null) ? parts.reduce((t, p) => t + (p.a.cost ?? 0), 0) : null,
@@ -94,6 +102,7 @@
   function tick(ts, i) {
     const d = new Date(ts);
     if (range === 'hour') return i % 4 === 0 ? `${d.toLocaleTimeString(locale(), { hour: '2-digit', timeZone: tz })}` : '';
+    if (range === 'week') return d.toLocaleDateString(locale(), { weekday: 'short', day: 'numeric', timeZone: tz });
     if (range === 'day') return i % 6 === 0 ? d.toLocaleDateString(locale(), { day: 'numeric', month: 'short', timeZone: tz }) : '';
     return d.toLocaleDateString(locale(), { month: 'short', timeZone: tz }).replace('.', '');
   }
@@ -102,7 +111,7 @@
     const s =
       range === 'hour'
         ? d.toLocaleString(locale(), { weekday: 'long', hour: '2-digit', minute: '2-digit', timeZone: tz })
-        : range === 'day'
+        : range === 'day' || range === 'week'
           ? d.toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'long', timeZone: tz })
           : d.toLocaleDateString(locale(), { month: 'long', year: 'numeric', timeZone: tz });
     return s.charAt(0).toUpperCase() + s.slice(1);
@@ -117,7 +126,17 @@
     return { per, kwh: per.reduce((t, p) => t + p.kwh, 0), cost: bars.some((b) => b.cost != null) ? per.reduce((t, p) => t + p.cost, 0) : null };
   });
 
+  const fee = $derived(shown ? shown.fee : bars.reduce((sum, b) => sum + b.fee, 0));
   const shown = $derived(hover != null ? bars[hover] : null);
+  function select(event) {
+    if (event.type === 'pointerdown') {
+      if (event.pointerType !== 'mouse') event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
+    if (event.type === 'pointermove' && event.pointerType !== 'mouse' && !event.buttons) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    hover = barIndex(event.clientX, rect.left, rect.width, bars.length);
+  }
 </script>
 
 {#if error}
@@ -125,20 +144,27 @@
 {:else if !report}
   <p class="muted">{t('energie.chargement')}</p>
 {:else}
+  <p class="muted">{t('energie.fee.chart', {cost: euros(fee, report.currency)})}</p>
   <div class="readout" aria-live="polite">
     {#if shown}
       <span class="when">{when(shown.start)}</span>
       <strong class="num">{kwh(shown.total)} kWh</strong>
-      {#if shown.cost != null}<span class="num">{euros(shown.cost, report.currency)}</span>{/if}
+      {#if shown.cost != null}<span class="num">{euros(shown.cost + shown.fee, report.currency)}</span>{/if}
     {:else}
       <span class="when">{t('energie.chart.periode')}</span>
       <strong class="num">{kwh(totals.kwh)} kWh</strong>
-      {#if totals.cost != null}<span class="num">{euros(totals.cost, report.currency)}</span>{/if}
+      {#if totals.cost != null}<span class="num">{euros(totals.cost + fee, report.currency)}</span>{/if}
     {/if}
   </div>
 
+  {#if report.costs_at_current_price}<p class="muted">{t('energie.price.estimate')}</p>{/if}
   <div class="plot" bind:clientWidth={W}>
-  <svg viewBox="0 0 {W} {H}" height={H} role="img" aria-label={t('energie.chart.conso')} onpointerleave={() => (hover = null)}>
+  <svg viewBox="0 0 {W} {H}" height={H} role="group" tabindex="0" aria-label={t('energie.chart.conso')}
+    onkeydown={(e) => {
+      if (!bars.length || !['ArrowLeft','ArrowRight','Home','End'].includes(e.key)) return;
+      e.preventDefault();
+      hover = e.key === 'Home' ? 0 : e.key === 'End' ? bars.length - 1 : Math.max(0, Math.min(bars.length - 1, (hover ?? 0) + (e.key === 'ArrowRight' ? 1 : -1)));
+    }} onpointerdown={select} onpointermove={select} oncontextmenu={(e) => e.preventDefault()} onpointerleave={(e) => { if (e.pointerType === 'mouse') hover = null; }}>
     {#each [0.5, 1] as f (f)}
       <line x1="0" x2={W} y1={y(max * f)} y2={y(max * f)} class="rule" />
     {/each}
@@ -146,7 +172,7 @@
       {@const x = i * slot + slot * 0.16}
       {@const w = slot * 0.68}
       <g class:dim={hover != null && hover !== i}>
-        <rect x={i * slot} y="0" width={slot} height={H} class="hit" role="presentation" onpointerenter={() => (hover = i)} />
+        <rect x={i * slot} y="0" width={slot} height={H} class="hit" role="presentation"  />
         {#each bar.parts.reduce((acc, p) => [...acc, { p, base: acc.at(-1)?.top ?? 0, top: (acc.at(-1)?.top ?? 0) + p.a.kwh }], []) as seg, k (seg.p.s.id)}
           {#if seg.p.a.kwh > 0}
             <rect {x} width={w} y={y(seg.top)} height={Math.max(0, y(seg.base) - y(seg.top) - (k ? 1.5 : 0))} rx={Math.min(5, w / 3)} fill={seg.p.s.color} />
@@ -198,6 +224,10 @@
   }
 
   .plot {
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    touch-action: pan-y;
     width: 100%;
     min-width: 0;
     overflow: hidden;

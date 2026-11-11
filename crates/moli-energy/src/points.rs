@@ -48,7 +48,7 @@ impl Points {
     async fn refresh(&self, ctx: &DriverCtx, id: &DeviceId) {
         match self.energy.summary().await {
             Ok(summary) => {
-                let fee = self.energy.inner.config.monthly_fee;
+                let fee = summary.monthly_fee;
                 for (key, value) in readings(&summary, fee, self.budget(), now_ms()) {
                     ctx.set_state(id, key, value);
                 }
@@ -318,6 +318,10 @@ mod tests {
 
     fn summary(month_from: u64, projection: Option<Amount>) -> Summary {
         Summary {
+            max_power_kw: 36.0,
+            costs_at_current_price: false,
+            fixed_price: None,
+            fixed_price_since: None,
             currency: "€".into(),
             timezone: "Europe/Paris".into(),
             since: Some(0),

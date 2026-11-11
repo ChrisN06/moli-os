@@ -1,16 +1,18 @@
 <script>
-  import { home, value, num, isOn, reachable } from '../lib/home.svelte.js';
+  import { home, value, num, isOn, reachable, relative, since } from '../lib/home.svelte.js';
   import { weatherOf } from '../lib/icons.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
   import LightTile from '../ui/LightTile.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
+  import HistoryCard from '../moli/HistoryCard.svelte';
 
   const out = $derived(home.config?.outdoor ?? {});
   const w = $derived(out.weather);
   const air = $derived(out.air);
+  const sun = $derived(out.sun);
   const pool = $derived(out.pool);
-  const v = (id, key) => value(id, key);
+  const v = (id, key) => reachable(id) ? value(id, key) : null;
 
   const day = $derived(v(w, 'daylight') !== false);
   const sky = $derived(weatherOf(v(w, 'weather_code'), day));
@@ -21,14 +23,14 @@
     aqi == null
       ? '—'
       : aqi <= 20
-        ? t('maison.air.tres_bon')
+        ? t('maison.air.bon')
         : aqi <= 40
-          ? t('maison.air.bon')
+          ? t('maison.air.fair')
           : aqi <= 60
             ? t('maison.air.moyen')
             : aqi <= 80
               ? t('maison.air.mediocre')
-              : t('maison.air.mauvais'),
+              : aqi <= 100 ? t('maison.air.very_poor') : t('maison.air.extreme'),
   );
   const aqiTone = $derived(aqi == null ? '' : aqi <= 40 ? 'good' : aqi <= 60 ? 'warm' : 'alert');
   const uv = $derived(v(air, 'uv_index'));
@@ -50,6 +52,10 @@
 
   const outsideCams = $derived((home.config?.favorites?.cameras ?? []).filter((c) => !/sonnette|doorbell/i.test(c.name)));
 
+  let sunPeriod = $state(24);
+  let sunDay = $state(0);
+  const sunEnd = $derived(new Date(new Date(home.now).setHours(0, 0, 0, 0)).setDate(new Date(home.now).getDate() + 1 - sunDay));
+  const sunStart = $derived(new Date(sunEnd).setDate(new Date(sunEnd).getDate() - 1));
   const sunPos = $derived.by(() => {
     const rise = Date.parse(v(w, 'sunrise'));
     const set = Date.parse(v(w, 'sunset'));
@@ -92,8 +98,13 @@
         <div><small>UV</small><b class="num">{num(uv, 0)}</b><em class="muted">{uvWord}</em></div>
         <div><small>{t('maison.dehors.particules')}</small><b class="num">{num(v(air, 'pm2_5'), 1)} µg/m³</b></div>
         <div><small>{t('maison.dehors.ozone')}</small><b class="num">{num(v(air, 'ozone'))} µg/m³</b></div>
+        <div><small>PM10</small><b class="num">{num(v(air, 'pm10'), 1)} µg/m³</b></div>
+        <div><small>NO₂</small><b class="num">{num(v(air, 'no2'), 1)} µg/m³</b></div>
       </div>
+      <p class="muted small">{t('maison.dehors.air_model')}</p>
+      {#if since(air, 'aqi') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(since(air, 'aqi'), home.now) })}</p>{/if}
     </section>
+
 
     {#if pool}
       <section class="card">
@@ -136,6 +147,26 @@
     {/if}
   </div>
 
+  {#if sun}
+    <section class="card">
+      <div class="card-head"><h2><Icon name="sun" size={18} />{t('maison.dehors.sun_sensor')}</h2></div>
+      <strong class="num">{num(reachable(sun) ? v(sun, 'illuminance') : null)} lx</strong>
+      {#if v(sun, 'last_received') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(v(sun, 'last_received') * 1000, home.now) })}</p>{/if}
+      <p class="muted small">{t('maison.dehors.sun_unit')}</p>
+    </section>
+    <div class="sun-period">
+      <select aria-label={t('orbite.light_period')} bind:value={sunPeriod}>
+        {#each [24, 168, 720] as hours}<option value={hours}>{t(hours === 24 ? 'orbite.daily' : hours === 168 ? 'orbite.weekly' : 'orbite.monthly')}</option>{/each}
+      </select>
+      {#if sunPeriod === 24}
+        <button onclick={() => sunDay++} aria-label={t('orbite.previous_day')}>←</button>
+        <span>{new Date(sunStart).toLocaleDateString()}</span>
+        <button disabled={!sunDay} onclick={() => sunDay--} aria-label={t('orbite.next_day')}>→</button>
+      {/if}
+    </div>
+    <HistoryCard point={`${sun}/illuminance`} hours={sunPeriod} from={sunPeriod === 24 ? sunStart : null} to={sunPeriod === 24 ? sunEnd : null} title={t('orbite.light_history')} />
+  {/if}
+
   {#if outsideCams.length}
     <section class="cams">
       {#each outsideCams as cam (cam.id)}
@@ -146,11 +177,13 @@
 
   {#if w || air}
     <!-- CC BY 4.0: the weather and air data credit their source. -->
-    <p class="credit">{t('maison.dehors.credit')} <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a></p>
+    <p class="credit">{t('maison.dehors.credit')} <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo.com</a>{#if air} · <a href="https://atmosphere.copernicus.eu/" target="_blank" rel="noopener">CAMS ENSEMBLE / Copernicus</a>{/if}</p>
   {/if}
 </div>
 
 <style>
+  .sun-period { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .sun-period :is(select, button) { min-height: 44px; min-width: 44px; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
   .credit {
     color: var(--ink-3);
     font-size: 12px;

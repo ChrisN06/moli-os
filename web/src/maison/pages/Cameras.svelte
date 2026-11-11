@@ -74,10 +74,11 @@
 
   <SecurityPanel />
 
+
   <div class="wall">
     {#each cameras as cam (cam.id)}
       <div class="slot">
-        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} onopen={(id) => (open = id)} />
+        <CameraTile id={cam.id} name={cam.name} refresh={cam.refresh} battery={cam.battery} autoplay={!open} onopen={(id) => (open = id)} />
         {#if cam.locked}<span class="chip cool lock"><Icon name="lock" size={14} />{t('salon.cameras.protegee')}</span>{/if}
       </div>
     {:else}

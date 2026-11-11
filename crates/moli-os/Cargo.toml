@@ -8,6 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 moli-core.workspace = true
+moli-xiaomi.workspace = true
 moli-i18n.workspace = true
 moli-runtime.workspace = true
 moli-z2m.workspace = true
@@ -23,12 +24,15 @@ moli-tuya.workspace = true
 moli-reolink.workspace = true
 moli-sonos.workspace = true
 moli-bambu.workspace = true
+moli-overkiz.workspace = true
 moli-esphome.workspace = true
 moli-alexa.workspace = true
 moli-moonraker.workspace = true
 moli-frigate.workspace = true
 moli-philips.workspace = true
+moli-tapo-camera.workspace = true
 moli-tapo.workspace = true
+moli-milight.workspace = true
 moli-shelly.workspace = true
 moli-izypower.workspace = true
 moli-solarman.workspace = true

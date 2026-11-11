@@ -3,6 +3,8 @@
   import { deviceName, isPrimary } from '../lib/format.js';
   import { t } from '../lib/i18n.svelte.js';
   import Point from './Point.svelte';
+  import PrinterStatus from './PrinterStatus.svelte';
+  import { isPrinter } from '../maison/lib/printers.js';
 
   let { device } = $props();
 
@@ -56,6 +58,8 @@
       </div>
     {/if}
   </header>
+
+  {#if isPrinter(device)}<PrinterStatus {device} />{/if}
 
   <div class="points">
     {#each primary as point (point.key)}

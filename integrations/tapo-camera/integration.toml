@@ -1,0 +1,19 @@
+[integration]
+id = "tapo-camera"
+name = "TP-Link Tapo (caméras RTSP)"
+brands = ["TP-Link"]
+models = ["C200", "C320WS"]
+transport = "tcp"
+driver = "tapo-camera"
+crate = "moli-tapo-camera"
+[discovery]
+mdns = []
+ssdp = []
+ports = [554]
+[needs]
+secrets = ["camera_account"]
+vars = []
+options = ["host", "model", "relay_host", "relay_port", "rtsp_port"]
+[origin]
+reused = "RTSP servi par go2rtc ; lecture HLS native ou hls.js, aucun code constructeur repris"
+author = "agent"

@@ -11,3 +11,6 @@ tools/model/*
 !tools/model/contract
 agent
 mobile/
+
+# Local demo state must never enter a container build context.
+.local

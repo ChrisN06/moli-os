@@ -1,5 +1,7 @@
 //! End-to-end: a real HTTP server over a hub with a fake driver.
 
+mod common;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -108,8 +110,7 @@ async fn request_with(
     );
     stream.write_all(head.as_bytes()).await.unwrap();
     stream.write_all(body.as_bytes()).await.unwrap();
-    let mut raw = Vec::new();
-    stream.read_to_end(&mut raw).await.unwrap();
+    let raw = common::response(&mut stream).await.unwrap();
     let raw = String::from_utf8_lossy(&raw).to_string();
     let status = raw[9..12].parse().unwrap();
     let (headers, body) = raw.split_once("\r\n\r\n").unwrap();
@@ -537,8 +538,7 @@ async fn request_cookie(
     );
     stream.write_all(head.as_bytes()).await.unwrap();
     stream.write_all(body.as_bytes()).await.unwrap();
-    let mut raw = Vec::new();
-    stream.read_to_end(&mut raw).await.unwrap();
+    let raw = common::response(&mut stream).await.unwrap();
     let raw = String::from_utf8_lossy(&raw).to_string();
     let status = raw[9..12].parse().unwrap();
     let (headers, body) = raw.split_once("\r\n\r\n").unwrap();
@@ -1396,4 +1396,230 @@ async fn an_invited_person_reaches_the_house_from_the_internet() {
     .await;
     assert_eq!(status, 401);
     let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[tokio::test]
+async fn fixed_energy_price_requires_an_owner_session() {
+    let (addr, _) = server().await;
+    let (status, _) = request(
+        &addr,
+        "PUT",
+        "/api/energy/price",
+        Some(&json!({"price":0.2})),
+    )
+    .await;
+    assert_eq!(status, 403);
+}
+
+#[tokio::test]
+async fn camera_accounts_require_owner_and_do_not_expose_credentials() {
+    let hub = Hub::new(HubOptions::default()).unwrap();
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new("000000")),
+        cameras: vec![(
+            "camera_test".into(),
+            moli_tapo_camera::Config {
+                host: "127.0.0.1".parse().unwrap(),
+                model: "C200".into(),
+                rtsp_port: 8554,
+                relay_host: "127.0.0.1".into(),
+                relay_port: 9,
+            },
+        )],
+        ..Default::default()
+    };
+    let addr = serve(&hub, &options).await;
+    let account = json!({"username":"fixture-user", "password":"fixture-password"});
+    let (status, body) = request(&addr, "GET", "/api/cameras/accounts", None).await;
+    assert_eq!(status, 200);
+    let list: Json = serde_json::from_str(&body).unwrap();
+    assert_eq!(list["cameras"][0]["configured"], false);
+    assert!(!body.contains("username") && !body.contains("password"));
+    let (status, _) = request(
+        &addr,
+        "PUT",
+        "/api/cameras/camera_test/account",
+        Some(&account),
+    )
+    .await;
+    assert_eq!(status, 403, "no relay call before owner authentication");
+    let (status, cookie, _) = request_cookie(
+        &addr,
+        "POST",
+        "/api/session",
+        &json!({"pin":"000000"}),
+        "",
+        "moli_session",
+    )
+    .await;
+    assert_eq!(status, 200);
+    let extra = format!("Cookie: {}\r\n", cookie.unwrap());
+    let (status, _) = request_with(
+        &addr,
+        "PUT",
+        "/api/cameras/unknown/account",
+        Some(&account),
+        &extra,
+    )
+    .await;
+    assert_eq!(status, 404, "the browser cannot add network targets");
+    let (status, _) = request_with(
+        &addr,
+        "PUT",
+        "/api/cameras/camera_test/account",
+        Some(&json!({"username":"","password":"fixture-password"})),
+        &extra,
+    )
+    .await;
+    assert_eq!(status, 422);
+    let (status, body) = request_with(
+        &addr,
+        "PUT",
+        "/api/cameras/camera_test/account",
+        Some(&account),
+        &extra,
+    )
+    .await;
+    assert_eq!(status, 502, "an unreachable relay never saves an account");
+    assert!(!body.contains("fixture-password") && !body.contains("rtsp://"));
+    assert!(
+        hub.secret(&"camera_test".into(), moli_tapo_camera::ACCOUNT)
+            .is_none()
+    );
+}
+
+#[derive(Debug)]
+struct VideoFixture(Arc<std::sync::atomic::AtomicUsize>);
+impl moli_runtime::media::VideoSource for VideoFixture {
+    fn file<'a>(
+        &'a self,
+        _: &'a str,
+        _: Option<&'a str>,
+    ) -> BoxFuture<'a, anyhow::Result<moli_runtime::media::VideoFile>> {
+        Box::pin(async move {
+            self.0.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+            Ok(moli_runtime::media::VideoFile {
+                content_type: "application/vnd.apple.mpegurl",
+                bytes: b"#EXTM3U\n".to_vec(),
+            })
+        })
+    }
+}
+impl Driver for VideoFixture {
+    fn kind(&self) -> &'static str {
+        "fake-video"
+    }
+    fn run<'a>(&'a self, ctx: &'a mut DriverCtx) -> BoxFuture<'a, anyhow::Result<()>> {
+        Box::pin(async move {
+            let id = ctx.device_id("camera");
+            ctx.provide_video(&id, Arc::new(Self(self.0.clone())));
+            ctx.upsert_device(Device {
+                id,
+                instance: ctx.instance().clone(),
+                native_name: "Fixture".into(),
+                manufacturer: None,
+                model: None,
+                description: None,
+                native_room: Some("Private test room".into()),
+                members: Vec::new(),
+                points: Vec::new(),
+            });
+            ctx.ready();
+            ctx.cancelled().await;
+            Ok(())
+        })
+    }
+}
+#[tokio::test]
+async fn protected_video_never_reaches_the_source_before_human_authentication() {
+    let calls = Arc::new(std::sync::atomic::AtomicUsize::new(0));
+    let hub = Hub::new(HubOptions {
+        guard: moli_runtime::guard::GuardPolicy {
+            protected_rooms: vec!["Private test room".into()],
+            ..Default::default()
+        },
+        ..Default::default()
+    })
+    .unwrap();
+    let cancel = CancellationToken::new();
+    spawn_driver(
+        &hub,
+        "camera_test".into(),
+        Arc::new(VideoFixture(calls.clone())),
+        cancel.clone(),
+    );
+    for _ in 0..200 {
+        if hub.stats().drivers_running == 1 {
+            break;
+        }
+        tokio::time::sleep(Duration::from_millis(5)).await;
+    }
+    let addr = serve(
+        &hub,
+        &moli_api::Options {
+            ui_pin: Some(moli_api::UiPin::new("000000")),
+            ..Default::default()
+        },
+    )
+    .await;
+    let path = "/api/devices/camera_test%3Acamera/video/stream.m3u8";
+    let (status, _) = request(&addr, "GET", path, None).await;
+    assert_eq!(status, 403);
+    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 0);
+    let (_, cookie, _) = request_cookie(
+        &addr,
+        "POST",
+        "/api/session",
+        &json!({"pin":"000000"}),
+        "",
+        "moli_session",
+    )
+    .await;
+    let (status, body) = request_with(
+        &addr,
+        "GET",
+        path,
+        None,
+        &format!("Cookie: {}\r\n", cookie.unwrap()),
+    )
+    .await;
+    assert_eq!(status, 200);
+    assert!(body.starts_with("#EXTM3U"));
+    assert_eq!(calls.load(std::sync::atomic::Ordering::SeqCst), 1);
+    cancel.cancel();
+}
+
+#[tokio::test]
+async fn a_camera_added_after_the_page_opens_keeps_its_video_capability() {
+    let hub = Hub::new(HubOptions::default()).unwrap();
+    let addr = serve(&hub, &moli_api::Options::default()).await;
+    let (status, mut stream) = live(&addr, "/api/events", "").await;
+    assert_eq!(status, 200);
+    assert_eq!(stream.next().await.0, "snapshot");
+    let cancel = CancellationToken::new();
+    spawn_driver(
+        &hub,
+        "camera_test".into(),
+        Arc::new(VideoFixture(Arc::new(std::sync::atomic::AtomicUsize::new(
+            0,
+        )))),
+        cancel.clone(),
+    );
+    let mut found = false;
+    for _ in 0..5 {
+        let (name, data) = stream.next().await;
+        if name == "snapshot"
+            && data["devices"].as_array().unwrap().iter().any(|d| {
+                d["id"] == "camera_test:camera" && d["video"] == true && d["camera"] == true
+            })
+        {
+            found = true;
+            break;
+        }
+    }
+    assert!(
+        found,
+        "the open dashboard must discover live video without reloading"
+    );
+    cancel.cancel();
 }

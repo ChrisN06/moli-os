@@ -111,3 +111,43 @@ daily_minutes = 120                      # au moins, par cycle, complété en he
   de la pince : comportement « heures creuses ». Un relais bougé à la main recommence la
   durée minimale. Une charge dont le relais commande la bobine d'un contacteur (sur « Auto »)
   convient telle quelle.
+
+## Préparation CSV TaHoma
+
+Voir [le convertisseur et ses limites](../../tools/somfy/README.md). Il prévisualise
+les exports réels sans écriture ni connexion. La production JSONL exige un fuseau
+explicite et une convention de date quotidienne ; le CSV ne les indique pas.
+L’écriture future réutilise l’import existant et ses protections contre les
+doublons et les chevauchements avec la collecte en direct. Aucune modification
+du collecteur, du schéma SQLite ou des données existantes. Les heures issues
+d’index quotidiens seraient des estimations au prorata, à distinguer des mesures.
+
+### Tarif fixe choisi dans le dashboard
+
+Sans période tarifaire configurée, **Paramètres** affiche « Mon tarif fixe » (prix TTC par kWh).
+`PUT /api/energy/price` exige une session propriétaire ; valeur finie entre 0 et 10.
+Le tarif et ses dates d'effet sont persistés dans `energy.db` (table additive `fixed_price`),
+inclus dans les sauvegardes SQLite et lisibles sans changer les fichiers de configuration.
+Les périodes HP/HC restent disponibles uniquement quand un point tarifaire existe.
+
+Le collecteur garde les coûts d'origine et les dates d'effet, mais les rapports sans
+période tarifaire **estiment tous les kWh consommés au tarif fixe actuel**, y compris les
+imports antérieurs et les anciennes heures partiellement valorisées. Aucun kWh ni coût
+stocké n'est réécrit. Changer le prix recalcule donc les estimations affichées.
+Les rapports `summary` et `series` annoncent `costs_at_current_price=true` ; le dashboard
+précise le tarif actuel et l'absence d'anciens tarifs. Production solaire
+et prix de revente ne sont pas revalorisés. Les rapports HP/HC gardent leur logique existante.
+
+### Abonnement mensuel TTC
+
+`PUT /api/energy/subscription` accepte `{ "monthly_fee": 15.5 }`, avec une session
+propriétaire et un montant fini entre 0 et 10 000. Le montant persiste dans `energy.db`
+et remplace la valeur TOML `monthly_fee`, y compris avec un tarif HP/HC. Aucun relevé
+historique n’est modifié. Les montants sont estimés à l’abonnement actuel, sans historique
+des changements d’abonnement.
+
+`summary` et `series` exposent `monthly_fee`. Les coûts des compteurs et appareils restent
+ceux de la consommation. Le dashboard ajoute l’abonnement aux totaux du jour, du mois et
+aux coûts de l’historique ; il affiche séparément la part abonnement du graphique. Le
+prorata suit les jours du mois local et la fraction écoulée du jour, y compris les journées
+à 23 ou 25 heures. Le mois projeté ajoute un abonnement mensuel entier, une seule fois.

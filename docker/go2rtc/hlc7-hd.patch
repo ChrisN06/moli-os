@@ -1,0 +1,74 @@
+diff --git a/pkg/xiaomi/miss/producer.go b/pkg/xiaomi/miss/producer.go
+index dcea284..ac07a51 100644
+--- a/pkg/xiaomi/miss/producer.go
++++ b/pkg/xiaomi/miss/producer.go
+@@ -17,0 +18 @@ type Producer struct {
++	first  *Packet
+@@ -35 +36,2 @@ func Dial(rawURL string) (core.Producer, error) {
+-	medias, err := probe(client, query.Get("audio") != "0")
++	_ = client.SetDeadline(time.Now().Add(15 * time.Second))
++	medias, first, err := probe(client.ReadPacket, client.model, query.Get("audio") != "0", query.Get("subtype"))
+@@ -40,0 +43 @@ func Dial(rawURL string) (core.Producer, error) {
++	_ = client.SetDeadline(time.Time{})
+@@ -51,0 +55 @@ func Dial(rawURL string) (core.Producer, error) {
++		first:  first,
+@@ -55,2 +59,2 @@ func Dial(rawURL string) (core.Producer, error) {
+-func probe(client *Client, audio bool) ([]*core.Media, error) {
+-	_ = client.SetDeadline(time.Now().Add(15 * time.Second))
++func probe(read func() (*Packet, error), model string, audio bool, quality string) ([]*core.Media, *Packet, error) {
++	var first *Packet
+@@ -61 +65 @@ func probe(client *Client, audio bool) ([]*core.Media, error) {
+-		pkt, err := client.ReadPacket()
++		pkt, err := read()
+@@ -68 +72 @@ func probe(client *Client, audio bool) ([]*core.Media, error) {
+-			return nil, fmt.Errorf("xiaomi: probe: %w", err)
++			return nil, nil, fmt.Errorf("xiaomi: probe: %w", err)
+@@ -83 +87,9 @@ func probe(client *Client, audio bool) ([]*core.Media, error) {
+-					vcodec = h265.AVCCToCodec(buf)
++					candidate := h265.AVCCToCodec(buf)
++					// hlc7 starts in SD even when HD was requested; do not cache its startup SPS.
++					if readyH265(model, quality, candidate) {
++						vcodec = candidate
++						if needsHD(model, quality) && h265.IsKeyframe(buf) {
++							// The probe consumed this IDR; HLS must not wait for the next GOP.
++							first = pkt
++						}
++					}
+@@ -101,2 +112,0 @@ func probe(client *Client, audio bool) ([]*core.Media, error) {
+-	_ = client.SetDeadline(time.Time{})
+-
+@@ -125 +135,17 @@ func probe(client *Client, audio bool) ([]*core.Media, error) {
+-	return medias, nil
++	return medias, first, nil
++}
++
++func needsHD(model, quality string) bool {
++	return model == "isa.camera.hlc7" && (quality == "" || quality == "hd" || quality == "2")
++}
++
++func readyH265(model, quality string, codec *core.Codec) bool {
++	if !needsHD(model, quality) {
++		return true
++	}
++	_, data, _ := h265.GetParameterSet(codec.FmtpLine)
++	if len(data) < 2 {
++		return false
++	}
++	sps := h265.DecodeSPS(data)
++	return sps != nil && sps.Width() > 640 && sps.Height() > 360
+@@ -132 +158,2 @@ func (p *Producer) Start() error {
+-
++	packet := p.first
++	p.first = nil
+@@ -135,3 +162,8 @@ func (p *Producer) Start() error {
+-		pkt, err := p.client.ReadPacket()
+-		if err != nil {
+-			return err
++		pkt := packet
++		packet = nil
++		if pkt == nil {
++			var err error
++			pkt, err = p.client.ReadPacket()
++			if err != nil {
++				return err
++			}

@@ -212,5 +212,14 @@
   "maison.meteo.legende_pluie": "Rain",
   "maison.meteo.legende_nuages": "Clouds",
   "maison.meteo.legende_vent": "Wind (light → strong)",
-  "maison.meteo.credit": "Forecast by Open-Meteo. The orange dot is the house."
+  "maison.meteo.credit": "Forecast by Open-Meteo. The orange dot is the house.",
+  "maison.dehors.air_model": "Regional CAMS estimate, not a measurement at home.",
+  "maison.dehors.sun_sensor": "Sunlight sensor",
+  "maison.dehors.sun_unit": "Illuminance measured in lux, not solar power in W/m².",
+  "maison.dehors.sun_history": "Illuminance · last 24 hours",
+  "maison.air.fair": "Fair",
+  "maison.air.very_poor": "Very poor",
+  "maison.air.extreme": "Extremely poor",
+  "maison.accueil.temperature_maison": "Home temperature",
+  "maison.accueil.temperature_interieure": "Indoor temperature"
 }

@@ -1,0 +1,20 @@
+[integration]
+id = "overkiz"
+name = "Overkiz cloud (session historique)"
+brands = ["Somfy"]
+models = []
+transport = "https"
+driver = "overkiz"
+crate = "moli-overkiz"
+
+[needs]
+secrets = ["username", "password"]
+options = []
+
+[origin]
+reused = "Protocol schemas from Somfy Developer Mode and python-overkiz-api; units cross-checked with Home Assistant. Independent implementation and synthetic fixtures. Legacy cloud reads and shutter feedback checked on one installation; exact gateway generation and physical commands remain unverified."
+author = "agent"
+
+# Synthetic protocol fixture; not a capture from a real gateway.
+[[fixture]]
+file = "fixtures/shutter.json"

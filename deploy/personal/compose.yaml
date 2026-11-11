@@ -1,0 +1,34 @@
+# Use --project-name moli-personal; never reuse another stack's project name.
+version: "2.4"
+services:
+  moli:
+    image: ${MOLI_IMAGE:?Set an immutable image tag or digest}
+    restart: unless-stopped
+    init: false
+    user: "1000:1000"
+    ports:
+      - "${MOLI_BIND_IP:-127.0.0.1}:${MOLI_PORT:-8790}:8790"
+    volumes:
+      - "${MOLI_DATA_DIR:?Set a dedicated data directory}:/data"
+      - "${MOLI_KEY_FILE:?Set the existing master key path}:/run/secrets/master.key:ro"
+      - "${MOLI_PIN_FILE:?Set the PIN file path}:/run/secrets/ui.pin:ro"
+    environment:
+      MOLI_CONFIG: /data/moli.toml
+      MOLI_MASTER_KEY_FILE: /run/secrets/master.key
+      MOLI_UI_PIN_FILE: /run/secrets/ui.pin
+      RUST_LOG: info,rumqttc=warn,rmcp=warn
+    mem_limit: 128m
+    memswap_limit: 128m
+    cpu_period: 100000
+    cpu_quota: 50000
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs:
+      - /tmp:size=8m,mode=1777
+    stop_grace_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

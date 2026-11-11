@@ -5,6 +5,8 @@
   import LightTile from './LightTile.svelte';
   import ClimateCard from './ClimateCard.svelte';
   import CoverTile from './CoverTile.svelte';
+  import SensorCard from './SensorCard.svelte';
+  import { hasReadOnlyDetails } from '../lib/readings.js';
   import AmbiancePicker from './AmbiancePicker.svelte';
   import { phase, PHASES } from '../lib/printers.js';
 
@@ -16,6 +18,7 @@
    *  silent (filtered view). */
   let { room, every = false, icons = false } = $props();
 
+  const unknownLights = $derived(room.lights.some((d) => value(d.id, 'state_estimated') === true && value(d.id, 'on') == null));
   const locked = $derived(protectedRoom(room.name));
 
   /** What a quiet sensor shows when nothing is wrong (the « Capteurs » view): one
@@ -114,6 +117,7 @@
   }
 
   const sensorChips = $derived(room.sensors.flatMap(chips));
+  const humidity = $derived(sensorChips.find(chip => chip.icon === 'humidity'));
   const lamps = $derived(lampsOf(room));
   let showLooks = $state(false);
 
@@ -176,7 +180,7 @@
   /** The pads: lights, then TV and speakers, then plugs. */
   const pads = $derived([
     ...room.lights.map((d) => ({ d, point: null })),
-    ...room.media.map((d) => ({ d, point: deviceKind(d) === 'tv' ? 'power' : null, link: deviceKind(d) === 'speaker' ? '#/salon' : null })),
+    ...room.media.map((d) => ({ d, point: deviceKind(d) === 'tv' ? 'power' : null, link: deviceKind(d) === 'speaker' ? '#/atelier' : null })),
     ...room.plugs.flatMap(plugPads),
   ]);
 
@@ -187,9 +191,11 @@
     if (!reachable(d.id)) return t('commun.piece.injoignable');
     if (outlets) return t('commun.piece.prises_allumees', { on: litCount(outlets, d.id), count: outlets.length });
     if (deviceKind(d) === 'speaker') return value(d.id, 'playing') === true ? t('commun.piece.lecture_en_cours') : t('commun.piece.a_l_arret');
-    if (!isOn(d.id, point)) return t('commun.piece.eteinte');
+    const assumed = value(d.id, 'state_estimated') === true;
+    if (assumed && value(d.id, 'on') == null) return t('commun.lampe.etat_inconnu');
     const b = value(d.id, 'brightness');
-    return typeof b === 'number' && fine(d) ? t('commun.pourcent', { n: Math.round(b) }) : t('commun.piece.allumee');
+    const state = !isOn(d.id, point) ? t('commun.piece.eteinte') : typeof b === 'number' && fine(d) ? t('commun.pourcent', { n: Math.round(b) }) : t('commun.piece.allumee');
+    return assumed ? `${state} · ${t('commun.lampe.etat_suppose')}` : state;
   }
 
   function tap(d, point, outlets, name) {
@@ -229,8 +235,11 @@
     <span class="room-icon" class:lit={room.lit}><Icon name={room.icon} size={22} /></span>
     <div class="title">
       <h2>{room.name}{#if locked}<span class="lock" title={t('commun.piece.protegee_titre')}><Icon name="lock" size={13} /></span>{/if}</h2>
-      <span class="muted">{room.lit ? t('commun.piece.allumees', { count: room.lit }) : t('commun.piece.tout_eteint')}</span>
+      {#if room.group || room.lights.length}
+        <span class="muted">{unknownLights ? t('commun.lampe.etat_inconnu') : room.lit ? t('commun.piece.allumees', { count: room.lit }) : t('commun.piece.tout_eteint')}</span>
+      {/if}
     </div>
+    {#if humidity}<span class="chip cool" title={humidity.title}><Icon name="humidity" size={15} />{humidity.text}</span>{/if}
     {#if temp != null}
       <span class="temp {tone(temp)}" title={t('commun.piece.temperature')}><b class="num">{num(temp, 1)}°</b><i class="gauge"><i style="left:{gaugeAt(temp)}%"></i></i></span>
     {/if}
@@ -240,7 +249,7 @@
       </button>
     {/if}
     {#if room.lights.length}
-      <button class="room-switch" class:on={room.lit} onclick={roomPower} aria-pressed={!!room.lit} title={room.lit ? t('commun.piece.tout_eteindre') : t('commun.piece.tout_allumer')} aria-label={t(room.lit ? 'commun.piece.label_eteindre' : 'commun.piece.label_allumer', { name: room.name })}><i></i></button>
+      <button class="room-switch" class:on={room.lit} onclick={roomPower} aria-pressed={unknownLights ? 'mixed' : !!room.lit} title={room.lit ? t('commun.piece.tout_eteindre') : t('commun.piece.tout_allumer')} aria-label={t(room.lit ? 'commun.piece.label_eteindre' : 'commun.piece.label_allumer', { name: room.name })}><i></i></button>
     {/if}
   </div>
 
@@ -262,7 +271,7 @@
               {#if !icons}<b>{label}</b><small>{stateOf(d, point)}</small>{/if}
             </a>
           {:else}
-            <button class="pad" class:on={lit} class:cut class:off-grid={!reachable(d.id) && !cut} onclick={() => tap(d, point, outlets, name)} title={label} aria-pressed={lit} aria-label={t('commun.action', { label, action: stateOf(d, point, outlets) })}>
+            <button class="pad" class:on={lit} class:cut class:off-grid={!reachable(d.id) && !cut} onclick={() => tap(d, point, outlets, name)} title={label} aria-pressed={value(d.id, 'state_estimated') === true && value(d.id, 'on') == null ? 'mixed' : lit} aria-label={t('commun.action', { label, action: stateOf(d, point, outlets) })}>
               <span class="ico"><Icon name={outlets ? 'power' : padIcon(d)} size={icons ? 22 : 18} /></span>
               {#if !icons}<b>{label}</b><small>{stateOf(d, point, outlets)}</small>{/if}
             </button>
@@ -284,6 +293,10 @@
     <CoverTile id={d.id} />
   {/each}
 
+  {#each room.sensors.filter(hasReadOnlyDetails) as d (d.id)}
+    <SensorCard id={d.id} />
+  {/each}
+
   {#each room.climates as d (d.id)}
     {@const on = isOn(d.id)}
     <button class="clim" class:on onclick={() => (openClim = openClim === d.id ? null : d.id)} aria-expanded={openClim === d.id}>
@@ -297,9 +310,9 @@
     {/if}
   {/each}
 
-  {#if sensorChips.length}
+  {#if sensorChips.some(c => c.icon !== 'humidity')}
     <div class="chips">
-      {#each sensorChips as c, i (i)}
+      {#each sensorChips.filter(c => c.icon !== 'humidity') as c, i (i)}
         {#if c.href}
           <a class="chip {c.tone}" href={c.href} title={c.title ?? c.text}><Icon name={c.icon} size={15} />{c.text}</a>
         {:else}

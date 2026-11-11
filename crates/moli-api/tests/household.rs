@@ -2,6 +2,8 @@
 //! protected rooms. Anyone on the home network can claim to be the
 //! dashboard (`X-Moli-Origin: ui` is public); only the code proves a person.
 
+mod common;
+
 use std::sync::Arc;
 use std::time::Duration;
 
@@ -9,7 +11,7 @@ use moli_core::{Access, Device, InstanceId, Kind, Origin, PointSpec, Semantic, V
 use moli_runtime::guard::{Dashboard, GuardPolicy};
 use moli_runtime::{BoxFuture, Driver, DriverCtx, Hub, HubOptions, LabelPatch, spawn_driver};
 use serde_json::{Value as Json, json};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncWriteExt;
 use tokio_util::sync::CancellationToken;
 
 struct Lamp;
@@ -32,19 +34,37 @@ impl Driver for Lamp {
                     description: None,
                     native_room: None,
                     members: Vec::new(),
-                    points: vec![PointSpec {
-                        key: "state".into(),
-                        label: "State".into(),
-                        kind: Kind::Binary,
-                        access: Access {
-                            read: true,
-                            write: true,
+                    points: vec![
+                        PointSpec {
+                            key: "state".into(),
+                            label: "State".into(),
+                            kind: Kind::Binary,
+                            access: Access {
+                                read: true,
+                                write: true,
+                            },
+                            unit: None,
+                            semantic: Semantic::OnOff,
                         },
-                        unit: None,
-                        semantic: Semantic::OnOff,
-                    }],
+                        PointSpec {
+                            key: "brightness".into(),
+                            label: "Brightness".into(),
+                            kind: Kind::Numeric {
+                                min: Some(0.0),
+                                max: Some(100.0),
+                                step: None,
+                            },
+                            access: Access {
+                                read: true,
+                                write: true,
+                            },
+                            unit: None,
+                            semantic: Semantic::Brightness,
+                        },
+                    ],
                 });
                 ctx.set_state(&id, "state", Value::Bool(false));
+                ctx.set_state(&id, "brightness", Value::Float(42.0));
             }
             ctx.ready();
             while let Some(cmd) = ctx.next_command().await {
@@ -128,8 +148,7 @@ async fn request(
     );
     stream.write_all(head.as_bytes()).await.unwrap();
     stream.write_all(body.as_bytes()).await.unwrap();
-    let mut raw = Vec::new();
-    stream.read_to_end(&mut raw).await.unwrap();
+    let raw = common::response(&mut stream).await.unwrap();
     let raw = String::from_utf8_lossy(&raw).to_string();
     let status = raw[9..12].parse().unwrap();
     let (headers, body) = raw.split_once("\r\n\r\n").unwrap();
@@ -249,8 +268,7 @@ async fn a_page_from_another_site_cannot_command_and_nothing_frames_the_house() 
     let mut stream = tokio::net::TcpStream::connect(&addr).await.unwrap();
     let head = format!("GET /api/health HTTP/1.1\r\nHost: {addr}\r\nConnection: close\r\n\r\n");
     stream.write_all(head.as_bytes()).await.unwrap();
-    let mut raw = Vec::new();
-    stream.read_to_end(&mut raw).await.unwrap();
+    let raw = common::response(&mut stream).await.unwrap();
     let raw = String::from_utf8_lossy(&raw).to_ascii_lowercase();
     assert!(raw.contains("x-frame-options: deny"), "{raw}");
     assert!(raw.contains("content-security-policy: frame-ancestors 'none'"));
@@ -317,5 +335,270 @@ async fn a_routine_reaching_a_bedroom_wants_the_code_from_the_dashboard() {
     let (status, _, body) =
         request(&addr, "POST", "/api/automations/nuit/run", &seen, &person).await;
     assert_eq!(status, 200, "{body}");
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
+async fn personal_light_preset_is_owner_saved_persistent_and_guarded() {
+    let dir = std::env::temp_dir().join(format!("moli-preset-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        home_path: Some(dir.join("home.json")),
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    let scope = json!({"lights":["fake:lamp","fake:bulb"]});
+    assert_eq!(
+        request(&addr, "PUT", "/api/light-preset", &scope, UI)
+            .await
+            .0,
+        403
+    );
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    let (status, _, body) = request(&addr, "PUT", "/api/light-preset", &scope, &owner).await;
+    assert_eq!(status, 200, "{body}");
+    assert!(dir.join("light-presets.json").exists());
+    let on = json!({"point":"fake:lamp/state","value":true});
+    assert_eq!(
+        request(&addr, "POST", "/api/command", &on, &owner).await.0,
+        200
+    );
+    assert_eq!(lamp(&hub), Value::Bool(true));
+    let (_, _, body) = request(&addr, "POST", "/api/light-preset", &scope, UI).await;
+    let report: Json = serde_json::from_str(&body).unwrap();
+    assert_eq!(report["held"].as_array().unwrap().len(), 1);
+    assert_eq!(lamp(&hub), Value::Bool(true));
+    let (status, _, body) = request(&addr, "POST", "/api/light-preset", &scope, &owner).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(lamp(&hub), Value::Bool(false));
+    let reloaded = serve(&hub, &options).await;
+    let path = "/api/light-preset?lights=%5B%22fake%3Alamp%22%2C%22fake%3Abulb%22%5D";
+    let (status, _, body) = request(&reloaded, "GET", path, &json!({}), UI).await;
+    assert_eq!(status, 200, "{body}");
+    assert_eq!(serde_json::from_str::<Json>(&body).unwrap()["saved"], true);
+    std::fs::write(dir.join("light-presets.json"), b"invalid fixture").unwrap();
+    assert_eq!(
+        request(&addr, "PUT", "/api/light-preset", &scope, &owner)
+            .await
+            .0,
+        500
+    );
+    assert_eq!(
+        std::fs::read(dir.join("light-presets.json")).unwrap(),
+        b"invalid fixture"
+    );
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
+async fn xiaomi_credentials_require_owner_before_any_relay_request() {
+    let dir = std::env::temp_dir().join(format!("moli-xiaomi-owner-{}", std::process::id()));
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        xiaomi: vec![moli_xiaomi::Configured {
+            instance: "robot_fixture".into(),
+            kind: moli_xiaomi::Kind::Vacuum,
+            config: moli_xiaomi::Config {
+                host: std::net::Ipv4Addr::LOCALHOST,
+                port: 54321,
+                poll_s: 30,
+                room: None,
+                relay_host: "127.0.0.1".into(),
+                relay_port: 9,
+            },
+        }],
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    let body = json!({"username":"fixture-user","password":"public-fixture-password"});
+    assert_eq!(
+        request(&addr, "POST", "/api/xiaomi/login", &body, UI)
+            .await
+            .0,
+        403
+    );
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    let (status, _, body) = request(&addr, "POST", "/api/xiaomi/login", &body, &owner).await;
+    assert_eq!(status, 502);
+    assert!(!body.contains("public-fixture-password"));
+    assert!(!body.contains("fixture-user"));
+    assert_eq!(
+        request(
+            &addr,
+            "PUT",
+            "/api/xiaomi/robot_fixture/commands",
+            &json!({"enabled":true}),
+            UI
+        )
+        .await
+        .0,
+        404
+    );
+    assert_eq!(
+        request(
+            &addr,
+            "GET",
+            "/api/xiaomi/robot_fixture/map",
+            &json!({}),
+            UI
+        )
+        .await
+        .0,
+        403
+    );
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
+async fn freebox_pairing_requires_owner_and_never_returns_a_token() {
+    let dir = std::env::temp_dir().join(format!("moli-freebox-test-{}", moli_core::now_ms()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let hub = bedroom(&dir).await;
+    let addr = serve(&hub, &moli_api::Options::default()).await;
+    let (status, _, body) = request(&addr, "GET", "/api/freebox", &json!({}), "").await;
+    assert_eq!(status, 200);
+    assert!(body.contains("false"));
+    assert!(!body.contains("token"));
+    let (status, _, _) = request(&addr, "GET", "/api/freebox/traffic", &json!({}), "").await;
+    assert_eq!(status, 404);
+    for route in ["/api/freebox/pair", "/api/freebox/confirm"] {
+        let (status, _, body) = request(&addr, "POST", route, &json!({}), UI).await;
+        assert_eq!(status, 403);
+        assert!(!body.contains("token"));
+    }
+}
+
+#[tokio::test]
+async fn subscription_changes_require_owner_before_accessing_energy() {
+    let dir = std::env::temp_dir().join(format!("moli-subscription-owner-{}", std::process::id()));
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    let body = json!({"monthly_fee":15.5});
+    assert_eq!(
+        request(&addr, "PUT", "/api/energy/subscription", &body, UI)
+            .await
+            .0,
+        403
+    );
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    assert_eq!(
+        request(&addr, "PUT", "/api/energy/subscription", &body, &owner)
+            .await
+            .0,
+        404
+    );
+}
+
+#[tokio::test]
+async fn water_import_requires_owner_and_merges_without_losing_readings() {
+    let dir = std::env::temp_dir().join(format!("moli-water-owner-{}", moli_core::now_ms()));
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    let body = json!({"csv":"Date;Consommation;Index\n2026-11-01;0.125;100.125\n2026-11-02;0;0", "unit":"m3"});
+    assert_eq!(request(&addr, "PUT", "/api/water", &body, UI).await.0, 403);
+    assert!(hub.core_secret("water_history").is_none());
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    assert_eq!(
+        request(&addr, "PUT", "/api/water", &body, &owner).await.0,
+        200
+    );
+    let next = json!({"csv":"Date;Consommation;Index\n2026-11-02;0;100.125", "unit":"m3"});
+    assert_eq!(
+        request(&addr, "PUT", "/api/water", &next, &owner).await.0,
+        200
+    );
+    let (status, _, body) = request(&addr, "GET", "/api/water", &json!({}), "").await;
+    assert_eq!(status, 200);
+    let data: Json = serde_json::from_str(&body).unwrap();
+    assert_eq!(data["days"], json!({"2026-11-01":0.125,"2026-11-02":0.0}));
+    let stored = hub.core_secret("water_history").unwrap();
+    let invalid = json!({"csv":"Date;Consommation;Index\n2026-11-02;NaN;100.125", "unit":"m3"});
+    assert_eq!(
+        request(&addr, "PUT", "/api/water", &invalid, &owner)
+            .await
+            .0,
+        400
+    );
+    assert_eq!(hub.core_secret("water_history").unwrap(), stored);
+    let _ = std::fs::remove_dir_all(dir);
+}
+
+#[tokio::test]
+async fn water_account_requires_owner_before_sending_credentials() {
+    let dir = std::env::temp_dir().join(format!("moli-water-account-{}", moli_core::now_ms()));
+    let hub = bedroom(&dir).await;
+    let options = moli_api::Options {
+        ui_pin: Some(moli_api::UiPin::new(PIN)),
+        ..moli_api::Options::default()
+    };
+    let addr = serve(&hub, &options).await;
+    assert_eq!(
+        request(
+            &addr,
+            "POST",
+            "/api/water/account",
+            &json!({"email":"user@example.org","password":"synthetic"}),
+            UI
+        )
+        .await
+        .0,
+        403
+    );
+    assert_eq!(
+        request(&addr, "POST", "/api/water/sync", &json!({}), UI)
+            .await
+            .0,
+        403
+    );
+    assert_eq!(
+        request(&addr, "GET", "/api/water/account", &json!({}), UI)
+            .await
+            .0,
+        403
+    );
+    assert!(hub.core_secret("water_suez_account").is_none());
+    let (_, cookie, _) = request(&addr, "POST", "/api/session", &json!({"pin":PIN}), "").await;
+    let owner = format!("{UI}Cookie: {}\r\n", cookie.unwrap());
+    let (status, _, body) = request(&addr, "GET", "/api/water/account", &json!({}), &owner).await;
+    assert_eq!(status, 200);
+    assert_eq!(
+        serde_json::from_str::<Json>(&body).unwrap()["configured"],
+        false
+    );
+    assert_eq!(
+        request(
+            &addr,
+            "POST",
+            "/api/water/account",
+            &json!({"email":"","password":""}),
+            &owner
+        )
+        .await
+        .0,
+        400
+    );
+    hub.store_core_secret(
+        "water_history",
+        &json!({"days":{},"imported_at":0,"meter":"synthetic-private-meter"}).to_string(),
+    )
+    .await
+    .unwrap();
+    let (_, _, body) = request(&addr, "GET", "/api/water", &json!({}), &owner).await;
+    assert!(!body.contains("synthetic-private-meter"));
     let _ = std::fs::remove_dir_all(dir);
 }

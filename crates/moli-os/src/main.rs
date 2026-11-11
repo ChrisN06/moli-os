@@ -414,6 +414,8 @@ async fn serve(config: Config, boot: Instant) -> anyhow::Result<()> {
         machines: gates.machines,
         weather: weather(&config),
         timezone: Some(config.zone.name.clone()),
+        cameras: camera_configs(&config)?,
+        xiaomi: xiaomi_configs(&config)?,
     };
     // Client addresses matter: human sessions are bound to them.
     axum::serve(
@@ -934,6 +936,36 @@ fn start_history(
     Ok(Some(started))
 }
 
+fn xiaomi_configs(config: &Config) -> anyhow::Result<Vec<moli_xiaomi::Configured>> {
+    config
+        .drivers
+        .iter()
+        .filter(|d| {
+            matches!(d.kind.as_str(), "xiaomi-vacuum" | "xiaomi-camera") && d.enabled != Some(false)
+        })
+        .map(|d| {
+            Ok(moli_xiaomi::Configured {
+                instance: d.id.clone(),
+                kind: if d.kind == "xiaomi-camera" {
+                    moli_xiaomi::Kind::Camera
+                } else {
+                    moli_xiaomi::Kind::Vacuum
+                },
+                config: d.options.clone().try_into()?,
+            })
+        })
+        .collect()
+}
+
+fn camera_configs(config: &Config) -> anyhow::Result<Vec<(String, moli_tapo_camera::Config)>> {
+    config
+        .drivers
+        .iter()
+        .filter(|d| d.kind == "tapo-camera" && d.enabled != Some(false))
+        .map(|d| Ok((d.id.clone(), d.options.clone().try_into()?)))
+        .collect()
+}
+
 /// Every driver kind this binary builds (`[[driver]] kind`): what the
 /// catalogue checks packages against, without building anything. A kind
 /// missing here is unknown, whatever `build_driver`'s match says.
@@ -943,12 +975,17 @@ const KINDS: &[&str] = &[
     "dirigera",
     "igd",
     "tapo",
+    "tapo-camera",
+    "milight",
+    "xiaomi-vacuum",
+    "xiaomi-camera",
     "shelly",
     "izypower",
     "solarman",
     "philips",
     "frigate",
     "bambu",
+    "overkiz",
     "esphome",
     "alexa",
     "sonos",
@@ -1080,6 +1117,7 @@ fn spawn_drivers(
     Ok((tasks, gates))
 }
 
+#[allow(clippy::too_many_lines)] // One explicit registry arm per supported driver.
 fn build_driver(
     config: &DriverConfig,
     data_dir: &std::path::Path,
@@ -1106,6 +1144,18 @@ fn build_driver(
         "igd" => Arc::new(moli_igd::Igd::new(
             config.options.clone().try_into().with_context(context)?,
         )),
+        "tapo-camera" => Arc::new(moli_tapo_camera::Camera::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
+        "xiaomi-vacuum" => Arc::new(moli_xiaomi::Vacuum::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
+        "xiaomi-camera" => Arc::new(moli_xiaomi::Camera::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
+        "milight" => Arc::new(moli_milight::Milight::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
         "tapo" => Arc::new(moli_tapo::Tapo::new(
             config.options.clone().try_into().with_context(context)?,
         )),
@@ -1124,6 +1174,9 @@ fn build_driver(
         "frigate" => Arc::new(moli_frigate::Frigate::new(
             config.options.clone().try_into().with_context(context)?,
         )),
+        "overkiz" => Arc::new(moli_overkiz::Overkiz::new(
+            config.options.clone().try_into().with_context(context)?,
+        )?),
         "bambu" => Arc::new(moli_bambu::Bambu::new(
             config.options.clone().try_into().with_context(context)?,
         )),

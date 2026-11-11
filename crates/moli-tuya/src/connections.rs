@@ -2,13 +2,42 @@
 //! connecting, for both links and searches, including identity negotiation.
 
 use std::collections::HashSet;
-use std::net::IpAddr;
+use std::net::{IpAddr, SocketAddr};
 use std::sync::{Arc, Mutex};
 
 use tokio::net::{TcpStream, lookup_host};
 
+#[cfg(test)]
+use std::collections::HashMap;
+#[cfg(test)]
+use std::sync::OnceLock;
+
 #[derive(Debug, Default)]
 pub struct Connections(Mutex<HashSet<IpAddr>>);
+
+#[cfg(test)]
+static TEST_ROUTES: OnceLock<Mutex<HashMap<SocketAddr, SocketAddr>>> = OnceLock::new();
+
+#[cfg(test)]
+pub(crate) fn route_test_address(logical: SocketAddr, actual: SocketAddr) {
+    TEST_ROUTES
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .expect("test routes")
+        .insert(logical, actual);
+}
+
+pub(crate) async fn connect(address: SocketAddr) -> std::io::Result<TcpStream> {
+    #[cfg(test)]
+    let address = TEST_ROUTES
+        .get_or_init(|| Mutex::new(HashMap::new()))
+        .lock()
+        .expect("test routes")
+        .get(&address)
+        .copied()
+        .unwrap_or(address);
+    TcpStream::connect(address).await
+}
 
 #[derive(Debug)]
 pub struct Reservation {
@@ -41,7 +70,7 @@ impl Connections {
             let Some(reservation) = self.reserve(address.ip()) else {
                 continue;
             };
-            match TcpStream::connect(address).await {
+            match connect(address).await {
                 Ok(stream) => return Ok((stream, reservation)),
                 Err(error) => last = error,
             }

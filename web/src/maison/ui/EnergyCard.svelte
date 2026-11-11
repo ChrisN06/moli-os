@@ -1,6 +1,8 @@
 <script>
+  import CounterPower from './CounterPower.svelte';
+  import { subscriptionCost } from '../lib/subscription.js';
   import { onMount } from 'svelte';
-  import { hub } from '../lib/home.svelte.js';
+  import { hub, home } from '../lib/home.svelte.js';
   import { energy, useEnergy, euros, kwh, watts, power, liveLook, billOf } from '../lib/energy-live.svelte.js';
   import { t } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
@@ -16,6 +18,7 @@
   };
   const total = $derived(s?.meters.find((m) => m.role === 'total' && m.power));
   const totalNow = $derived(total ? current(total.power, total.power_w) : null);
+  const counter = $derived(s?.meters.find((m) => m.role === 'total' && !m.power));
 
   // Today against a whole yesterday: the arc fills as the day goes.
   const today = $derived(s?.today.total.kwh ?? null);
@@ -53,6 +56,7 @@
     <span class="more" aria-hidden="true"><Icon name="arrow-top-right" size={18} /></span>
   </div>
   {#if s}
+    {#if !s.live && counter}<CounterPower point={counter.point} />{/if}
     <div class="gauges" class:pair={s.live}>
       <div class="gauge">
         <svg viewBox="0 0 180 104" aria-hidden="true">
@@ -78,7 +82,7 @@
       {/if}
     </div>
     <div class="facts">
-      <div><small>{t('energie.carte.cout_jour')}</small><b class="num">{euros(s.today.total.cost, s.currency)}</b></div>
+      <div><small>{t('energie.carte.cout_jour')}</small><b class="num">{euros(s.today.total.cost == null ? null : s.today.total.cost + subscriptionCost(s.monthly_fee, s.today.from, Math.min(home.now,s.today.to), s.timezone), s.currency)}</b></div>
       {#if s.live}
         <div title={billOf(s) != null ? t('energie.carte.facture', { bill: euros(billOf(s), s.currency) }) : null}>
           <small>{t('energie.span.month')}</small><b class="num">{euros(s.month.total.cost, s.currency)}</b>

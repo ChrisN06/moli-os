@@ -20,6 +20,7 @@
   "salon.pause": "Pause",
   "salon.lecture": "Lecture",
   "salon.ambiance": "Ambiance",
+  "salon.volets": "Volets",
   "salon.tout_le_salon": "Tout le salon",
   "salon.barre_de_son": "Barre de son",
   "salon.eteinte": "Éteinte",
@@ -196,5 +197,16 @@
   "salon.apercu_aide": "Une image par seconde, prise seulement pendant qu’elle est affichée.",
   "salon.apercu_veille": "La télé est en veille : rien à montrer.",
   "salon.apercu_montrer": "Afficher",
-  "salon.apercu_masquer": "Masquer"
+  "salon.apercu_masquer": "Masquer",
+  "salon.eclairage_description": "Les éclairages du salon.",
+  "salon.eclairage_vide": "Aucun éclairage connecté configuré pour le moment.",
+  "salon.climate.title": "Température, humidité et chauffage",
+  "salon.climate.period": "Période",
+  "salon.climate.days": "{n} jours",
+  "salon.climate.note": "Historique enregistré par Moli. Consigne rapportée par Somfy ; elle peut différer d’une dérogation active.",
+  "salon.climate.temperature": "Température",
+  "salon.climate.humidity": "Humidité",
+  "salon.climate.reported_setpoint": "Consigne rapportée",
+  "salon.climate.inspect": "Explorer le graphique",
+  "salon.climate.setpoint_dense": "Trop de changements pour afficher la consigne exacte : choisissez une période plus courte."
 }

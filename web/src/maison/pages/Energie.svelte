@@ -1,4 +1,7 @@
 <script>
+  import WaterCard from '../ui/WaterCard.svelte';
+  import CounterPower from '../ui/CounterPower.svelte';
+  import { subscriptionCost } from '../lib/subscription.js';
   import { onMount } from 'svelte';
   import { home, hub, value, isOn, nameOf, deviceKind, doorOpen, act } from '../lib/home.svelte.js';
   import { energy, useEnergy, euros, kwh, watts, power, liveLook, billOf } from '../lib/energy-live.svelte.js';
@@ -219,6 +222,7 @@
   let by = $state('devices');
   const RANGES = [
     ['hour', 'energie.range.hour'],
+    ['week', 'energie.range.week'],
     ['day', 'energie.range.day'],
     ['month', 'energie.range.month'],
   ];
@@ -233,9 +237,11 @@
     <a class="demo" href="#/energie/solaire"><Icon name="sun" size={16} />{t('energie.demo_solaire')}</a>
   </header>
 
+  <WaterCard chart />
   {#if !s}
     <p class="muted">{energy.missing ? t('energie.aucun_compteur') : t('energie.chargement')}</p>
   {:else}
+    {#if s.costs_at_current_price}<p class="muted">{t('energie.price.estimate')}</p>{/if}
     <div class="heads">
       <section class="card now" class:hued={look.hue != null} style:--h={look.hue}>
         <span class="eyebrow">{t('energie.now.titre')}</span>
@@ -247,7 +253,9 @@
           </div>
           <span class="muted small">{t(now != null ? 'energie.now.detail_fine' : 'energie.now.detail', { level: look.word, plan: power(s.live.max, s.live.unit), fine: watts(now) })}</span>
         {:else}
-          <strong class="big num">{watts(now)}</strong>
+          {#if now != null}<strong class="big num">{watts(now)}</strong>
+          {:else if total?.point}<CounterPower point={total.point} />
+          {:else}<strong class="big num">—</strong>{/if}
         {/if}
         <div class="row">
           {#if s.period}<span class="chip {isHc ? 'cool' : 'warm'}">{isHc ? t('energie.hc') : t('energie.hp')}</span>{/if}
@@ -259,7 +267,8 @@
         <span class="eyebrow">{t('energie.span.today')}</span>
         <strong class="big num">{kwh(s.today.total.kwh)} <small>kWh</small></strong>
         <div class="row">
-          <b class="num">{euros(s.today.total.cost, cur)}</b>
+          <b class="num">{euros(s.today.total.cost == null ? null : s.today.total.cost + subscriptionCost(s.monthly_fee, s.today.from, Math.min(home.now, s.today.to), s.timezone), cur)}</b>
+          {#if !s.costs_at_current_price && s.fixed_price_since > s.today.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
           {#if vsYesterday != null}
             <span class="chip {vsYesterday > 10 ? 'warm' : vsYesterday < -10 ? 'good' : ''}">
               {t('energie.vs_hier', { n: `${vsYesterday > 0 ? '+' : ''}${vsYesterday}` })}
@@ -270,7 +279,8 @@
 
       <section class="card">
         <span class="eyebrow">{t('energie.mois.titre')}</span>
-        <strong class="big num">{euros(s.month.total.cost, cur)}</strong>
+        <strong class="big num">{euros(s.month.total.cost == null ? null : s.month.total.cost + subscriptionCost(s.monthly_fee, s.month.from, Math.min(home.now, s.month.to), s.timezone), cur)}</strong>
+        {#if !s.costs_at_current_price && s.fixed_price_since > s.month.from}<small class="muted">{t('energie.price.partial')}</small>{/if}
         <div class="row">
           {#if s.month_projection}
             <span class="muted num small">
@@ -329,25 +339,12 @@
         {#if draws.length}
           <ul class="bars">
             {#each draws as d (d.id)}
-              <li class:rest={d.rest}>
-                <span class="name">{d.name}{#if d.estimated} <small class="muted" title={t('energie.estime_ampoules')}>{t('energie.estime')}</small>{/if}</span>
-                <span class="track"><i style="width:{(d.w / drawMax) * 100}%"></i></span>
-                <b class="num">{watts(d.w)}</b>
-              </li>
-              {#each d.subs as a (a.id)}
-                <li class="sub">
-                  <span class="name">{t('energie.dont', { name: a.name })}{#if a.estimated} <small class="muted" title={t('energie.estime_ampoule')}>{t('energie.estime')}</small>{/if}</span>
-                  <span class="track"><i style="width:{(a.w / drawMax) * 100}%"></i></span>
-                  <b class="num">{watts(a.w)}</b>
-                </li>
-              {/each}
+              <li class:rest={d.rest}><span class="name">{d.name}{#if d.estimated} <small class="muted" title={t('energie.estime_ampoules')}>{t('energie.estime')}</small>{/if}</span><span class="track"><i style="width:{(d.w / drawMax) * 100}%"></i></span><b class="num">{watts(d.w)}</b></li>
+              {#each d.subs as a (a.id)}<li class="sub"><span class="name">{t('energie.dont', { name: a.name })}{#if a.estimated} <small class="muted" title={t('energie.estime_ampoule')}>{t('energie.estime')}</small>{/if}</span><span class="track"><i style="width:{(a.w / drawMax) * 100}%"></i></span><b class="num">{watts(a.w)}</b></li>{/each}
             {/each}
           </ul>
-        {:else}
-          <p class="muted">{t('energie.direct.vide')}</p>
-        {/if}
+        {:else}<p class="muted">{t('energie.direct.vide')}</p>{/if}
       </section>
-
       <section class="card">
         <div class="card-head">
           <h2><Icon name="bolt" size={18} />{t('energie.repartition.titre')}</h2>
@@ -382,7 +379,7 @@
       </section>
     </div>
 
-    <TariffPie {windows} />
+    {#if s.period_point}<TariffPie {windows} />{/if}
 
     {#if profile}
       <section class="card">
@@ -399,7 +396,7 @@
         <h2><Icon name="tune" size={18} />{t('energie.histo.titre')}</h2>
         <div class="seg" role="group" aria-label={t('energie.histo.empile')}>
           <button class:on={by === 'devices'} onclick={() => (by = 'devices')}>{t('energie.histo.appareils')}</button>
-          <button class:on={by === 'tariff'} onclick={() => (by = 'tariff')}>{t('energie.histo.tarif')}</button>
+          {#if s.period_point}<button class:on={by === 'tariff'} onclick={() => (by = 'tariff')}>{t('energie.histo.tarif')}</button>{/if}
         </div>
         <div class="seg" role="group" aria-label={t('energie.periode')}>
           {#each RANGES as [key, label] (key)}
@@ -421,7 +418,11 @@
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
+    width: 100%;
+    min-width: 0;
   }
+
+  .energie > * { min-width: 0; }
 
   .head {
     display: flex;
@@ -650,11 +651,6 @@
     color: var(--ink-2);
   }
 
-  .split {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
-  }
 
   .bars {
     list-style: none;
@@ -774,17 +770,13 @@
   }
 
   @media (max-width: 900px) {
-    .split {
-      grid-template-columns: minmax(0, 1fr);
-    }
   }
 
   @media (max-width: 560px) {
+    .energie { grid-template-columns: minmax(0, 1fr); }
+    .head > div { min-width: 0; }
     .energie,
     .heads,
-    .split {
-      gap: 14px;
-    }
 
     /* Two by two: the figures stay readable without a long scroll. */
     .heads {

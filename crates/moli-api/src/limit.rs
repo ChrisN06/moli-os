@@ -61,6 +61,9 @@ fn budget(method: &Method, path: &str, from_dashboard: bool) -> Option<(&'static
     if path.starts_with("/api/phones/") || path == "/api/mobile/register" {
         return Some(("phone", 20));
     }
+    if path == "/api/water" || path.starts_with("/api/water/") {
+        return Some(("water", 5));
+    }
     if path.starts_with("/api/assistant") || path.starts_with("/api/plan/images") {
         return Some(("heavy", 20));
     }

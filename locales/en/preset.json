@@ -1,0 +1,14 @@
+{
+  "preset.name": "Personal",
+  "preset.save": "Save look",
+  "preset.replace": "Replace Personal",
+  "preset.recall": "Recall my look",
+  "preset.note": "Save the known settings of these lamps, including power. Radio states remain estimated.",
+  "preset.saved": "Personal look saved.",
+  "preset.failed": "Could not save or recall this look.",
+  "preset.missing": "No Personal look saved for these lamps.",
+  "preset.owner": "An owner must sign in to save a Personal look.",
+  "preset.storage": "The Personal look file is unavailable or unreadable.",
+  "preset.invalid": "Invalid lamp selection or too many presets.",
+  "preset.unknown": "Adjust the lamps in Moli first: their state must be known and available."
+}

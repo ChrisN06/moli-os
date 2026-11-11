@@ -1,0 +1,29 @@
+# Copy outside the public repository. No credentials in this file.
+[server]
+listen = "0.0.0.0:8790"
+data_dir = "/data"
+language = "fr"
+timezone = "Europe/Paris"
+worker_threads = 2
+history_days = 30
+allowed_hosts = ["moli.example.org"]
+
+[guard]
+dashboard = "pin"
+protect_unassigned = true
+
+# Enable only after checking the account's authentication flow.
+# [[driver]]
+# id = "somfy"
+# kind = "overkiz"
+# [driver.options]
+# read_only = true
+# poll_seconds = 10
+
+# [[driver]]
+# id = "printer"
+# kind = "bambu"
+# [driver.options]
+# host = "192.168.1.x"
+# serial = "REPLACE_WITH_PRIVATE_SERIAL"
+# read_only = true

@@ -839,3 +839,103 @@ Restent ouverts (non urgents) :
 - le commentaire de `crates/moli-api/src/lib.rs` ne liste ni `/api/system`, ni
   `/api/home`, `/api/bench`, `/api/history`, `/api/devices/{id}/snapshot` ; la plupart des
   handlers de `rest.rs` et `automations.rs` n'ont pas de commentaire de documentation.
+
+
+### Tarif fixe
+
+`PUT /api/energy/price`, corps `{"price": 0.20}` (exemple fictif), requiert une session
+propriétaire reconnue par les contrôles existants. Refus 403 sinon, 400 pour un prix
+invalide ou une configuration à périodes tarifaires. Le prix est en devise configurée par
+kWh, entre 0 et 10 inclus, fini. `/api/energy` expose `fixed_price`, `fixed_price_since`
+quand définis, ainsi que `max_power_kw`. Les coûts **stockés** restent inchangés.
+Sans période tarifaire, `costs_at_current_price=true` dans le résumé et les séries
+signale la revalorisation de tous les kWh consommés au prix fixe courant pour affichage.
+Il s'agit d'estimations hors abonnement, pas de factures historiques.
+
+### Caméras Tapo et vidéo locale
+
+- `GET /api/cameras/accounts` : modèles, adresses déclarées et indicateur de compte
+  enregistré ; jamais un identifiant de compte. Les invités sont refusés.
+- `PUT /api/cameras/{instance}/account` : propriétaire authentifié uniquement, JSON
+  `{ "username": "…", "password": "…" }`, corps limité à 4 Kio. Lecture RTSP de
+  vérification puis stockage atomique dans le coffre. La cible est fixée dans la
+  configuration serveur ; aucun hôte ou URL ne vient du navigateur.
+- `GET /api/devices/{id}/video/stream.m3u8` puis `video/hls/playlist.m3u8`,
+  `video/hls/init.mp4` et `video/hls/segment.m4s` : relais HLS borné. Les fichiers
+  enfants portent `id` et éventuellement `n` ; l’identifiant de session doit
+  appartenir à cette caméra et ne pas être périmé. Le hub publie `video: true` et
+  `camera: true` ; une caméra vidéo seule n’a pas nécessairement d’instantané JPEG.
+
+Les médias suivent les restrictions des instantanés : invités refusés, pièce
+protégée réservée à une session humaine. Les réponses ne contiennent aucun URL
+RTSP, message brut du relais ou secret. Les fichiers font au plus 4 Mio, la lecture
+amont est limitée à 12 secondes ; aucun proxy réseau générique n’est exposé.
+Voir `integrations/tapo-camera/` pour l’exploitation du relais isolé.
+
+### Favori d'éclairage
+
+- `GET /api/light-preset?lights=<tableau JSON encodé>` : `{saved}`, accès limité aux pièces autorisées.
+- `PUT /api/light-preset {lights}` : capture serveur, propriétaire uniquement, stockage `light-presets.json` atomique.
+- `POST /api/light-preset {lights}` : rappel via le garde existant, rapport `done/skipped/held/failed`.
+
+Une portée contient au plus 32 lampes, normalisées ; au plus 64 favoris. Un fichier
+corrompu provoque une erreur sans remplacement. Le client n'envoie pas de commandes
+arbitraires à mémoriser.
+
+### Xiaomi
+
+`GET /api/xiaomi` renvoie les équipements configurés et leur statut, jamais les
+jetons. Les routes suivantes exigent le propriétaire :
+
+- `POST /api/xiaomi/login` : `{username,password}`, puis `{captcha}` ou `{verify}` si demandé.
+- `POST /api/xiaomi/discover` : nouvelle vérification avec le compte enregistré.
+- `GET /api/xiaomi/{instance}/map` : carte RR bornée, pixels en base64, dimensions en pixels de 50 mm, origine/base/robot en millimètres.
+- `GET|PUT /api/xiaomi/{instance}/zone` : rectangle, repère et confirmation serveur.
+
+Les défis d'authentification sont liés au demandeur, expirent après dix minutes et
+ne peuvent pas mélanger les étapes. Le relais ne reçoit les identifiants qu'après
+contrôle des droits. Ses erreurs brutes ne sont jamais relayées au navigateur. Le
+mot de passe n'est pas écrit sur disque. Les comptes et la zone utilisent le coffre.
+Le point `action` du robot accepte seulement `clean`, `pause`, `dock`, `kitchen`, via l'API de
+commande habituelle, dès que le pilote a vérifié le compte et le modèle.
+L’action explicite `clean` lance un nettoyage classique (`app_start`) sans carte ni
+zone ; elle ne sert jamais de repli à `kitchen`.
+L’ancien réglage de déplacement n’est plus utilisé ; sa route renvoie 404.
+La référence de carte est demandée via le RPC cloud Xiaomi `get_map_v1`, seul RPC
+autorisé par le client cloud, avec identifiant numérique borné et paramètres vides.
+Les échecs distinguent attente du robot, session et requête cloud, métadonnées,
+téléchargement et décodage, sans publier les détails amont. La cuisine vérifie carte, empreinte de géométrie et base ; une
+incertitude ne provoque jamais un nettoyage général. Les capacités restent à valider
+sur le matériel et son firmware réels.
+
+Une connexion Xiaomi réussie redémarre aussi le relais pour actualiser son cache de
+session cloud. Les lecteurs déjà ouverts peuvent être interrompus brièvement.
+
+### Freebox locale (lecture seule)
+
+`GET /api/freebox` indique uniquement si un compte est configuré. Le foyer peut
+lire `GET /api/freebox/traffic` : état et débits Internet, ports Ethernet,
+compteurs, stations Wi-Fi et hôtes LAN nécessaires au rattachement des répéteurs.
+Les règles d'accès communes refusent ces routes aux invités et aux visiteurs
+extérieurs non connectés. Aucune commande réseau n'est exposée.
+
+`POST /api/freebox/pair` démarre l'autorisation sur l'afficheur de la Freebox.
+`POST /api/freebox/confirm` vérifie la validation puis conserve le jeton dans le
+coffre chiffré, sous l'instance `freebox`, nom `account`. Ces deux routes exigent
+le propriétaire. Une tentative dure trois minutes, reste liée à son propriétaire
+et ne remplace jamais un compte existant avant validation et sauvegarde réussies.
+Ni le jeton d'application ni celui de session ne sont renvoyés au navigateur.
+
+L'hôte est fixe (`mafreebox.freebox.fr`) ; aucun hôte ni chemin arbitraire n'est
+accepté du navigateur. La version est découverte par `/api_version`. Les lectures
+sont bornées à 2 Mio par réponse, trois secondes par échange et huit secondes
+pour un relevé complet. Le cache est partagé entre les clients, les lectures sont
+à la demande et la page demande un relevé toutes les cinq secondes. Aucun relevé
+périodique n'est lancé sans page ouverte. Le transport LAN utilise HTTP, comme
+Freebox OS local ; il ne doit pas être présenté comme chiffré en transit.
+
+Cette première intégration cible la Freebox Pop : trois ports Ethernet et deux
+radios. Une autre gamme nécessite une découverte des interfaces avant d'étendre
+ce contrat. Les vitesses Wi-Fi sont des débits PHY, distincts du trafic et de la
+vitesse Internet. Les compteurs Ethernet concernent le port entier, pas chaque
+appareil derrière un switch.

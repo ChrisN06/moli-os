@@ -1,41 +1,20 @@
 <script>
+  import WaterCard from '../ui/WaterCard.svelte';
   import { onMount } from 'svelte';
-  import { home, hub, value, device, isOn, clock, num, relative, lastSeen, roomList, lampsOf, nameOf, doorOpen, leak, lowBattery, act, pending } from '../lib/home.svelte.js';
+  import { home, hub, value, device, clock, num, relative, lastSeen, nameOf, doorOpen, leak, lowBattery, act, pending } from '../lib/home.svelte.js';
   import { isPrinter, phase } from '../lib/printers.js';
   import { t, locale } from '../../lib/i18n.svelte.js';
   import Icon from '../ui/Icon.svelte';
-  import LightTile from '../ui/LightTile.svelte';
   import ClimateCard from '../ui/ClimateCard.svelte';
   import EnergyCard from '../ui/EnergyCard.svelte';
   import CameraTile from '../ui/CameraTile.svelte';
-  import AmbiancePicker from '../ui/AmbiancePicker.svelte';
   import Routines from '../ui/Routines.svelte';
-  import SkyHero from '../ui/SkyHero.svelte';
+  import FreeboxRates from '../ui/FreeboxRates.svelte';
+  import SkyHero from '../ui/OrbiteHero.svelte';
+  import OrbiteEnergy from '../ui/OrbiteEnergy.svelte';
 
   const cfg = $derived(home.config ?? {});
   const out = $derived(cfg.outdoor ?? {});
-
-  const lights = $derived(cfg.favorites?.lights ?? []);
-  const litCount = $derived(lights.filter((l) => [l.id, ...(l.also ?? [])].some((i) => isOn(i))).length);
-
-  // Ambiances, room by room (the last room chosen is remembered here).
-  const moodRooms = $derived(roomList().map((r) => ({ name: r.name, lamps: lampsOf(r) })).filter((r) => r.lamps.length));
-  let moodPick = $state((() => {
-    try {
-      return localStorage.getItem('moli.mood-room');
-    } catch {
-      return null;
-    }
-  })());
-  const mood = $derived(moodRooms.find((r) => r.name === moodPick) ?? moodRooms.find((r) => r.name === 'Salon') ?? moodRooms[0]);
-  function pickRoom(name) {
-    moodPick = name;
-    try {
-      localStorage.setItem('moli.mood-room', name);
-    } catch {
-      /* remembered for this visit only */
-    }
-  }
 
   // The house's mode (a helper, « Mode Maison »): one tap, like Home
   // Assistant's mode buttons.
@@ -114,24 +93,7 @@
     return list;
   });
 
-  const tv = $derived(cfg.salon?.tv);
-  const speaker = $derived(cfg.salon?.speaker);
-  const tvOn = $derived(value(tv, 'power') === true);
-  const playing = $derived(value(speaker, 'playing') === true);
-  const aqi = $derived(value(out.air, 'aqi'));
-  const aqiWord = $derived(
-    aqi == null
-      ? '—'
-      : aqi <= 20
-        ? t('maison.air.tres_bon')
-        : aqi <= 40
-          ? t('maison.air.bon')
-          : aqi <= 60
-            ? t('maison.air.moyen')
-            : aqi <= 80
-              ? t('maison.air.mediocre')
-              : t('maison.air.mauvais'),
-  );
+  const robot = $derived(Object.values(hub.devices).find(d => d.model === 'rockrobo.vacuum.v1'));
   const bell = $derived((cfg.favorites?.cameras ?? [])[0]);
 
   // The last real passage at the door (the history knows; the live value
@@ -174,36 +136,16 @@
     {/each}
   </section>
 
+  <div class="orbite-quick">
+    <a class="card salon-summary" href="#/salon"><span class="label"><Icon name="sofa" size={20}/>{t('salon.titre')}</span><strong>{t('salon.ambiance')}</strong><span>{t('salon.eclairage_description')}</span></a>
+    <OrbiteEnergy/>
+    <a class="card vacuum-summary" href="#/{robot ? 'aspirateur' : 'pieces'}"><span class="label"><Icon name="robot" size={20}/>{t('xiaomi.vacuum.title')}</span><strong>{robot ? (robot.online ? t(`xiaomi.state.${value(robot.id,'state') ?? 0}`) : t('xiaomi.vacuum.offline')) : t('orbite.robot_missing')}</strong>{#if robot}<span>{t('xiaomi.vacuum.battery')} {num(value(robot.id,'battery'))} %</span>{/if}</a>
+  </div>
   <div class="grid">
-    <section class="card lights">
-      <div class="card-head">
-        <h2><Icon name="light" size={18} />{t('maison.accueil.lumieres')} <span class="count">{litCount ? t('maison.accueil.allumees', { count: litCount }) : t('maison.accueil.tout_eteint')}</span></h2>
-        <a class="more" href="#/pieces" aria-label={t('maison.accueil.toutes_pieces')}><Icon name="arrow-top-right" size={18} /></a>
-      </div>
-      <div class="tiles">
-        {#each lights as l (l.id)}
-          <LightTile id={l.id} name={l.name} icon={l.icon} also={l.also ?? []} />
-        {/each}
-      </div>
-      {#if mood}
-        <div class="moods">
-          <div class="moods-head">
-            <span class="moods-title"><Icon name="palette" size={16} />{t('maison.accueil.ambiance')}</span>
-            <div class="rooms" role="group" aria-label={t('maison.accueil.piece')}>
-              {#each moodRooms as r (r.name)}
-                <button class:on={r.name === mood.name} onclick={() => pickRoom(r.name)} aria-pressed={r.name === mood.name}>{r.name}</button>
-              {/each}
-            </div>
-          </div>
-          <AmbiancePicker lights={mood.lamps} label={mood.name} />
-        </div>
-      {/if}
-    </section>
-
-    <div class="side">
-      <EnergyCard />
-      <Routines />
-    </div>
+    <FreeboxRates />
+    <EnergyCard />
+    <WaterCard />
+    <Routines />
 
     {#if (cfg.favorites?.climate ?? []).length}
       <section class="card climate">
@@ -227,33 +169,15 @@
       </section>
     {/if}
 
-    <a class="card remote" href="#/salon">
-      <span class="tv-object" aria-hidden="true">
-        <span class="screen" class:lit={tvOn}></span>
-        <span class="stand"></span>
-      </span>
-      <span class="remote-text">
-        <strong>{t('maison.accueil.telecommande')}</strong>
-        <span class="muted">{tvOn ? t('maison.accueil.tele_allumee') : t('maison.accueil.tele_veille')}{playing ? ` · ${t('maison.accueil.son_joue')}` : ''}</span>
-      </span>
-      <span class="go"><Icon name="arrow-top-right" size={20} /></span>
-    </a>
 
-    <a class="card outside" href="#/dehors">
-      <div class="card-head"><h2><Icon name="flower-outline" size={18} />{t('maison.accueil.dehors')}</h2><span class="more" aria-hidden="true"><Icon name="arrow-top-right" size={18} /></span></div>
-      <div class="facts">
-        <div><small>{t('maison.accueil.air')}</small><b>{aqiWord}</b></div>
-        <div><small>UV</small><b class="num">{num(value(out.air, 'uv_index'), 0)}</b></div>
-        <div><small>{t('maison.accueil.humidite')}</small><b class="num">{value(out.weather, 'humidity') != null ? `${num(value(out.weather, 'humidity'))} %` : '—'}</b></div>
-        {#if out.pool}
-          <div><small>{t('maison.accueil.piscine')}</small><b class="num">{value(out.pool, 'temperature') != null ? `${num(value(out.pool, 'temperature'), 1)}°` : '—'}</b></div>
-        {/if}
-      </div>
-    </a>
   </div>
 </div>
 
 <style>
+  .orbite-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;min-width:0}.orbite-quick :global(.card){min-width:0}.salon-summary,.vacuum-summary{display:flex;flex-direction:column;gap:16px;min-height:220px;text-decoration:none;color:var(--ink)}.salon-summary{background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--warm) 14%,transparent),transparent 70%),var(--surface)}.vacuum-summary{background:radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--violet) 15%,transparent),transparent 70%),var(--surface)}.label{display:flex;align-items:center;gap:10px;font-size:14px}.salon-summary .label{color:var(--warm-ink)}.vacuum-summary .label{color:var(--violet)}.orbite-quick strong{font-size:32px;font-weight:450;letter-spacing:-.7px;line-height:1.2}.orbite-quick a>span:last-child{color:var(--ink-2);font-size:14px}
+  @media(max-width:760px){.orbite-quick{grid-template-columns:1fr}.salon-summary,.vacuum-summary{min-height:170px}}
+  @media(min-width:1800px){:global(.orbite:is([data-display=auto],[data-display=tv])) .orbite-quick strong{font-size:3vw}:global(.orbite:is([data-display=auto],[data-display=tv])) .orbite-quick .label,:global(.orbite:is([data-display=auto],[data-display=tv])) .orbite-quick a>span:last-child{font-size:1.2vw}}
+
   .accueil {
     display: grid;
     gap: 22px;
@@ -317,98 +241,9 @@
 
   .grid {
     display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
     gap: 20px;
     align-items: start;
-  }
-
-  .lights {
-    grid-column: span 8;
-  }
-
-  .side {
-    grid-column: span 4;
-  }
-
-  .climate {
-    grid-column: span 7;
-  }
-
-  .doorbell {
-    grid-column: span 5;
-    grid-row: span 2;
-  }
-
-  .remote {
-    grid-column: span 3;
-  }
-
-  .outside {
-    grid-column: span 4;
-  }
-
-  .moods {
-    grid-template-columns: minmax(0, 1fr);
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line);
-    display: grid;
-    gap: 12px;
-  }
-
-  .moods-head {
-    min-width: 0;
-    display: flex;
-    align-items: center;
-    gap: 10px 14px;
-    flex-wrap: wrap;
-  }
-
-  .moods-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 700;
-    font-size: 14px;
-  }
-
-  .rooms {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    scrollbar-width: none;
-    min-width: 0;
-    flex: 1;
-  }
-
-  .rooms button {
-    flex: none;
-    border: 0;
-    border-radius: 999px;
-    padding: 6px 12px;
-    font: inherit;
-    font-size: 13px;
-    font-weight: 650;
-    background: var(--surface-2);
-    color: var(--ink-3);
-    cursor: pointer;
-  }
-
-  .rooms button.on {
-    background: var(--warm-soft);
-    color: var(--warm-ink);
-  }
-
-  .count {
-    font-weight: 550;
-    color: var(--ink-3);
-    margin-left: 4px;
-  }
-
-  .tiles {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 12px;
   }
 
   .clims {
@@ -422,151 +257,8 @@
     margin-top: 10px;
   }
 
-  .remote {
-    display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 14px;
-    color: inherit;
-    text-decoration: none;
-    min-height: 168px;
-    align-content: space-between;
-    transition: transform 0.2s var(--ease);
-  }
-
-  .remote:hover,
-  .outside:hover {
-    transform: translateY(-2px);
-  }
-
-  .tv-object {
-    grid-column: 1 / -1;
-    display: grid;
-    justify-items: center;
-  }
-
-  .screen {
-    width: 96px;
-    height: 56px;
-    border-radius: 8px;
-    background: #171c28;
-    box-shadow: inset 0 0 0 3px #2a3142;
-    transition: background 0.4s;
-  }
-
-  .screen.lit {
-    background: linear-gradient(135deg, #5fb4f0, #8f8cf5 55%, #f0a53a);
-    box-shadow: inset 0 0 0 3px #2a3142, 0 8px 26px -6px #8f8cf5aa;
-  }
-
-  .stand {
-    width: 30px;
-    height: 6px;
-    border-radius: 0 0 6px 6px;
-    background: #2a3142;
-  }
-
-  .remote-text {
-    display: grid;
-  }
-
-  .remote-text strong {
-    font-size: 18px;
-  }
-
-  .remote-text span {
-    font-size: 13px;
-  }
-
-  .go {
-    align-self: end;
-    width: 36px;
-    height: 36px;
-    border-radius: 50%;
-    background: var(--surface-2);
-    display: grid;
-    place-items: center;
-    color: var(--ink-2);
-  }
-
-  .outside {
-    color: inherit;
-    text-decoration: none;
-    transition: transform 0.2s var(--ease);
-  }
-
-  .facts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .facts small {
-    display: block;
-    font-size: 11px;
-    color: var(--ink-3);
-    font-weight: 650;
-  }
-
-  .facts b {
-    font-size: 17px;
-    font-weight: 650;
-  }
-
-  /* Without the air-conditioning card the twelve-column grid no longer tiles:
-     a row is as tall as its tallest card (the energy side, the doorbell over
-     two rows) and leaves empty space under the short ones. On a wide screen
-     the cards then stack in columns, which leaves no hole whichever cards
-     the house has. */
-  @media (min-width: 1181px) {
-    .grid:not(:has(.climate)) {
-      display: block;
-      columns: 420px 3;
-      column-gap: 20px;
-    }
-
-    .grid:not(:has(.climate)) > * {
-      width: 100%;
-      margin: 0 0 20px;
-      break-inside: avoid;
-    }
-
-    /* Out of a grid, a card that is a link turns inline again and loses its
-       background. Block it, with no specificity, so a card that declares its
-       own display (the remote) keeps it. */
-    :where(.grid:not(:has(.climate))) > :where(a) {
-      display: block;
-    }
-  }
-
-  @media (max-width: 1180px) {
-    .lights,
-    .climate {
-      grid-column: span 12;
-    }
-
-    .side,
-    .doorbell {
-      grid-column: span 6;
-      grid-row: auto;
-    }
-
-    .remote,
-    .outside {
-      grid-column: span 6;
-    }
-  }
-
+  .grid > * { min-width: 0; }
   @media (max-width: 760px) {
-    .grid > * {
-      grid-column: span 12 !important;
-    }
-
-    .tiles {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    .clims {
-      grid-template-columns: 1fr;
-    }
+    .clims { grid-template-columns: 1fr; }
   }
 </style>

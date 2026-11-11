@@ -1,0 +1,19 @@
+[integration]
+id = "xiaomi-vacuum"
+name = "Xiaomi Mi Robot Vacuum (miIO local)"
+brands = ["Xiaomi"]
+models = ["SDJQR01RR / rockrobo.vacuum.v1"]
+transport = "udp"
+driver = "xiaomi-vacuum"
+crate = "moli-xiaomi"
+[discovery]
+mdns = []
+ssdp = []
+ports = [54321]
+[needs]
+secrets = ["xiaomi_account", "kitchen_zone"]
+vars = []
+options = ["host", "port", "poll_s", "room", "relay_host", "relay_port"]
+[origin]
+reused = "Authentification Xiaomi via go2rtc ; protocoles miIO et RR-map décrits par python-miio et vacuum-map-parser-roborock, implémentation Rust indépendante"
+author = "agent"

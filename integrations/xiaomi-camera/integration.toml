@@ -1,0 +1,19 @@
+[integration]
+id = "xiaomi-camera"
+name = "Xiaomi Mi Camera 2K Magnetic Mount"
+brands = ["Xiaomi"]
+models = ["MJSXJ03HL / isa.camera.hlc7 (à confirmer sur le matériel)"]
+transport = "udp"
+driver = "xiaomi-camera"
+crate = "moli-xiaomi"
+[discovery]
+mdns = []
+ssdp = []
+ports = []
+[needs]
+secrets = ["xiaomi_account"]
+vars = []
+options = ["host", "room", "relay_host", "relay_port"]
+[origin]
+reused = "Source Xiaomi et CS2 de go2rtc, HLS HEVC sans transcodage ; aucun SDK constructeur ajouté"
+author = "agent"
