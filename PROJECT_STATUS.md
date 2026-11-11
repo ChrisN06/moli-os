@@ -2,9 +2,11 @@
 
 ## Consolidation locale — 11 novembre 2026
 
-Branche de travail `codex/consolidation-20261111`, issue de `personal/main` (`1603bbb`),
-avec les branches publiées intégrées jusqu'à Orbite (`ee86d85`). `main` reste inchangée.
-Point de retour local : `codex/rollback-20261111` ; état local initial sauvegardé sur
+Branche consolidée `codex/consolidation-20261111`, issue de `personal/main` (`1603bbb`),
+avec les branches publiées intégrées jusqu'à Orbite (`ee86d85`). Le 11 novembre, `main` a
+avancé en fast-forward local jusqu'à `bc0c984` ; l'ancien sommet est conservé sur
+`codex/main-before-finalize-20261111`. Branche active : `main`. Point de retour de consolidation :
+`codex/rollback-20261111` ; état local initial sauvegardé sur
 `codex/local-checkpoint-20261111`. Archives validées hors projet :
 `../moli-os-backups/2026-11-11/`.
 
