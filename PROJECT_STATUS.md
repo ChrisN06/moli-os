@@ -22,11 +22,24 @@ actuellement active.
 Validations observées : 51 tests web, build, i18n (3 438 clés), PWA, catalogue, fuite,
 8 tests Somfy, build `moli-os`, Clippy strict et tests ciblés API (61), énergie (31),
 Xiaomi (17) passent. Les 33 tests `moli-profile` passent après portabilisation du harnais
-loopback. `sh scripts/check.sh` atteint ensuite `moli-tuya` et échoue sur 17 tests qui
-tentent encore de binder des adresses macOS non attribuées (`AddrNotAvailable`). Build web
-garde les avertissements Svelte et taille de bundle préexistants. Ne pas pousser, déployer,
-déplacer ou supprimer les anciens checkouts sans accord explicite. Aucun appareil physique
-n'a été testé.
+loopback. Les tests `moli-tuya` passent également après portabilisation décrite ci-dessous.
+Build web garde les avertissements Svelte et taille de bundle préexistants. Ne pas pousser,
+déployer, déplacer ou supprimer les anciens checkouts sans accord explicite. Aucun appareil
+physique n'a été testé.
+
+### Stabilisation locale et branche `main` — 11 novembre 2026
+
+Les tests TCP de `moli-tuya` utilisent des sockets sur `127.0.0.1:0` ; les adresses
+d'appareils restent logiques et sont routées uniquement sous `cfg(test)`. Le code de
+production garde sa connexion TCP directe. Résultat : 41 tests Tuya réussis, dont connexion,
+preuve d'identité, erreurs et recherche après changement DHCP.
+
+Validations locales : `cargo fmt --all -- --check`, `sh scripts/check.sh`,
+`cargo build --locked -p moli-os`, 51 tests web et `npm run build` réussis. Le contrôle i18n
+réussit avec 3 438 clés FR/EN et aucune ligne non traduite ; il a été lancé depuis une copie
+temporaire excluant les `.DS_Store` non suivis, car le script les traite comme des dossiers.
+Le catalogue conserve six avertissements existants. Le build web conserve les avertissements
+Svelte et taille de bundle déjà observés. Les tests n'ont envoyé aucune commande physique.
 
 ## Orbite — version locale du 6 novembre 2026
 

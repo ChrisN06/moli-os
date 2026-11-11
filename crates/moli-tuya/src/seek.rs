@@ -16,13 +16,12 @@ use std::time::Duration;
 
 use serde_json::json;
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
-use tokio::net::TcpStream;
 use tokio::net::tcp::OwnedReadHalf;
 use tokio::sync::watch;
 use tokio::task::JoinSet;
 use tokio::time::timeout;
 
-use crate::connections::Connections;
+use crate::connections::{Connections, connect};
 use crate::device::{Address, Reachability};
 use crate::protocol::{Codec, Frame, Version, cmd};
 
@@ -157,11 +156,7 @@ async fn listeners(addresses: impl Iterator<Item = Ipv4Addr>, devices: &[Wanted]
                     return None;
                 }
                 let _reservation = connections.reserve(ip.into())?;
-                matches!(
-                    timeout(KNOCK, TcpStream::connect((ip, PORT))).await,
-                    Ok(Ok(_))
-                )
-                .then_some(ip)
+                matches!(timeout(KNOCK, connect((ip, PORT).into())).await, Ok(Ok(_))).then_some(ip)
             });
         }
         while let Some(knock) = knocks.join_next().await {
@@ -206,7 +201,7 @@ async fn question(
 /// key (3.3: a status it encrypted; 3.4/3.5: the proof of the handshake).
 async fn identify(at: SocketAddr, id: &str, key: [u8; 16], version: Version) -> bool {
     let attempt = async {
-        let stream = TcpStream::connect(at).await.ok()?;
+        let stream = connect(at).await.ok()?;
         let (mut reader, mut writer) = stream.into_split();
         let mut codec = Codec::new(version, key);
         let mut buf = Vec::with_capacity(512);
@@ -262,7 +257,14 @@ async fn next_frame(codec: &Codec, reader: &mut OwnedReadHalf, buf: &mut Vec<u8>
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::connections::route_test_address;
     use tokio::net::TcpListener;
+
+    async fn test_listener(ip: Ipv4Addr) -> TcpListener {
+        let listener = TcpListener::bind((Ipv4Addr::LOCALHOST, 0)).await.unwrap();
+        route_test_address((ip, PORT).into(), listener.local_addr().unwrap());
+        listener
+    }
 
     fn wanted(id: &str, key: [u8; 16], ip: Option<&str>, version: Version) -> Wanted {
         Wanted {
@@ -283,7 +285,7 @@ mod tests {
     }
 
     async fn changing_device(ip: Ipv4Addr, key: [u8; 16]) -> watch::Sender<[u8; 16]> {
-        let listener = TcpListener::bind((ip, PORT)).await.unwrap();
+        let listener = test_listener(ip).await;
         let (keys, current) = watch::channel(key);
         tokio::spawn(async move {
             loop {
@@ -361,7 +363,7 @@ mod tests {
     #[tokio::test]
     async fn a_healthy_devices_address_is_never_probed_for_a_missing_peer() {
         let ip = Ipv4Addr::new(127, 0, 0, 11);
-        let listener = TcpListener::bind((ip, PORT)).await.unwrap();
+        let listener = test_listener(ip).await;
         let healthy = wanted(
             "healthy",
             *b"0123456789abcdef",
@@ -385,7 +387,7 @@ mod tests {
     #[tokio::test]
     async fn a_link_recovered_after_candidate_selection_is_not_knocked() {
         let ip = Ipv4Addr::new(127, 0, 0, 12);
-        let listener = TcpListener::bind((ip, PORT)).await.unwrap();
+        let listener = test_listener(ip).await;
         let device = wanted(
             "recovering",
             *b"0123456789abcdef",
@@ -413,7 +415,7 @@ mod tests {
     #[tokio::test]
     async fn searches_do_not_connect_during_a_links_unfinished_authentication() {
         let ip = Ipv4Addr::new(127, 0, 0, 18);
-        let listener = TcpListener::bind((ip, PORT)).await.unwrap();
+        let listener = test_listener(ip).await;
         let device = wanted("a", *b"0123456789abcdef", None, Version::V33);
         let reservation = device.connections.reserve(ip.into()).unwrap();
         assert!(

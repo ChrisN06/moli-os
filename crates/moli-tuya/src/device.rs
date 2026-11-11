@@ -531,6 +531,16 @@ fn now() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::connections::route_test_address;
+
+    async fn test_listener(ip: &str) -> tokio::net::TcpListener {
+        let ip: std::net::Ipv4Addr = ip.parse().unwrap();
+        let listener = tokio::net::TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
+            .await
+            .unwrap();
+        route_test_address((ip, PORT).into(), listener.local_addr().unwrap());
+        listener
+    }
     use tokio::net::TcpStream;
 
     fn response(version: Version, key: [u8; 16], command: u32, payload: &[u8]) -> Vec<u8> {
@@ -577,9 +587,7 @@ mod tests {
 
     #[tokio::test]
     async fn unverified_connections_never_receive_an_order() {
-        let listener = tokio::net::TcpListener::bind(("127.0.0.7", PORT))
-            .await
-            .unwrap();
+        let listener = test_listener("127.0.0.7").await;
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             assert_eq!(request(&mut stream).await.0, cmd::DP_QUERY);
@@ -612,9 +620,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_status_encrypted_with_another_key_does_not_mark_online() {
-        let listener = tokio::net::TcpListener::bind(("127.0.0.8", PORT))
-            .await
-            .unwrap();
+        let listener = test_listener("127.0.0.8").await;
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             request(&mut stream).await;
@@ -649,9 +655,7 @@ mod tests {
     #[tokio::test]
     async fn verified_status_allows_fresh_orders_but_discards_the_recovery_queue() {
         let key = *b"0123456789abcdef";
-        let listener = tokio::net::TcpListener::bind(("127.0.0.9", PORT))
-            .await
-            .unwrap();
+        let listener = test_listener("127.0.0.9").await;
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             request(&mut stream).await;
@@ -706,9 +710,7 @@ mod tests {
 
     #[tokio::test]
     async fn endless_heartbeats_do_not_extend_the_handshake_deadline() {
-        let listener = tokio::net::TcpListener::bind(("127.0.0.10", PORT))
-            .await
-            .unwrap();
+        let listener = test_listener("127.0.0.10").await;
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             let _ = stream.read(&mut [0; 1024]).await.unwrap();
@@ -745,9 +747,7 @@ mod tests {
 
     #[tokio::test]
     async fn an_announcement_during_authentication_does_not_replace_the_connected_address() {
-        let listener = tokio::net::TcpListener::bind(("127.0.0.13", PORT))
-            .await
-            .unwrap();
+        let listener = test_listener("127.0.0.13").await;
         let (queried, query) = oneshot::channel();
         let (release, released) = oneshot::channel();
         let server = tokio::spawn(async move {
@@ -791,8 +791,8 @@ mod tests {
         session.abort();
         assert_eq!(
             connected_ip,
-            Some(std::net::Ipv4Addr::new(127, 0, 0, 13)),
-            "the protected address belongs to the verified socket, not the latest broadcast"
+            Some(std::net::Ipv4Addr::LOCALHOST),
+            "reachability belongs to the verified socket, not the later announcement"
         );
     }
 
@@ -843,9 +843,7 @@ mod tests {
     #[tokio::test]
     async fn a_gateway_carries_its_sub_devices_states_and_orders() {
         let key = *b"0123456789abcdef";
-        let listener = tokio::net::TcpListener::bind(("127.0.0.23", PORT))
-            .await
-            .unwrap();
+        let listener = test_listener("127.0.0.23").await;
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             let codec = Codec::new(Version::V33, key);
@@ -941,9 +939,7 @@ mod tests {
 
     #[tokio::test]
     async fn a_reused_address_cannot_claim_to_be_online_with_a_heartbeat() {
-        let listener = tokio::net::TcpListener::bind(("127.0.0.2", PORT))
-            .await
-            .unwrap();
+        let listener = test_listener("127.0.0.2").await;
         let server = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
             request(&mut stream).await;
@@ -994,15 +990,11 @@ mod tests {
     }
 
     async fn quick_retry_after_proof(old_ip: &str, found_ip: &str) {
-        let old = tokio::net::TcpListener::bind((old_ip, PORT)).await.unwrap();
+        let old = test_listener(old_ip).await;
         let found = if old_ip == found_ip {
             None
         } else {
-            Some(
-                tokio::net::TcpListener::bind((found_ip, PORT))
-                    .await
-                    .unwrap(),
-            )
+            Some(test_listener(found_ip).await)
         };
         let (up, mut events) = mpsc::channel(16);
         let (mut link, _orders) = test_link(up);
@@ -1066,7 +1058,7 @@ mod tests {
     }
 
     async fn exclusive_connection(ip: &'static str, authenticated: bool) {
-        let listener = tokio::net::TcpListener::bind((ip, PORT)).await.unwrap();
+        let listener = test_listener(ip).await;
         let (up, mut events) = mpsc::channel(8);
         let (mut owner, _orders) = test_link(up.clone());
         let (mut old_owner, _old_orders) = test_link(up);
