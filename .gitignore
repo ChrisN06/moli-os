@@ -7,3 +7,5 @@ __pycache__/
 
 # Local Orbite demo data contains its generated encryption key.
 .local/
+
+.DS_Store
