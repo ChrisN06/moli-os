@@ -4,10 +4,9 @@ Ce fichier est lu par n'importe quel agent (Claude Code, Codex…). Rien ici ne 
 
 ## Avant tout
 
-1. Au début de chaque nouvelle tâche de développement, lire **`PROJECT_STATUS.md`**, puis `docs/README.md` (index, état, règles), puis `docs/ARCHITECTURE.md` (les décisions prises, à ne pas rediscuter sans raison nouvelle) et la doc du composant touché (`docs/components/`).
-2. **La maison de l'utilisateur** : si un dossier `../moli-maison/` existe à côté de ce dépôt, lire son `AGENTS.md`. Il décrit l'installation de cette maison (machine, déploiement, règles de la famille). Rien de ce dossier n'entre jamais dans ce dépôt.
-3. Examiner la branche, les différences indexées/non indexées et les fichiers non suivis. Utiliser le checkout permanent sur `main`. Sur un checkout propre, revenir à `main` si nécessaire, puis synchroniser avec `origin/main` par `git pull --ff-only`. Si des changements existent, les préserver et les terminer ou les réconcilier avant la synchronisation ; ne jamais créer de branche ou de worktree ni écraser du travail pour contourner cet état.
-4. **Installer Moli chez quelqu'un** (pas modifier son code) : suivre `.claude/skills/installer-moli/SKILL.md`, lisible par tout agent.
+- Pour reprendre le développement, lire [`PROJECT_STATUS.md`](PROJECT_STATUS.md). Consulter [l’index de la documentation](docs/README.md) pour s’orienter, [l’architecture](docs/ARCHITECTURE.md) pour les décisions transversales et la documentation du composant concerné selon la tâche.
+- Pour une intervention liée à l’installation privée, à ses équipements ou à sa production, lire `../moli-maison/AGENTS.md` si le dossier existe. Rien de ce dossier n’entre dans ce dépôt.
+- Pour installer Moli chez quelqu’un, suivre [le guide d’installation](.claude/skills/installer-moli/SKILL.md).
 
 ## Commandes
 
@@ -131,18 +130,16 @@ Les échecs connus et les résultats effectivement observés sont dans `PROJECT_
 - Saisie des comptes et codes par le propriétaire dans l’interface ; aucun secret dans
   Git, les captures ou les journaux. Ne jamais consulter de clé privée ou de coffre personnel.
 
-## Git séquentiel et entretien documentaire
+## Git et entretien documentaire
 
-- Le propriétaire travaille sur une seule fonctionnalité à la fois, dans le checkout permanent `moli-os`, toujours sur `main`. Ne pas créer de branche, clone ou worktree par conversation ; ne pas lancer de travail parallèle.
-- Au début d’une tâche, vérifier le dépôt, la branche, les différences indexées/non indexées et les fichiers non suivis. Si le checkout est propre, synchroniser `main` avec `origin/main` par fast-forward. Si le checkout est sale, préserver le travail et le terminer ou le réconcilier sans stash, reset, changement de branche ou worktree.
-- Après les vérifications obligatoires, commiter uniquement les changements ciblés sur `main`, puis pousser sur `origin/main` comme opération Git courante. Ne pas inclure les changements indépendants. Attendre la CI GitHub avant d’envisager un déploiement. Si une protection GitHub bloque le push direct, s’arrêter et signaler le blocage ; ne pas créer automatiquement de branche ou de PR.
+- Réutiliser le checkout et la branche de travail adaptés à la tâche. Avant toute modification, vérifier le dépôt, la branche, l’index, les modifications, les fichiers non suivis et les commits locaux par rapport à la base pertinente. Préserver le travail existant et signaler toute divergence avant une opération qui pourrait l’affecter.
+- Un changement de branche ou une synchronisation doit répondre à un besoin de la tâche. Préserver les changements locaux lors d’une synchronisation et utiliser le fast-forward si le flux choisi le permet. Créer une branche, un clone ou un worktree uniquement si la tâche le justifie ou si l’utilisateur le demande.
+- Après les vérifications obligatoires, demander un accord explicite avant tout commit et un accord distinct avant tout push. Limiter le commit au périmètre validé et vérifier la branche de destination avant publication. Attendre la CI GitHub avant d’envisager un déploiement.
 - Avant de modifier un fichier, vérifier qu’il n’a pas changé depuis sa lecture. Ne jamais utiliser reset/clean/stash pour effacer du travail.
 - Une seule opération de déploiement ou de migration à la fois ; vérifier à nouveau l’image et la configuration actives avant tout remplacement. Les autorisations d’un ancien chat ne dispensent pas de lire la demande et les contraintes de la tâche actuelle.
 - `AGENTS.md` contient les règles durables ; `PROJECT_STATUS.md` contient l’état courant
   daté et les tâches restantes. Les contrats techniques restent dans `docs/` et `integrations/`.
   Les adresses, comptes, configurations et preuves privées restent dans `../moli-maison/`.
-- Après une étape importante, le skill personnel **fonctionnalite-terminee**, s’il est
-  disponible, peut vérifier le périmètre et actualiser `PROJECT_STATUS.md`. Il ne clôture pas le projet.
-- **projet-termine** est réservé à une demande explicite de clôture définitive.
-  Les skills personnels existent hors du dépôt ; ne pas les recréer ni les recopier ici.
+- Après une étape importante, actualiser `PROJECT_STATUS.md` si le résultat ou les preuves utiles à la reprise ont changé.
+- **projet-termine** est réservé à une demande de clôture définitive avec archivage.
 - Les commits et pushes documentaires suivent les mêmes règles de périmètre, vérification et confidentialité. Ils n’autorisent jamais un déploiement, rollback ou changement de données en production, qui exige une confirmation explicite.

@@ -394,8 +394,6 @@ capacités d’un protocole, ni leur fonctionnement permanent.
 - Coffre chiffré et clé maître externe préservés ; comptes saisis par le propriétaire.
 - Fuseau de l’import énergétique : `Europe/Paris`, changements été/hiver compris.
 - Dev Apple Silicon, image amd64 générique construite hors du NAS ; aucune compilation native CPU spécifique.
-- Fork : `main` réservé au suivi amont, travail personnel sur `personal/main`, branches
-  courtes et worktrees isolés. Vérifier les branches disponibles avant de les utiliser.
 - Documentation publique sans installation personnelle ; détails et preuves dans
   `../moli-maison/`. Ne jamais recopier les configurations ni captures privées ici.
 
@@ -453,9 +451,6 @@ Le commit documentaire est préparé dans le clone isolé, sur `fix/vacuum-contr
 le checkout principal conserve ses modifications. `AGENTS.md` et les fichiers privés sont exclus.
 Vérifier le résultat Git à la reprise ; ce document ne présume pas une fusion de la PR.
 
-Lire d’abord les instructions applicables, ce fichier et la documentation du composant.
-S’il existe, lire `../moli-maison/AGENTS.md` et le dernier état privé ; ne pas considérer
-une ancienne connexion SSH, session Portainer ou image active comme toujours valide.
-
-Après une étape importante, `fonctionnalite-terminee` peut actualiser ce fichier et
-les preuves du périmètre. `projet-termine` reste réservé à la clôture définitive.
+Reprendre depuis [les consignes du projet](AGENTS.md). Pour une intervention sur
+l’installation privée, vérifier l’état courant avant d’utiliser un accès SSH,
+une session Portainer ou une référence d’image.
