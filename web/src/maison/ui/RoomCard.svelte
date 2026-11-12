@@ -370,10 +370,14 @@
 
   /* A phone: the name wraps instead of being cut by the temperature gauge. */
   @media (max-width: 520px) {
+    .head { flex-wrap: wrap; gap: 8px; }
+    .title { flex-basis: calc(100% - 48px); }
     .title h2 {
       white-space: normal;
       overflow-wrap: anywhere;
     }
+    .clim { flex-wrap: wrap; min-height: 44px; }
+    .clim .state { text-align: start; }
   }
 
   .lock {

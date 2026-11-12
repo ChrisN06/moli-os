@@ -1,5 +1,30 @@
 # Moli OS — état du fork et reprise
 
+## Tableau de bord et connexion So’EAU — 12 novembre 2026
+
+- Accueil : cadrans à aiguille pour les consommations journalières. Le repère
+  électrique utilise les heures comparables des sept derniers jours. Celui de
+  l’eau utilise les jours mesurés des trente derniers jours. Le total des
+  relevés du mois est présenté face à l’objectif de 8 m³.
+- Réseau : topologie horizontale et vue verticale mobile, thèmes jour et nuit,
+  historique Internet glissant sur 60 secondes, détail des ports et appareils,
+  particules bornées par liaison. Les mesures indisponibles laissent des trous
+  dans l’historique et la dernière topologie reste consultable en cas de panne.
+- Pièces : cartes sur une colonne et commandes adaptées aux écrans étroits.
+  Dans Dehors, l’historique journalier d’éclairement utilise les horaires
+  météo du jour choisi et affiche la moyenne des relevés. Les cartes
+  « Capteur d’ensoleillement » et « Qui consomme maintenant » ont été retirées.
+- So’EAU : le formulaire public annonce une vérification humaine active.
+  Moli la reconnaît avant de soumettre les identifiants et continue de servir
+  l’historique pendant une tentative de synchronisation. Le fournisseur
+  bloque encore la récupération automatique quand cette vérification est active.
+
+Vérifications locales : `sh scripts/check.sh`, 55 tests web, build, i18n et PWA.
+Recette navigateur sur données fictives à 320, 390, 1 440 et 3 840 px.
+La Freebox et la présence d’horaires météo historiques ont été vérifiées
+en lecture seule. Recette sur iPhone et téléviseur réels à faire.
+Cette étape ne change pas le déploiement ci-dessous.
+
 ## Dernier déploiement — PR #7, 11 novembre 2026
 
 Commit fusionné sur `main` : `de935f60a5080a7432b2abf8869666e305b2845c` ; commit de

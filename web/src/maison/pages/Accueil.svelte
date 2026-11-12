@@ -11,7 +11,6 @@
   import Routines from '../ui/Routines.svelte';
   import FreeboxRates from '../ui/FreeboxRates.svelte';
   import SkyHero from '../ui/OrbiteHero.svelte';
-  import OrbiteEnergy from '../ui/OrbiteEnergy.svelte';
 
   const cfg = $derived(home.config ?? {});
   const out = $derived(cfg.outdoor ?? {});
@@ -136,15 +135,16 @@
     {/each}
   </section>
 
+  <div class="consumption">
+    <EnergyCard />
+    <WaterCard />
+  </div>
   <div class="orbite-quick">
     <a class="card salon-summary" href="#/salon"><span class="label"><Icon name="sofa" size={20}/>{t('salon.titre')}</span><strong>{t('salon.ambiance')}</strong><span>{t('salon.eclairage_description')}</span></a>
-    <OrbiteEnergy/>
+    <FreeboxRates />
     <a class="card vacuum-summary" href="#/{robot ? 'aspirateur' : 'pieces'}"><span class="label"><Icon name="robot" size={20}/>{t('xiaomi.vacuum.title')}</span><strong>{robot ? (robot.online ? t(`xiaomi.state.${value(robot.id,'state') ?? 0}`) : t('xiaomi.vacuum.offline')) : t('orbite.robot_missing')}</strong>{#if robot}<span>{t('xiaomi.vacuum.battery')} {num(value(robot.id,'battery'))} %</span>{/if}</a>
   </div>
   <div class="grid">
-    <FreeboxRates />
-    <EnergyCard />
-    <WaterCard />
     <Routines />
 
     {#if (cfg.favorites?.climate ?? []).length}
@@ -176,8 +176,15 @@
 <style>
   .orbite-quick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;min-width:0}.orbite-quick :global(.card){min-width:0}.salon-summary,.vacuum-summary{display:flex;flex-direction:column;gap:16px;min-height:220px;text-decoration:none;color:var(--ink)}.salon-summary{background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--warm) 14%,transparent),transparent 70%),var(--surface)}.vacuum-summary{background:radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--violet) 15%,transparent),transparent 70%),var(--surface)}.label{display:flex;align-items:center;gap:10px;font-size:14px}.salon-summary .label{color:var(--warm-ink)}.vacuum-summary .label{color:var(--violet)}.orbite-quick strong{font-size:32px;font-weight:450;letter-spacing:-.7px;line-height:1.2}.orbite-quick a>span:last-child{color:var(--ink-2);font-size:14px}
   @media(max-width:760px){.orbite-quick{grid-template-columns:1fr}.salon-summary,.vacuum-summary{min-height:170px}}
-  @media(min-width:1800px){:global(.orbite:is([data-display=auto],[data-display=tv])) .orbite-quick strong{font-size:3vw}:global(.orbite:is([data-display=auto],[data-display=tv])) .orbite-quick .label,:global(.orbite:is([data-display=auto],[data-display=tv])) .orbite-quick a>span:last-child{font-size:1.2vw}}
+  @media(min-width:1800px){:global(.orbite) .orbite-quick strong{font-size:3vw}:global(.orbite) .orbite-quick .label,:global(.orbite) .orbite-quick a>span:last-child{font-size:1.2vw}}
 
+  .consumption {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    gap: 20px;
+    align-items: start;
+  }
+  .consumption > :global(*) { min-width: 0; }
   .accueil {
     display: grid;
     gap: 22px;

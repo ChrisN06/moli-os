@@ -2,10 +2,16 @@
  import {onMount} from 'svelte';
  import {home,num} from '../lib/home.svelte.js';
  import {barIndex} from '../lib/readings.js';
- import {waterMonth,waterTotal,localMonth} from '../lib/water.js';
+ import ConsumptionDial from './ConsumptionDial.svelte';
+ import {usualWater} from '../lib/consumption.js';
+ import {waterMonth,waterTotal,localDate,localMonth} from '../lib/water.js';
  import {t} from '../../lib/i18n.svelte.js';
  let {chart=false}=$props();
  let history=$state(null),failed=$state(false),month=$state(localMonth()),selected=$state(null),monthly=$state(false);
+ const MONTH_LIMIT = 8;
+ const today = $derived(localDate(new Date(home.now)));
+ const daily = $derived(history?.days?.[today] ?? null);
+ const usual = $derived(!chart && history ? usualWater(history.days, today) : null);
  const current=$derived(localMonth(new Date(home.now)));
  const months=$derived.by(()=>{
   const options=[];
@@ -36,10 +42,9 @@
   refresh();const timer=setInterval(refresh,60000);return()=>{controller.abort();clearInterval(timer);};
  });
 </script>
-{#if chart || Object.keys(history?.days??{}).length}
 <section class="card water">
  <header>
-  <h2>{t(chart?(monthly?'orbite.monthly':'water.daily'):'water.month')}</h2>
+  <h2>{t(chart?(monthly?'orbite.monthly':'water.daily'):'water.home')}</h2>
   {#if chart}
    <select aria-label={t('water.period')} value={monthly ? months.find(key=>key.startsWith(month.slice(0,4))) : month} onchange={event=>{month=event.currentTarget.value;selected=null;}}>
     {#each monthly ? months.filter((key,i)=>i===0||key.slice(0,4)!==months[i-1].slice(0,4)) : months as key}
@@ -50,7 +55,19 @@
   {/if}
  </header>
  {#if failed}<p role="status">{t('water.failed')}</p>{/if}
- <strong class="total">{num(total,3)} m³</strong>
+ {#if chart}
+  <strong class="total">{num(total,3)} m³</strong>
+ {:else}
+  <ConsumptionDial value={daily == null ? null : daily * 1000} usual={usual == null ? null : usual * 1000} unit="L" reference="orbite.water_reference" />
+  <div class="budget">
+   <span>{t('water.month')}</span>
+   <strong class="num">{num(total, 2)} / {MONTH_LIMIT} m³</strong>
+   {#if total != null}
+    <progress max={MONTH_LIMIT} value={Math.min(total, MONTH_LIMIT)} class:over={total > MONTH_LIMIT} aria-label={t('water.month_goal', { goal: MONTH_LIMIT })}></progress>
+    {#if total > MONTH_LIMIT}<span class="over">{t('water.over_goal')}</span>{/if}
+   {/if}
+  </div>
+ {/if}
  {#if last}<p class="muted">{t('water.through',{date:last})}</p>{:else}<p class="muted">{t('water.empty')}</p>{/if}
  {#if chart && total!=null}
  <div class="bars" onpointerdown={select} onpointermove={select} role="group" aria-label={t('water.daily')}>
@@ -62,7 +79,9 @@
  {#if history?.sync?.error}<p role="status">{history.sync.error}</p>{/if}
  <a href={chart?'#/parametres':'#/energie'}>{t(chart?'water.setup':'water.view')}</a>
 </section>
-{/if}
 <style>
+ .budget { display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 6px 12px; margin-block: 16px 8px; color: var(--ink-2); }
+ progress { grid-column: 1 / -1; width: 100%; accent-color: var(--cool); }
+ .over { accent-color: var(--alert); color: var(--alert); }
  header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}h2{margin:0}.total{display:block;font-size:28px;margin-top:16px}select,header button{min-height:44px;background:var(--surface);color:var(--ink)}.water{min-width:0}.bars{touch-action:pan-y;display:flex;height:180px;gap:2px;margin-top:24px;padding-bottom:24px}.bars button{position:relative;display:flex;align-items:end;flex:1;min-width:0;padding:0;border:0;border-bottom:1px solid var(--line);background:transparent;cursor:pointer}.bars i{display:block;width:100%;background:var(--cool);border-radius:3px 3px 0 0}.bars small{position:absolute;top:100%;width:100%;font-size:10px;padding-top:4px}.bars .missing{background:repeating-linear-gradient(135deg,transparent,transparent 5px,var(--line) 5px,var(--line) 6px)}.bars .partial i{opacity:.55}.bars .selected i{background:var(--ink)}.readout{min-height:24px}
 </style>

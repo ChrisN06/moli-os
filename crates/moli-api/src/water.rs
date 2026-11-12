@@ -98,6 +98,7 @@ pub(crate) fn routes(hub: Hub, shutdown: CancellationToken) -> Router<Hub> {
     let service = Service {
         state: Arc::new(Mutex::new(SyncState::default())),
         writing: writing.clone(),
+        syncing: Arc::new(Mutex::new(())),
     };
     let worker = service.clone();
     tokio::spawn(async move {
@@ -209,6 +210,7 @@ struct SyncState {
 struct Service {
     state: Arc<Mutex<SyncState>>,
     writing: Arc<Mutex<()>>,
+    syncing: Arc<Mutex<()>>,
 }
 fn account(hub: &Hub) -> Option<Account> {
     hub.core_secret(ACCOUNT)
@@ -243,14 +245,17 @@ async fn synchronize(
     mut account: Account,
     save: bool,
 ) -> water_suez::Result<()> {
-    let mut state = service.state.lock().await;
-    if state
-        .attempted
-        .is_some_and(|at| at.elapsed() < Duration::from_secs(60))
+    let _sync = service.syncing.try_lock().map_err(|_| "water.wait")?;
     {
-        return Err("water.wait");
+        let mut state = service.state.lock().await;
+        if state
+            .attempted
+            .is_some_and(|at| at.elapsed() < Duration::from_secs(60))
+        {
+            return Err("water.wait");
+        }
+        state.attempted = Some(Instant::now());
     }
-    state.attempted = Some(Instant::now());
     let result = async {
         let backfill = !save && !read(hub).map_err(|_| "water.failed")?.backfilled;
         let water_suez::Readings {
@@ -284,7 +289,7 @@ async fn synchronize(
         backfill_error.map_or(Ok(()), Err)
     }
     .await;
-    state.error = result.as_ref().err().copied();
+    service.state.lock().await.error = result.as_ref().err().copied();
     result
 }
 async fn connect(

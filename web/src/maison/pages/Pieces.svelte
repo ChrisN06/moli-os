@@ -194,7 +194,15 @@
   }
 
   .slot {
+    min-width: 0;
     break-inside: avoid;
     margin-bottom: 20px;
+  }
+  @media (max-width: 760px) {
+    .bar { gap: 8px; }
+    .bar > :global(:first-child) { flex-basis: 100%; }
+    .look button { min-width: 44px; height: 44px; }
+    .rooms { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+    .slot { margin-bottom: 0; }
   }
 </style>

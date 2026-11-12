@@ -42,7 +42,7 @@
     </form>
   {:else if status}
     {#if status.configured}
-      <p>{t('water.automatic')}</p>
+      {#if !status.error}<p>{t('water.automatic')}</p>{/if}
       {#if status.synchronized_at}<p>{t('water.synced',{date:new Date(status.synchronized_at).toLocaleString()})}</p>{/if}
       {#if status.error}<p role="status">{status.error}</p>{/if}
       <button type="button" disabled={busy} onclick={()=>send(false)}>{t('water.sync_now')}</button>

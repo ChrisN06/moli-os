@@ -57,6 +57,18 @@ fn encode(text: &str) -> String {
     }
     out
 }
+fn human_verification_enabled(page: &str) -> bool {
+    [
+        r"\\u0022recaptchaEnabled\\u0022\\u003A",
+        r"\u0022recaptchaEnabled\u0022\u003A",
+        "\"recaptchaEnabled\":",
+    ]
+    .iter()
+    .any(|marker| {
+        page.split_once(marker)
+            .is_some_and(|(_, value)| value.trim_start().starts_with("true"))
+    })
+}
 fn csrf(page: &str) -> anyhow::Result<String> {
     for (marker, separator) in [
         (r"\\u0022csrfToken\\u0022\\u003A\\u0022", '\\'),
@@ -197,8 +209,11 @@ impl Client {
         if status != StatusCode::OK {
             return Err("water.connection_failed");
         }
-        let token = csrf(std::str::from_utf8(&page).map_err(|_| "water.login_failed")?)
-            .map_err(|_| "water.login_failed")?;
+        let page = std::str::from_utf8(&page).map_err(|_| "water.login_failed")?;
+        if human_verification_enabled(page) {
+            return Err("water.human_required");
+        }
+        let token = csrf(page).map_err(|_| "water.login_failed")?;
         let form = [
             ("_csrf_token", token.as_str()),
             ("tsme_user_login[_username]", account.email.as_str()),
@@ -210,10 +225,15 @@ impl Client {
         ]
         .map(|(k, v)| format!("{}={}", encode(k), encode(v)))
         .join("&");
-        let (status, _, _) = self
+        let (status, _, page) = self
             .request(LOGIN, Some(form))
             .await
             .map_err(|_| "water.connection_failed")?;
+        if status == StatusCode::OK
+            && std::str::from_utf8(&page).is_ok_and(human_verification_enabled)
+        {
+            return Err("water.human_required");
+        }
         login_result(status)
     }
 }
@@ -368,12 +388,12 @@ mod tests {
             let request = String::from_utf8_lossy(&bytes[..n]);
             assert!(request.starts_with("GET "));
             assert!(!request.contains("synthetic-password"));
-            stream
-                .write_all(
-                    b"HTTP/1.1 403 Forbidden\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
-                )
-                .await
-                .unwrap();
+            let body = r"\u0022recaptchaEnabled\u0022\u003Atrue,\u0022csrfToken\u0022\u003A\u0022synthetic-token\u0022";
+            let response = format!(
+                "HTTP/1.1 200 OK\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+                body.len()
+            );
+            stream.write_all(response.as_bytes()).await.unwrap();
         });
         let mut client = Client {
             host: "127.0.0.1".into(),

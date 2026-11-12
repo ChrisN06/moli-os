@@ -5,7 +5,7 @@
 
   /** How one value moved over the last hours: a curve for numbers, the
    *  last changes for the rest. */
-  let { point, hours = 24, title = null, from = null, to = null } = $props();
+  let { point, hours = 24, title = null, from = null, to = null, average = false } = $props();
 
   const [id, key] = $derived([point.slice(0, point.indexOf('/')), point.slice(point.indexOf('/') + 1)]);
   const spec = $derived(device(id)?.points.find((p) => p.key === key));
@@ -56,6 +56,15 @@
       last: typeof series.last?.[1] === 'number' ? series.last[1] : vs.at(-1),
     };
   });
+  const mean = $derived.by(() => {
+    if (!average || !series) return null;
+    if (series.buckets?.length) {
+      const count = series.buckets.reduce((n, b) => n + b.count, 0);
+      return count ? series.buckets.reduce((sum, b) => sum + b.avg * b.count, 0) / count : null;
+    }
+    const readings = series.raw.map(([, value]) => value).filter(Number.isFinite);
+    return readings.length ? readings.reduce((sum, value) => sum + value, 0) / readings.length : null;
+  });
   const path = $derived.by(() => {
     if (!numeric) return '';
     const { min, max } = stats;
@@ -85,10 +94,11 @@
       <path d={path} class="line" />
     </svg>
     <div class="axis muted"><span>{clock(from ?? series.from)}</span><span>{clock(to ?? series.to)}</span></div>
-    <div class="stats">
+    <div class="stats" class:average={mean != null}>
       <span><small>{t('moli.historique.releve', { time: clock(series.last?.[0] ?? series.before?.[0] ?? series.to) })}</small><b class="num">{num(stats.last, 1)}{unit}</b></span>
       <span><small>{t('moli.historique.min')}</small><b class="num">{num(stats.min, 1)}{unit}</b></span>
       <span><small>{t('moli.historique.max')}</small><b class="num">{num(stats.max, 1)}{unit}</b></span>
+      {#if mean != null}<span><small>{t('moli.historique.moyenne')}</small><b class="num">{num(mean, 1)}{unit}</b></span>{/if}
     </div>
   {:else if changes.length}
     <ul>
@@ -124,6 +134,11 @@
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     margin-top: 10px;
+  }
+
+  .stats.average { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  @media (max-width: 460px) {
+    .stats.average { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   }
 
   .stats span {

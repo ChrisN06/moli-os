@@ -1,4 +1,7 @@
 <script>
+  import ConsumptionDial from './ConsumptionDial.svelte';
+  import { deviceSeries } from '../lib/energy-series.js';
+  import { hasElectricity, usualElectricity } from '../lib/consumption.js';
   import CounterPower from './CounterPower.svelte';
   import { subscriptionCost } from '../lib/subscription.js';
   import { onMount } from 'svelte';
@@ -20,10 +23,27 @@
   const totalNow = $derived(total ? current(total.power, total.power_w) : null);
   const counter = $derived(s?.meters.find((m) => m.role === 'total' && !m.power));
 
-  // Today against a whole yesterday: the arc fills as the day goes.
-  const today = $derived(s?.today.total.kwh ?? null);
+  let report = $state(null);
+  onMount(() => {
+    const controller = new AbortController();
+    async function refresh() {
+      if (document.hidden) return;
+      try {
+        const response = await fetch('/api/energy/series?step=hour&count=217', { signal: controller.signal });
+        if (response.ok) report = await response.json();
+      } catch { /* The daily total remains available without a reference. */ }
+    }
+    refresh();
+    const timer = setInterval(refresh, 10 * 60_000);
+    return () => { controller.abort(); clearInterval(timer); };
+  });
+  const today = $derived(s && hasElectricity(s.meters, s.today) ? (s.today.consumption ?? s.today.total.kwh) : null);
+  const usual = $derived(usualElectricity(report, s?.today, home.now));
+  const parts = $derived(s ? deviceSeries(s.meters)
+    .map(part => ({ ...part, amount: part.kwh(s.today) }))
+    .filter(part => part.amount > 0) : []);
+  const partsTotal = $derived(parts.reduce((sum, part) => sum + part.amount, 0));
   const yesterday = $derived(s?.yesterday.total.kwh ?? null);
-  const frac = $derived(today != null && yesterday ? Math.min(1, today / yesterday) : 0);
 
   // The supplier's meter right now, against the contract.
   const live = $derived(s?.live ? current(s.live.point, s.live.value) : null);
@@ -58,16 +78,7 @@
   {#if s}
     {#if !s.live && counter}<CounterPower point={counter.point} />{/if}
     <div class="gauges" class:pair={s.live}>
-      <div class="gauge">
-        <svg viewBox="0 0 180 104" aria-hidden="true">
-          <path class="track" d="M 20 92 A {R} {R} 0 0 1 160 92" />
-          <path class="fill" d="M 20 92 A {R} {R} 0 0 1 160 92" stroke-dasharray="{C * frac} {C}" />
-        </svg>
-        <div class="value">
-          <strong class="num">{kwh(today)}</strong>
-          <span>{t('energie.carte.kwh_aujourdhui')}</span>
-        </div>
-      </div>
+      <ConsumptionDial value={today} {usual} unit="kWh" digits={1} reference="orbite.electricity_reference" />
       {#if s.live}
         <div class="gauge">
           <svg viewBox="0 0 180 104" aria-hidden="true">
@@ -81,6 +92,14 @@
         </div>
       {/if}
     </div>
+    {#if partsTotal > 0}
+      <div class="stack" aria-hidden="true">
+        {#each parts as part (part.id)}<i style:width={`${part.amount / partsTotal * 100}%`} style:background={part.color}></i>{/each}
+      </div>
+      <div class="legend">
+        {#each parts as part (part.id)}<span><i style:background={part.color}></i>{part.name}{part.estimated ? ' ≈' : ''}</span>{/each}
+      </div>
+    {/if}
     <div class="facts">
       <div><small>{t('energie.carte.cout_jour')}</small><b class="num">{euros(s.today.total.cost == null ? null : s.today.total.cost + subscriptionCost(s.monthly_fee, s.today.from, Math.min(home.now,s.today.to), s.timezone), s.currency)}</b></div>
       {#if s.live}
@@ -110,6 +129,11 @@
 </a>
 
 <style>
+  .stack { display: flex; height: 8px; border-radius: 8px; overflow: hidden; margin: 12px 0 6px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .78em; color: var(--ink-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 8px; height: 8px; border-radius: 2px; flex: none; }
+
   .energy {
     display: block;
     color: inherit;

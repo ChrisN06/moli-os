@@ -1,4 +1,5 @@
 <script>
+  import { localDate } from '../lib/water.js';
   import { home, value, num, isOn, reachable, relative, since } from '../lib/home.svelte.js';
   import { weatherOf } from '../lib/icons.js';
   import { t } from '../../lib/i18n.svelte.js';
@@ -56,6 +57,35 @@
   let sunDay = $state(0);
   const sunEnd = $derived(new Date(new Date(home.now).setHours(0, 0, 0, 0)).setDate(new Date(home.now).getDate() + 1 - sunDay));
   const sunStart = $derived(new Date(sunEnd).setDate(new Date(sunEnd).getDate() - 1));
+  let recordedSun = $state(null);
+  const selectedDate = $derived(localDate(new Date(sunStart)));
+  const sunWindow = $derived.by(() => {
+    const dates = sunDay === 0 ? [value(w, 'sunrise'), value(w, 'sunset')] : recordedSun;
+    if (!dates?.every(date => typeof date === 'string' && date.startsWith(selectedDate))) return null;
+    const [from, to] = dates.map(date => Date.parse(date));
+    return Number.isFinite(from) && Number.isFinite(to) && to > from ? { from, to } : null;
+  });
+  let sunLoading = $state(false);
+  $effect(() => {
+    recordedSun = null;
+    sunLoading = false;
+    if (!w || !sun || !sunDay || sunPeriod !== 24) return;
+    const controller = new AbortController();
+    const start = sunStart;
+    const end = sunEnd;
+    sunLoading = true;
+    Promise.all(['sunrise', 'sunset'].map(async key => {
+      const point = encodeURIComponent(`${w}/${key}`);
+      const response = await fetch(`/api/history?point=${point}&from=${start}&to=${end}`, { signal: controller.signal });
+      if (!response.ok) throw new Error();
+      return (await response.json()).last?.[1];
+    })).then(dates => {
+      if (!controller.signal.aborted) recordedSun = dates;
+    }).catch(() => {}).finally(() => {
+      if (!controller.signal.aborted) sunLoading = false;
+    });
+    return () => controller.abort();
+  });
   const sunPos = $derived.by(() => {
     const rise = Date.parse(v(w, 'sunrise'));
     const set = Date.parse(v(w, 'sunset'));
@@ -148,12 +178,6 @@
   </div>
 
   {#if sun}
-    <section class="card">
-      <div class="card-head"><h2><Icon name="sun" size={18} />{t('maison.dehors.sun_sensor')}</h2></div>
-      <strong class="num">{num(reachable(sun) ? v(sun, 'illuminance') : null)} lx</strong>
-      {#if v(sun, 'last_received') != null}<p class="muted small">{t('commun.volet.reception', { age: relative(v(sun, 'last_received') * 1000, home.now) })}</p>{/if}
-      <p class="muted small">{t('maison.dehors.sun_unit')}</p>
-    </section>
     <div class="sun-period">
       <select aria-label={t('orbite.light_period')} bind:value={sunPeriod}>
         {#each [24, 168, 720] as hours}<option value={hours}>{t(hours === 24 ? 'orbite.daily' : hours === 168 ? 'orbite.weekly' : 'orbite.monthly')}</option>{/each}
@@ -164,7 +188,14 @@
         <button disabled={!sunDay} onclick={() => sunDay--} aria-label={t('orbite.next_day')}>→</button>
       {/if}
     </div>
-    <HistoryCard point={`${sun}/illuminance`} hours={sunPeriod} from={sunPeriod === 24 ? sunStart : null} to={sunPeriod === 24 ? sunEnd : null} title={t('orbite.light_history')} />
+    {#if sunPeriod !== 24 || sunWindow}
+      <HistoryCard point={`${sun}/illuminance`} hours={sunPeriod} from={sunPeriod === 24 ? sunWindow.from : null} to={sunPeriod === 24 ? sunWindow.to : null} title={t('orbite.light_history')} average />
+    {:else}
+      <section class="card">
+        <div class="card-head"><h2><Icon name="sun-angle" size={18} />{t('orbite.light_history')}</h2></div>
+        <p class="muted">{sunLoading ? '…' : t('orbite.light_hours_missing')}</p>
+      </section>
+    {/if}
   {/if}
 
   {#if outsideCams.length}

@@ -14,7 +14,7 @@
   "freebox.close": "Fermer les détails",
   "freebox.unknown_wire": "Les branches indiquent le port d’accès. Le câblage des switchs intermédiaires n’est pas connu.",
   "freebox.footer": "Données et topologie : 5 s · Cliquer sur un appareil pour ses détails.",
-  "freebox.rate_note": "Ethernet : trafic par port. Répéteur : somme du trafic de ses clients Wi-Fi.",
+  "freebox.rate_note": "Ethernet : trafic local par port. Wi-Fi : somme des débits des stations mesurées.",
   "freebox.connecting": "Connexion…",
   "freebox.live": "En direct · 5 s",
   "freebox.failed": "Freebox indisponible",
@@ -50,5 +50,16 @@
   "freebox.device": "Appareil",
   "freebox.stations": "Stations connectées",
   "freebox.current": "Trafic",
-  "freebox.status_aria": "État de la connexion Freebox"
+  "freebox.status_aria": "État de la connexion Freebox",
+  "freebox.stale": "Données anciennes",
+  "freebox.one_device": "1 appareil",
+  "freebox.device_count": "{count} appareils",
+  "freebox.history": "Trafic Internet",
+  "freebox.history_window": "60 secondes",
+  "freebox.history_label": "Débits de téléchargement et d’envoi sur les 60 dernières secondes",
+  "freebox.now": "Maintenant",
+  "freebox.interfaces": "Interfaces",
+  "freebox.negotiated": "Débit de liaison",
+  "freebox.band": "Bande Wi-Fi",
+  "freebox.signal": "Signal Wi-Fi"
 }

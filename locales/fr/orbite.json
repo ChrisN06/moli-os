@@ -25,5 +25,13 @@
   "orbite.ground_floor": "Rez-de-chaussée",
   "orbite.light_period": "Période d’éclairement",
   "orbite.weekly": "Vue hebdomadaire",
-  "orbite.light_history": "Historique de l’éclairement"
+  "orbite.light_history": "Historique de l’éclairement",
+  "orbite.light_hours_missing": "Horaires du lever et du coucher indisponibles pour cette date.",
+  "orbite.consumption_pending": "Relevé du jour indisponible",
+  "orbite.consumption_no_reference": "Historique insuffisant pour comparer",
+  "orbite.consumption_above": "Plus que d’habitude",
+  "orbite.consumption_below": "Moins que d’habitude",
+  "orbite.consumption_usual": "Dans la moyenne",
+  "orbite.electricity_reference": "Moyenne à cette heure ≈ {value}",
+  "orbite.water_reference": "Moyenne journalière · {value}"
 }

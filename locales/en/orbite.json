@@ -25,5 +25,13 @@
   "orbite.ground_floor": "Ground floor",
   "orbite.light_period": "Illuminance period",
   "orbite.weekly": "Weekly view",
-  "orbite.light_history": "Illuminance history"
+  "orbite.light_history": "Illuminance history",
+  "orbite.light_hours_missing": "Sunrise and sunset times are unavailable for this date.",
+  "orbite.consumption_pending": "Today’s reading is unavailable",
+  "orbite.consumption_no_reference": "More history is needed for a comparison",
+  "orbite.consumption_above": "Above usual",
+  "orbite.consumption_below": "Below usual",
+  "orbite.consumption_usual": "In line with usual",
+  "orbite.electricity_reference": "Average at this time ≈ {value}",
+  "orbite.water_reference": "Daily average · {value}"
 }

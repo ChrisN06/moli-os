@@ -190,5 +190,6 @@
   "moli.correction.aucun": "Untick all",
   "moli.correction.pour_les": "For the {count} ticked device(s)",
   "moli.correction.rien_en_commun": "These devices have no command in common.",
-  "moli.historique.releve": "Reading at {time}"
+  "moli.historique.releve": "Reading at {time}",
+  "moli.historique.moyenne": "Average"
 }

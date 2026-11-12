@@ -14,7 +14,7 @@
   "freebox.close": "Close details",
   "freebox.unknown_wire": "Branches indicate the access port. Intermediate switch wiring is unknown.",
   "freebox.footer": "Data and topology: 5 s · Click a device for details.",
-  "freebox.rate_note": "Ethernet: traffic per port. Repeater: combined Wi-Fi client traffic.",
+  "freebox.rate_note": "Ethernet: local traffic by port. Wi-Fi: combined rates of measured stations.",
   "freebox.connecting": "Connecting…",
   "freebox.live": "Live · 5 s",
   "freebox.failed": "Freebox unavailable",
@@ -50,5 +50,16 @@
   "freebox.device": "Device",
   "freebox.stations": "Connected stations",
   "freebox.current": "Traffic",
-  "freebox.status_aria": "Freebox connection status"
+  "freebox.status_aria": "Freebox connection status",
+  "freebox.stale": "Stale data",
+  "freebox.one_device": "1 device",
+  "freebox.device_count": "{count} devices",
+  "freebox.history": "Internet traffic",
+  "freebox.history_window": "60 seconds",
+  "freebox.history_label": "Download and upload rates over the last 60 seconds",
+  "freebox.now": "Now",
+  "freebox.interfaces": "Interfaces",
+  "freebox.negotiated": "Link speed",
+  "freebox.band": "Wi-Fi band",
+  "freebox.signal": "Wi-Fi signal"
 }

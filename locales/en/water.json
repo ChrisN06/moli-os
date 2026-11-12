@@ -31,13 +31,16 @@
   "water.automatic": "Automatic synchronization enabled.",
   "water.synced": "Last synchronization: {date}.",
   "water.sync_now": "Refresh readings",
-  "water.automatic_note": "Tout sur mon eau readings refreshed every 12 hours. Days without readings remain unknown.",
+  "water.automatic_note": "Moli checks Tout sur mon eau readings every 12 hours. Days without a reading remain unknown.",
   "water.connection_failed": "SUEZ is not responding. Saved readings are preserved.",
   "water.login_failed": "SUEZ refused the login or the session expired. Try again, then reconnect the account if it persists.",
-  "water.human_required": "SUEZ requires human verification. Complete it on the SUEZ website, then reconnect the account in Moli.",
+  "water.human_required": "SUEZ requires human verification to open a session. Automatic sync is paused. Saved readings remain available.",
   "water.data_failed": "Unrecognized SUEZ response. Saved readings are preserved.",
   "water.meter_required": "Choose a meter identifier belonging to this account; automatic selection requires one meter.",
   "water.meter_changed": "This meter differs from the saved readings. No histories were mixed.",
   "water.account_invalid": "Enter a valid SUEZ email and password.",
-  "water.wait": "Wait one minute before trying again."
+  "water.wait": "Wait one minute before trying again.",
+  "water.home": "Water",
+  "water.month_goal": "Monthly goal of {goal} m³",
+  "water.over_goal": "Monthly goal exceeded"
 }

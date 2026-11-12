@@ -30,7 +30,6 @@
 
   let { route } = $props();
   let shell, moreDialog;
-  let display = $state('auto');
 
   // Shown only if the link stays down a few seconds (a blink is not news).
   let offline = $state(false);
@@ -71,7 +70,6 @@
 
   onMount(() => {
     start();
-    try { const saved = localStorage.getItem('maison-display'); if (['auto', 'desktop', 'tablet', 'phone', 'tv'].includes(saved)) display = saved; } catch { /* Private browsing keeps the automatic layout. */ }
     const stopRemote = attachRemoteNavigation(shell);
     const media = matchMedia('(prefers-color-scheme: dark)');
     prefersDark = media.matches;
@@ -110,14 +108,11 @@
   });
 </script>
 
-<div class="maison orbite" data-theme={theme} data-display={display} data-page={page || 'accueil'} bind:this={shell}>
+<div class="maison orbite" data-theme={theme} data-page={page || 'accueil'} bind:this={shell}>
   <header class="orbite-bar">
     <a class="orbite-brand" href="#/" aria-label={t('commun.nav.logo')}>{t('orbite.brand')}<span>{t('orbite.name')}</span></a>
     <div class="orbite-tools">
-      <select aria-label={t('orbite.display')} value={display} onchange={(event) => { display = event.currentTarget.value; savePref('maison-display', display); }}>
-        <option value="auto">{t('orbite.auto')}</option><option value="desktop">{t('orbite.desktop')}</option><option value="tablet">{t('orbite.tablet')}</option><option value="phone">{t('orbite.phone')}</option><option value="tv">{t('orbite.tv')}</option>
-      </select>
-      <button class="theme" onclick={cycleTheme} title={themeTitle}><Icon name={theme === 'night' ? 'moon' : 'sun'} size={20} /><span>{themeName}</span></button>
+      <button class="theme" onclick={cycleTheme} aria-label={themeName} title={themeTitle}><Icon name={home.theme === 'auto' ? 'theme-auto' : theme === 'night' ? 'moon' : 'sun'} size={20} /><span>{themeName}</span></button>
     </div>
   </header>
   <nav class="orbite-dock" aria-label={t('commun.nav.aria')}>
@@ -126,7 +121,7 @@
     {/each}
     <button onclick={() => moreDialog.showModal()} aria-haspopup="dialog" class:active={!primary.some(item => item.path === page)}><Icon name="rooms" size={22}/><span>{t('orbite.more')}</span></button>
   </nav>
-  <main class="content" class:network={page === 'reseau'}>
+  <main class="content">
     {#if page === 'salon'}
       <Salon />
     {:else if page === 'pieces'}

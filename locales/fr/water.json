@@ -31,13 +31,16 @@
   "water.automatic": "Synchronisation automatique activée.",
   "water.synced": "Dernière synchronisation : {date}.",
   "water.sync_now": "Actualiser les relevés",
-  "water.automatic_note": "Relevés Tout sur mon eau actualisés toutes les 12 heures. Les jours sans relevé restent inconnus.",
+  "water.automatic_note": "Moli vérifie les relevés Tout sur mon eau toutes les 12 heures. Les jours sans relevé restent inconnus.",
   "water.connection_failed": "Le service SUEZ ne répond pas. Les relevés déjà enregistrés sont conservés.",
   "water.login_failed": "Connexion SUEZ refusée ou session expirée. Réessayez, puis reconnectez le compte si le problème persiste.",
-  "water.human_required": "SUEZ demande une vérification humaine. Terminez-la sur le site SUEZ, puis reconnectez le compte dans Moli.",
+  "water.human_required": "SUEZ exige une vérification humaine pour ouvrir une session. La synchronisation automatique est suspendue. Les relevés enregistrés restent disponibles.",
   "water.data_failed": "Réponse SUEZ non reconnue. Les relevés déjà enregistrés sont conservés.",
   "water.meter_required": "Choisissez un identifiant de compteur appartenant à ce compte ; la sélection automatique exige un seul compteur.",
   "water.meter_changed": "Ce compteur diffère de celui des relevés enregistrés. Aucun historique n’a été mélangé.",
   "water.account_invalid": "Renseignez une adresse e-mail et un mot de passe SUEZ valides.",
-  "water.wait": "Attendez une minute avant une nouvelle tentative."
+  "water.wait": "Attendez une minute avant une nouvelle tentative.",
+  "water.home": "Eau",
+  "water.month_goal": "Objectif mensuel de {goal} m³",
+  "water.over_goal": "Objectif mensuel dépassé"
 }
