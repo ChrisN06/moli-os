@@ -1,5 +1,33 @@
 # Moli OS — état du fork et reprise
 
+## Point de reprise — 12 novembre 2026
+
+- **Base de travail.** Repartir du checkout existant sur `main`. Le code
+  actuellement en production est `81898c6`, suivi du compte rendu
+  documentaire `3712006`. Les trois workflows du commit déployé sont verts.
+  Relecture de `/api/health` pour ce bilan : 10 pilotes actifs sur 10,
+  35 appareils, 244 points et zéro échec journal.
+- **Livré.** Accueil avec cadrans eau et électricité et objectif d’eau de
+  8 m³ par mois. Page Pièces adaptée au mobile. Éclairement du lever au
+  coucher du soleil avec moyenne. Page Réseau jour/nuit avec flux continus
+  selon les mesures Freebox, graphique sur 60 secondes, fiche appareil
+  mobile et dock hors de la zone défilante.
+- **Prochaine recette.** Sur iPhone réel, ouvrir `#/reseau`, atteindre le
+  bas de la page, puis ouvrir et fermer une fiche appareil. Sur TV réelle,
+  vérifier la lisibilité des flux et la sélection à la télécommande.
+  Les vérifications navigateur et les contrôles locaux sont déjà faits.
+- **So’EAU en pause.** Reprendre après résolution vérifiée de
+  [l’incident Home Assistant #190782](https://github.com/home-assistant/core/issues/190782),
+  encore ouvert au 12 novembre. Examiner alors séparément l’ouverture de
+  session So’EAU et la récupération des relevés. La reprise est validée
+  lorsqu’un nouveau relevé rejoint l’historique existant et qu’un cycle
+  automatique de douze heures réussit. Conserver les relevés actuels,
+  sans import CSV ni lecture locale du compteur.
+- **Exploitation.** Le digest actif, la sauvegarde native et le digest
+  précédent figurent ci-dessous. Avant toute intervention, relire l’état
+  Portainer et suivre [le guide d’exploitation](docs/components/exploitation.md).
+  Déploiement et retour arrière exigent un accord explicite.
+
 ## Dernier déploiement — Finition Réseau, 12 novembre 2026
 
 Commit déployé : `81898c68a16b707dc0e48eb27e3d206721b53a69`. Image amd64
