@@ -1,5 +1,24 @@
 # Moli OS — état du fork et reprise
 
+## Deuxième passe Réseau — 12 novembre 2026
+
+Les flux montants et descendants empruntent deux trajectoires avec des
+particules orientées. La densité et la vitesse suivent le débit mesuré.
+Les trajectoires cessent de s’animer hors écran et respectent la pause et
+la préférence de mouvement réduit. La topologie conserve les associations
+détectées. Les liaisons indéterminées restent en pointillés.
+
+Sur mobile, une interface dépliée montre ses appareils. Leur fiche s’ouvre
+dans un panneau séparé. Sur la page Réseau, le dock reste visible sous la
+zone défilante. Le graphique conserve 60 secondes, avec une échelle
+graduée qui se resserre après une baisse durable du trafic.
+
+Recette navigateur jour et nuit sur données Freebox fictives, à 390 et
+1 440 px. Pas de débordement horizontal ni recouvrement du dock à 320 px
+et en 4K. Le sens des particules et l’ouverture de la fiche ont été
+vérifiés. Les contrôles Rust, web, i18n et PWA passent. La recette
+sur iPhone et TV réels reste à faire.
+
 ## Tableau de bord et connexion So’EAU — 12 novembre 2026
 
 - Accueil : cadrans à aiguille pour les consommations journalières. Le repère

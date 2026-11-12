@@ -1,32 +1,83 @@
 <script>
+  import { onMount } from 'svelte';
+  import { flowProfile } from '../../lib/freebox-data.js';
+
   let { down = null, up = null, paused = false, unknown = false, vertical = false } = $props();
-  const particleCount = bytes => bytes > 0 ? Math.min(7, 2 + Math.floor(Math.log10(1 + bytes / 500))) : 0;
-  const speed = bytes => Math.max(1.1, 4.8 - Math.log10(1 + bytes) / 2);
+  let element;
+  let visible = $state(false);
+  const lanes = $derived([{ direction: 'down', ...flowProfile(down) }, { direction: 'up', ...flowProfile(up) }]);
+
+  onMount(() => {
+    const observer = new IntersectionObserver(([entry]) => { visible = entry.isIntersecting; });
+    observer.observe(element);
+    return () => observer.disconnect();
+  });
+
+  function travel(node, options) {
+    const shift = options.direction === 'down' ? ['translateX(-100%)', 'translateX(0%)'] : ['translateX(100%)', 'translateX(0%)'];
+    const duration = 4800;
+    const animation = node.animate(shift.map(transform => ({ transform })), { duration, iterations: Infinity });
+    animation.currentTime = (options.index * 0.61803398875 % 1) * duration;
+
+    function update({ speed, stopped }) {
+      // Changing the playback rate preserves the particle's position.
+      animation.updatePlaybackRate(speed);
+      if (stopped) animation.pause();
+      else animation.play();
+    }
+    update(options);
+    return { update, destroy: () => animation.cancel() };
+  }
 </script>
 
-<svg viewBox="0 0 100 24" preserveAspectRatio="none" class:vertical class:unknown aria-hidden="true">
-  <path d="M0 12 H100" class="wire" vector-effect="non-scaling-stroke" />
-  {#each [['down', down, 8], ['up', up, 16]] as [direction, bytes, y] (direction)}
-    {#each Array(particleCount(bytes)) as _, index (index)}
-      <circle cx={direction === 'down' ? 0 : 100} cy={y} r="2" class={direction} class:paused
-        style:--duration={`${speed(bytes)}s`}
-        style:--delay={`${-index / particleCount(bytes) * speed(bytes)}s`} />
+<div class="wire" class:vertical class:unknown bind:this={element} aria-hidden="true">
+  <div class="track">
+    {#each lanes as lane (lane.direction)}
+      <div class="lane" class:active={lane.count > 0} class:up={lane.direction === 'up'}>
+        {#each Array(lane.count) as _, index (index)}
+          <i class="particle" use:travel={{ ...lane, index, stopped: paused || !visible }}></i>
+        {/each}
+      </div>
     {/each}
-  {/each}
-</svg>
+  </div>
+</div>
 
 <style>
-  svg { display: block; width: 100%; height: 24px; }
-  .wire { stroke: var(--line); stroke-width: 1.5px; }
-  .unknown .wire { stroke-dasharray: 3 4; }
-  circle { filter: drop-shadow(0 0 3px var(--traffic-glow)); }
-  .down { fill: var(--traffic-down); animation: down var(--duration) linear var(--delay) infinite; }
-  .up { fill: var(--traffic-up); animation: up var(--duration) linear var(--delay) infinite; }
-  .paused { animation-play-state: paused; }
-  @keyframes down { to { transform: translateX(100px); } }
-  @keyframes up { to { transform: translateX(-100px); } }
-  @media (prefers-reduced-motion: reduce) { circle { display: none; animation: none; } }
+  .wire { min-width: 0; position: relative; height: 36px; }
+  .track { position: absolute; inset: 0; overflow: hidden; }
+  .lane {
+    --stream: var(--traffic-down);
+    position: absolute;
+    width: 100%;
+    height: 1px;
+    top: 36%;
+    background: var(--line);
+  }
+  .lane.up { --stream: var(--traffic-up); top: 64%; }
+  .lane.active { background: color-mix(in srgb, var(--stream) 32%, var(--line)); }
+  .unknown .lane { background: repeating-linear-gradient(to right, var(--line) 0 4px, transparent 4px 8px); }
+  .particle { position: absolute; left: 0; width: 100%; }
+  .particle::after {
+    content: '';
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: clamp(15px, 15%, 40px);
+    height: 5px;
+    border-radius: 50%;
+    background: linear-gradient(to right, transparent 0%, var(--stream) 82%, var(--traffic-core) 96%);
+    box-shadow: 3px 0 8px -2px var(--traffic-glow);
+  }
+  .up .particle::after {
+    right: auto;
+    left: -2px;
+    transform: scaleX(-1);
+    box-shadow: 3px 0 8px -2px var(--traffic-glow);
+  }
+  @media (prefers-reduced-motion: reduce) { .particle { display: none; } }
   @media (max-width: 760px) {
-    .vertical { width: 34px; height: 22px; transform: rotate(90deg); }
+    .particle::after { width: clamp(7px, 18%, 12px); }
+    .vertical { width: 42px; height: 56px; }
+    .vertical .track { width: 56px; height: 36px; inset: 50% auto auto 50%; transform: translate(-50%, -50%) rotate(90deg); }
   }
 </style>

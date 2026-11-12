@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {appendTraffic, normalizeFreebox, rateText, stationRate, trafficPath} from './freebox-data.js';
+import {appendTraffic, flowProfile, normalizeFreebox, rateText, stationRate, trafficPath, trafficScale} from './freebox-data.js';
 const repeater='aa:bb:cc:dd:ee:01',client='aa:bb:cc:dd:ee:02';
 function fixture(){return {timestamp:10000,connection:{rate_down:100,rate_up:50},ports:[{id:2,link:'up',speed:'1000',mac_list:[{mac:repeater},{mac:client}]}],stats:{2:{tx_bytes_rate:100}},radios:[[],[]],hosts:[{active:true,host_type:'freebox_wifi',l2ident:{id:repeater},primary_name:'Repeater',access_point:{connectivity_type:'ethernet',ethernet_information:{speed:1000}}},{active:true,l2ident:{id:client},primary_name:'Camera',l3connectivities:[{af:'ipv4',active:true,addr:'192.168.1.10'}],access_point:{type:'repeater',mac:repeater,connectivity_type:'wifi',rx_rate:20,tx_rate:30,wifi_information:{signal:-50,band:'5g',phy_tx_rate:8667,phy_rx_rate:1733}}}]}}
 test('repeater clients attach to Ethernet parent with PHY units and no duplicates',()=>{const d=normalizeFreebox(fixture());assert.equal(d.repeaters[0].port,2);assert.equal(d.repeaters[0].stations[0].ip,'192.168.1.10');assert.equal(d.repeaters[0].stations[0].link_down,866.7);assert.equal(d.ports[0].mac_list.length,1);assert.equal(d.timestamp,10)});
@@ -36,4 +36,22 @@ test('traffic keeps only distinct samples and leaves outages blank', () => {
   assert.deepEqual(samples.map(s => s.time), [105, 155, 160, 165]);
   assert.equal(samples[0].up, null);
   assert.equal(trafficPath(samples, 'down', 165, 24, 60, 96), 'M0.0 48.0h.01 M50.0 48.0h.01 L55.0 48.0 L60.0 48.0');
+});
+
+
+test('only measured positive traffic animates, with bounded speed and density', () => {
+  for (const rate of [null, undefined, -1, 0]) assert.equal(flowProfile(rate).count, 0);
+  const quiet = flowProfile(500);
+  const busy = flowProfile(1_000_000);
+  assert.ok(busy.count > quiet.count && busy.speed > quiet.speed);
+  assert.deepEqual(flowProfile(1_000_000_000), { count: 8, speed: 3.4 });
+});
+
+test('traffic axis grows to fit and waits before shrinking', () => {
+  const large = trafficScale({ ceiling: 200, lowerSince: null }, 173_000, 10);
+  assert.equal(large.ceiling, 200_000);
+  const waiting = trafficScale(large, 30_000, 40);
+  assert.equal(trafficScale(waiting, 30_000, 54), waiting);
+  assert.equal(trafficScale(waiting, 30_000, 55).ceiling, 50_000);
+  assert.deepEqual(trafficScale(waiting, 120_000, 54), large);
 });

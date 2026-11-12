@@ -68,3 +68,25 @@ export function trafficPath(samples, direction, now, max, width, height) {
     return `${command}${x.toFixed(1)} ${y.toFixed(1)}${command === 'M' ? 'h.01' : ''}`;
   }).join(' ');
 }
+
+/** Counts and speed stay bounded even on multi-gigabit links. */
+export function flowProfile(bytes) {
+  if (rate(bytes) == null || bytes === 0) return { count: 0, speed: 1 };
+  const strength = Math.log10(1 + bytes / 500);
+  return { count: Math.min(8, 2 + Math.floor(strength * 1.5)), speed: Math.min(3.4, 1 + strength * 0.56) };
+}
+
+/** Fit peaks immediately. Shrink only after 15 seconds well below the ceiling. */
+export function trafficScale(previous, peak, now) {
+  const value = Math.max(125, peak);
+  const magnitude = 10 ** Math.floor(Math.log10(value));
+  const step = [1, 2, 5, 10].find(multiplier => value <= multiplier * magnitude);
+  const ceiling = step * magnitude;
+  if (ceiling > previous.ceiling) return { ceiling, lowerSince: null };
+  if (value > previous.ceiling / 2 || ceiling >= previous.ceiling) {
+    return previous.lowerSince == null ? previous : { ceiling: previous.ceiling, lowerSince: null };
+  }
+  const lowerSince = previous.lowerSince ?? now;
+  if (now - lowerSince >= 15) return { ceiling, lowerSince: null };
+  return previous.lowerSince == null ? { ceiling: previous.ceiling, lowerSince } : previous;
+}

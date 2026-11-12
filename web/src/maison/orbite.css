@@ -9,3 +9,20 @@
 
 .maison.orbite .orbite-quick .salon-summary{background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--warm) 14%,transparent),transparent 70%),var(--surface)}.maison.orbite .orbite-quick .orbite-energy{background:radial-gradient(ellipse at 0 0,color-mix(in srgb,var(--good) 12%,transparent),transparent 70%),var(--surface)}.maison.orbite .orbite-quick .vacuum-summary{background:radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--violet) 15%,transparent),transparent 70%),var(--surface)}
 @media(max-width:360px){.maison.orbite .clim{grid-template-columns:minmax(0,1fr);justify-items:center}.maison.orbite .clim .facts{width:100%;min-width:0}.maison.orbite .orbite-climate{width:132px}.maison.orbite .orbite-welcome h1{font-size:24px}}
+
+/* On Réseau, the dock has its own row below the scrollable content. */
+.maison.orbite[data-page=reseau] {
+  height: 100dvh;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(10px, 1.4vw, 24px);
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+.maison.orbite[data-page=reseau] .content {
+  overflow: auto;
+  overscroll-behavior: contain;
+  scroll-padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+  padding: 5px 6px 12px;
+}
+.maison.orbite[data-page=reseau] .orbite-dock { position: static; }
