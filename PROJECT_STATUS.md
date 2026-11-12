@@ -1,5 +1,25 @@
 # Moli OS — état du fork et reprise
 
+## Dernier déploiement — Finition Réseau, 12 novembre 2026
+
+Commit déployé : `81898c68a16b707dc0e48eb27e3d206721b53a69`. Image amd64
+épinglée : `ghcr.io/chrisn06/moli-os@sha256:ac6df386f5bcd3d1c1601ed316ae416947ea7fb5d9a7dc630e529f8c5f336a52`.
+Les workflows [check](https://github.com/ChrisN06/moli-os/actions/runs/43193450112),
+[audit](https://github.com/ChrisN06/moli-os/actions/runs/43193450206) et
+[image](https://github.com/ChrisN06/moli-os/actions/runs/43193450251) ont réussi.
+
+Sauvegarde native avant mise à jour : manifeste et tailles de neuf fichiers
+vérifiés. La sauvegarde reste accessible depuis le nouveau conteneur.
+Une seule référence d’image a changé dans le Compose Portainer. Le plafond
+mémoire de 128 Mio et le relais vidéo ont été vérifiés. Image de retour
+locale : `ghcr.io/chrisn06/moli-os@sha256:b09a30a26888eb4285e3a90365c968daf2dae69273832bcc67bc100435da5c05`.
+
+Recette en lecture seule : 35 appareils, 244 points, 10 pilotes actifs et
+zéro échec journal. Somfy est revenu après la temporisation de reconnexion
+à Overkiz. L’historique d’eau répond. Les cinq liaisons et leurs particules
+ont été observées sur la page Réseau à 390 et 1 440 px, avec le dock en
+dehors du contenu défilant. Recette sur iPhone et TV réels à faire.
+
 ## Finition Réseau — 12 novembre 2026
 
 Les trajectoires relient la Freebox aux interfaces via le répartiteur,
@@ -13,8 +33,8 @@ Le nombre d’appareils est accompagné d’une icône et d’un libellé access
 La zone défilante garde une marge sous le contenu et le dock réserve
 l’espace de sécurité mobile. Vérifié dans le navigateur en jour et nuit,
 sur données fictives. À 320 px, le bas de page est entièrement accessible.
-Contrôles Rust, 58 tests web, build, i18n et PWA réussis. Recette sur appareils
-réels et déploiement en attente.
+Contrôles Rust, 58 tests web, build, i18n et PWA réussis. Le résultat
+du déploiement est indiqué ci-dessus.
 
 ## Deuxième passe Réseau — 12 novembre 2026
 
@@ -60,7 +80,7 @@ La Freebox et la présence d’horaires météo historiques ont été vérifiée
 en lecture seule. Recette sur iPhone et téléviseur réels à faire.
 Cette étape ne change pas le déploiement ci-dessous.
 
-## Dernier déploiement — PR #7, 11 novembre 2026
+## Déploiement précédent — PR #7, 11 novembre 2026
 
 Commit fusionné sur `main` : `de935f60a5080a7432b2abf8869666e305b2845c` ; commit de
 branche `600a8c2`. Image épinglée :
