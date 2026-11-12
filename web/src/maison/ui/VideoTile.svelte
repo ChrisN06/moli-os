@@ -31,8 +31,8 @@
     const src = `/api/devices/${encodeURIComponent(id)}/video/stream.m3u8`;
     try {
       const native = video.canPlayType('application/vnd.apple.mpegurl');
-      // Chrome can advertise native HLS without playing this live fMP4 stream.
-      if (native && /Version\/.*Safari\//.test(navigator.userAgent)) {
+      // Android WebView inserts Chrome between Version and Safari and needs hls.js for this stream.
+      if (native && /Version\/[\d.]+ (?:Mobile\/\S+ )?Safari\//.test(navigator.userAgent)) {
         video.src = src;
         await video.play();
       } else {

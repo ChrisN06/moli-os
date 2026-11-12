@@ -33,6 +33,7 @@ public final class TvActivity extends Activity {
         dashboard = new WebView(this);
         dashboard.getSettings().setJavaScriptEnabled(true);
         dashboard.getSettings().setDomStorageEnabled(true);
+        dashboard.getSettings().setMediaPlaybackRequiresUserGesture(false);
         dashboard.getSettings().setAllowFileAccess(false);
         dashboard.getSettings().setAllowContentAccess(false);
         dashboard.getSettings().setUseWideViewPort(true);

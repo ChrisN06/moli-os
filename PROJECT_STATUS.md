@@ -42,6 +42,10 @@ Installation et navigation vérifiées sur Shield en lecture seule, à
 1920 × 1080 logiques sur une sortie HDMI 4K. Le serveur en production
 n’a pas été modifié par l’installation de l’APK.
 
+APK 1.1 : Android WebView utilise hls.js pour les caméras et autorise
+la lecture automatique des vignettes muettes. Trois décodeurs vidéo
+actifs observés sur la Shield, libérés au retour à l’accueil.
+
 ## Dernier déploiement — Finition Réseau, 12 novembre 2026
 
 Commit déployé : `81898c68a16b707dc0e48eb27e3d206721b53a69`. Image amd64

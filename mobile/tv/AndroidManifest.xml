@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="org.molios.tv"
-    android:versionCode="1" android:versionName="1.0">
+    android:versionCode="2" android:versionName="1.1">
     <uses-sdk android:minSdkVersion="30" android:targetSdkVersion="35" />
     <uses-feature android:name="android.software.leanback" android:required="true" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
