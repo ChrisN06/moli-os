@@ -72,8 +72,8 @@ export function trafficPath(samples, direction, now, max, width, height) {
 /** Counts and speed stay bounded even on multi-gigabit links. */
 export function flowProfile(bytes) {
   if (rate(bytes) == null || bytes === 0) return { count: 0, speed: 1 };
-  const strength = Math.log10(1 + bytes / 500);
-  return { count: Math.min(8, 2 + Math.floor(strength * 1.5)), speed: Math.min(3.4, 1 + strength * 0.56) };
+  const strength = Math.log10(1 + bytes / 125);
+  return { count: Math.min(8, 1 + Math.floor(strength * 1.35)), speed: Math.min(1.6, 1 + strength * 0.13) };
 }
 
 /** Fit peaks immediately. Shrink only after 15 seconds well below the ceiling. */
@@ -89,4 +89,31 @@ export function trafficScale(previous, peak, now) {
   const lowerSince = previous.lowerSince ?? now;
   if (now - lowerSince >= 15) return { ceiling, lowerSince: null };
   return previous.lowerSince == null ? { ceiling: previous.ceiling, lowerSince } : previous;
+}
+
+/** Route one measured interface through its junction. Reverse the same curve for upload. */
+export function flowRoute(x, y, trunk, [endX, endY], lane, reverse = false) {
+  const side = endY < y ? -1 : 1;
+  const points = [[x, y + lane], [trunk - lane * side, y + lane],
+    [trunk - lane * side, endY + lane], [endX, endY + lane]]
+    .filter(([x, y], i, points) => i === 0 || x !== points[i - 1][0] || y !== points[i - 1][1]);
+  if (reverse) points.reverse();
+  const distance = ([ax, ay], [bx, by]) => Math.hypot(bx - ax, by - ay);
+  const toward = ([x, y], [toX, toY], amount) => [x + (toX - x) * amount, y + (toY - y) * amount].join(' ');
+  let path = `M${points[0].join(' ')}`;
+  let length = 0;
+  for (let i = 1; i < points.length; i++) {
+    const point = points[i];
+    const incoming = distance(point, points[i - 1]);
+    length += incoming;
+    const next = points[i + 1];
+    if (!next) {
+      path += ` L${point.join(' ')}`;
+      break;
+    }
+    const outgoing = distance(point, next);
+    const radius = Math.min(12, incoming / 2, outgoing / 2);
+    path += ` L${toward(point, points[i - 1], radius / incoming)} Q${point.join(' ')} ${toward(point, next, radius / outgoing)}`;
+  }
+  return { path, length };
 }

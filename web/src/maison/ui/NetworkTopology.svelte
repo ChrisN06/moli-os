@@ -5,6 +5,7 @@
   import { t, locale } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
   import TrafficWire from './network/TrafficWire.svelte';
+  import TrafficRoutes from './network/TrafficRoutes.svelte';
 
   let samples = $state.raw([]);
   let now = $state(Date.now() / 1000);
@@ -15,6 +16,8 @@
   let reduced = $state(false);
   let compact = $state(false);
   let sheet;
+  let map = $state();
+  const continuous = typeof CSS !== 'undefined' && CSS.supports('offset-path', 'path("M0 0 L1 1")');
   let scale = $state.raw({ ceiling: 200, lowerSince: null });
 
   onMount(() => {
@@ -91,6 +94,10 @@
   const chartMax = $derived(scale.ceiling);
   const displayRate = value => rateText(value, locale());
   const groupRate = (group, direction) => fresh && group.active ? group[direction] : null;
+  const links = $derived(interfaces.map(group => ({
+    id: group.id, parent: group.parent, logical: group.logical,
+    down: groupRate(group, 'down'), up: groupRate(group, 'up'),
+  })));
   const traffic = group => (groupRate(group, 'down') ?? 0) + (groupRate(group, 'up') ?? 0);
   const busiest = $derived(Math.max(0, ...interfaces.filter(group => !group.logical).map(traffic)));
   const groupState = group => t(group.logical ? 'freebox.unknown_link' : group.active ? 'freebox.connected' : 'freebox.disconnected');
@@ -156,11 +163,15 @@
 
 {#snippet branch(group)}
   <div class="branch" class:busy={!group.logical && busiest > 0 && traffic(group) >= busiest * .7}>
-    <TrafficWire down={group.logical ? null : groupRate(group, 'down')} up={group.logical ? null : groupRate(group, 'up')} paused={!moving} unknown={group.logical} />
-    <button class="node" type="button" aria-expanded={selected === group.id} onclick={() => select(group.id)}>
+    <div class="branch-wire">
+      {#if !continuous}
+        <TrafficWire down={group.logical ? null : groupRate(group, 'down')} up={group.logical ? null : groupRate(group, 'up')} paused={!moving} unknown={group.logical} />
+      {/if}
+    </div>
+    <button class="node" data-traffic-link={group.id} type="button" aria-expanded={selected === group.id} onclick={() => select(group.id)}>
       <Icon name={group.icon} size={22} />
       <span><b>{group.label}</b><small>{group.active && group.speed && !group.logical ? group.speed : groupState(group)}</small>{@render rates(groupRate(group, 'down'), groupRate(group, 'up'))}</span>
-      <span class="node-count num" aria-label={deviceCount(group.devices.length)}>{group.devices.length}</span>
+      <span class="node-count num" title={deviceCount(group.devices.length)} aria-label={deviceCount(group.devices.length)}><Icon name="devices" size={15} />{group.devices.length}</span>
     </button>
     {#if compact && selected === group.id}<div class="inline-detail">{@render devices(group)}</div>{/if}
   </div>
@@ -192,11 +203,11 @@
       <div class="workspace">
         <section class="card graph" aria-label={t('freebox.topology')}>
           <div class="card-head"><h2>{t('freebox.topology')}</h2></div>
-          <div class="map">
+          <div class="map" bind:this={map}>
             <div class="origin">
               <div class="anchor"><Icon name="internet" size={26} /><b>{t('freebox.internet')}</b><small>{data.connection?.media?.toUpperCase() ?? ''}</small></div>
               <TrafficWire down={connected ? down : null} up={connected ? up : null} paused={!moving} vertical />
-              <div class="anchor"><Icon name="router" size={26} /><b>Freebox</b><small>{t('freebox.gateway')}</small></div>
+              <div class="anchor gateway"><Icon name="router" size={26} /><b>Freebox</b><small>{t('freebox.gateway')}</small></div>
             </div>
             <div class="branches">
               {#each ports as port (port.id)}
@@ -210,6 +221,7 @@
                 {@render branch(repeater)}
               {/each}
             </div>
+            {#if continuous}<TrafficRoutes {map} {links} {compact} paused={!moving} />{/if}
           </div>
           <p class="map-note muted">{t('freebox.unknown_wire')}</p>
         </section>
@@ -306,8 +318,8 @@
   .network-side { grid-area: side; display: grid; gap: 12px; min-width: 0; }
   .graph { grid-area: map; min-width: 0; }
   .chart, .supervision { min-width: 0; }
-  .map { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; }
-  .origin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(36px, 1.05fr) minmax(0, 1fr) clamp(14px, 2.5vw, 76px); align-items: center; }
+  .map { position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; }
+  .origin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(40px, 1.15fr) minmax(0, 1fr) clamp(14px, 2.5vw, 76px); align-items: center; }
   .origin::after { content: ''; border-block-start: 1px solid var(--line); }
   .anchor { min-height: 88px; display: grid; align-content: center; justify-items: center; gap: 5px; padding: 8px 4px; color: var(--cool); border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); text-align: center; overflow-wrap: anywhere; }
   .anchor b { color: var(--ink); }
@@ -319,7 +331,7 @@
   .node { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-width: 0; text-align: start; padding: 10px; }
   .node > :global(svg) { color: var(--cool); }
   .node[aria-expanded=true], .interface[aria-pressed=true], .devices button[aria-pressed=true] { border-color: var(--cool); background: var(--cool-soft); }
-  .node-count { color: var(--ink-2); font-size: .8em; }
+  .node-count { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); font-size: .8em; }
   .node b, .interface b, .devices b { overflow-wrap: anywhere; }
   .node small, .interface small, .devices small { display: block; }
   .map-note { margin: 12px 0 0; font-size: .85em; }
@@ -357,6 +369,10 @@
   .device-info { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 6px 10px; margin-bottom: 0; }
   dt { color: var(--ink-2); }
   dd { margin: 0; overflow-wrap: anywhere; }
+  @supports (offset-path: path("M0 0 L1 1")) {
+    .branch-wire { visibility: hidden; }
+    .branches, .child, .origin::after, .child::before { border-color: transparent; }
+  }
   @media (max-width: 1100px) {
     .workspace { grid-template-columns: minmax(0, 2.25fr) minmax(220px, 1fr); }
     .map { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }

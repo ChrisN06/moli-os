@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {appendTraffic, flowProfile, normalizeFreebox, rateText, stationRate, trafficPath, trafficScale} from './freebox-data.js';
+import {appendTraffic, flowProfile, flowRoute, normalizeFreebox, rateText, stationRate, trafficPath, trafficScale} from './freebox-data.js';
 const repeater='aa:bb:cc:dd:ee:01',client='aa:bb:cc:dd:ee:02';
 function fixture(){return {timestamp:10000,connection:{rate_down:100,rate_up:50},ports:[{id:2,link:'up',speed:'1000',mac_list:[{mac:repeater},{mac:client}]}],stats:{2:{tx_bytes_rate:100}},radios:[[],[]],hosts:[{active:true,host_type:'freebox_wifi',l2ident:{id:repeater},primary_name:'Repeater',access_point:{connectivity_type:'ethernet',ethernet_information:{speed:1000}}},{active:true,l2ident:{id:client},primary_name:'Camera',l3connectivities:[{af:'ipv4',active:true,addr:'192.168.1.10'}],access_point:{type:'repeater',mac:repeater,connectivity_type:'wifi',rx_rate:20,tx_rate:30,wifi_information:{signal:-50,band:'5g',phy_tx_rate:8667,phy_rx_rate:1733}}}]}}
 test('repeater clients attach to Ethernet parent with PHY units and no duplicates',()=>{const d=normalizeFreebox(fixture());assert.equal(d.repeaters[0].port,2);assert.equal(d.repeaters[0].stations[0].ip,'192.168.1.10');assert.equal(d.repeaters[0].stations[0].link_down,866.7);assert.equal(d.ports[0].mac_list.length,1);assert.equal(d.timestamp,10)});
@@ -44,7 +44,7 @@ test('only measured positive traffic animates, with bounded speed and density', 
   const quiet = flowProfile(500);
   const busy = flowProfile(1_000_000);
   assert.ok(busy.count > quiet.count && busy.speed > quiet.speed);
-  assert.deepEqual(flowProfile(1_000_000_000), { count: 8, speed: 3.4 });
+  assert.deepEqual(flowProfile(1_000_000_000), { count: 8, speed: 1.6 });
 });
 
 test('traffic axis grows to fit and waits before shrinking', () => {
@@ -54,4 +54,13 @@ test('traffic axis grows to fit and waits before shrinking', () => {
   assert.equal(trafficScale(waiting, 30_000, 54), waiting);
   assert.equal(trafficScale(waiting, 30_000, 55).ceiling, 50_000);
   assert.deepEqual(trafficScale(waiting, 120_000, 54), large);
+});
+
+test('branch trajectory spans the junction, with reversed upload and straight zero-length turns', () => {
+  assert.deepEqual(flowRoute(10, 30, 40, [90, 80], 0), {
+    path: 'M10 30 L28 30 Q40 30 40 42 L40 68 Q40 80 52 80 L90 80',
+    length: 130,
+  });
+  assert.match(flowRoute(10, 30, 40, [90, 80], 4, true).path, /^M90 84 .* L10 34$/);
+  assert.doesNotMatch(flowRoute(40, 30, 40, [90, 30], 0).path, /NaN|Infinity/);
 });

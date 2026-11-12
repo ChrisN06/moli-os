@@ -1,5 +1,21 @@
 # Moli OS — état du fork et reprise
 
+## Finition Réseau — 12 novembre 2026
+
+Les trajectoires relient la Freebox aux interfaces via le répartiteur,
+avec le débit propre de chaque branche. Les répéteurs dont le port est
+connu partent de leur port parent. Une liaison indéterminée reste statique.
+Le trafic nul supprime ses particules. La vitesse varie sur une plage
+réduite et le débit se lit surtout par la densité. Les navigateurs sans
+prise en charge des trajectoires CSS gardent l’animation par segment.
+
+Le nombre d’appareils est accompagné d’une icône et d’un libellé accessible.
+La zone défilante garde une marge sous le contenu et le dock réserve
+l’espace de sécurité mobile. Vérifié dans le navigateur en jour et nuit,
+sur données fictives. À 320 px, le bas de page est entièrement accessible.
+Contrôles Rust, 58 tests web, build, i18n et PWA réussis. Recette sur appareils
+réels et déploiement en attente.
+
 ## Deuxième passe Réseau — 12 novembre 2026
 
 Les flux montants et descendants empruntent deux trajectoires avec des
