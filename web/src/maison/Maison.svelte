@@ -2,6 +2,7 @@
   import '@fontsource-variable/figtree';
   import './maison.css';
   import './orbite.css';
+  import './television.css';
   import { attachRemoteNavigation } from './lib/remote-navigation.js';
   import { onMount, tick } from 'svelte';
   import { home, hub, start, savePref, watches, hidden } from './lib/home.svelte.js';
@@ -29,7 +30,8 @@
   import { moli } from './lib/moli.svelte.js';
 
   let { route } = $props();
-  let shell, moreDialog;
+  let shell, content, moreDialog;
+  const television = new URLSearchParams(location.search).get('tv') === '1';
 
   // Shown only if the link stays down a few seconds (a blink is not news).
   let offline = $state(false);
@@ -65,12 +67,15 @@
   ];
   const nav = $derived(NAV.filter((item) => (!item.shown || item.shown()) && (!Array.isArray(home.config?.navigation) || home.config.navigation.includes(item.path))));
 
-  const primary = $derived(['', 'salon', 'energie', 'aspirateur', 'moli'].map(path => nav.find(item => item.path === path)).filter(Boolean));
+  const primary = $derived((television
+    ? ['', 'salon', 'energie', 'aspirateur', 'reseau', 'moli']
+    : ['', 'salon', 'energie', 'aspirateur', 'moli']
+  ).map(path => nav.find(item => item.path === path)).filter(Boolean));
   let prefersDark = $state(false);
 
   onMount(() => {
     start();
-    const stopRemote = attachRemoteNavigation(shell);
+    const stopRemote = attachRemoteNavigation(shell, { television });
     const media = matchMedia('(prefers-color-scheme: dark)');
     prefersDark = media.matches;
     const update = (e) => (prefersDark = e.matches);
@@ -103,12 +108,21 @@
   $effect(() => {
     const destination = route;
     let cancelled = false;
-    tick().then(() => { if (!cancelled && route === destination) window.scrollTo({ top: 0, behavior: 'instant' }); });
+    tick().then(() => {
+      if (cancelled || route !== destination) return;
+      window.scrollTo({ top: 0, behavior: 'instant' });
+      if (!television) return;
+      content.scrollTop = 0;
+      if (!shell.querySelector('dialog[open], [aria-modal="true"]')) {
+        const dock = shell.querySelector('.orbite-dock');
+        (dock.querySelector('[aria-current="page"]') ?? dock.querySelector('button')).focus({ preventScroll: true });
+      }
+    });
     return () => { cancelled = true; };
   });
 </script>
 
-<div class="maison orbite" data-theme={theme} data-page={page || 'accueil'} bind:this={shell}>
+<div class="maison orbite" data-theme={theme} data-page={page || 'accueil'} data-tv={television ? '' : undefined} bind:this={shell}>
   <header class="orbite-bar">
     <a class="orbite-brand" href="#/" aria-label={t('commun.nav.logo')}>{t('orbite.brand')}<span>{t('orbite.name')}</span></a>
     <div class="orbite-tools">
@@ -121,7 +135,7 @@
     {/each}
     <button onclick={() => moreDialog.showModal()} aria-haspopup="dialog" class:active={!primary.some(item => item.path === page)}><Icon name="rooms" size={22}/><span>{t('orbite.more')}</span></button>
   </nav>
-  <main class="content">
+  <main class="content" bind:this={content}>
     {#if page === 'salon'}
       <Salon />
     {:else if page === 'pieces'}
@@ -153,7 +167,7 @@
     {:else if page === 'systeme'}
       <Systeme />
     {:else if page === 'reseau'}
-      {#await import('./ui/NetworkTopology.svelte') then { default: NetworkTopology }}<NetworkTopology />{/await}
+      {#await import('./ui/NetworkTopology.svelte') then { default: NetworkTopology }}<NetworkTopology {television} />{/await}
     {:else if page === 'infra'}
       <!-- The house's machines: loaded only when visited. -->
       {#await import('./pages/Infra.svelte') then { default: Infra }}<Infra />{/await}

@@ -139,3 +139,27 @@ test('selects keep option arrows but horizontal arrows can leave', () => {
   assert.equal(leaveArrow.prevented, true);
   assert.equal(f.document.activeElement, f.second);
 });
+
+test('TV arrows reveal text below the last control before moving to the dock', () => {
+  const f = fixture();
+  f.document.addEventListener = f.root.addEventListener;
+  f.document.removeEventListener = f.root.removeEventListener;
+  f.root.contains = () => true;
+  const content = {
+    contains: (control) => control === f.first,
+    clientHeight: 100,
+    scrollHeight: 170,
+    scrollTop: 0,
+    scrollBy({ top }) { this.scrollTop += top; },
+  };
+  f.root.querySelector = () => content;
+  f.second.getBoundingClientRect = () => rect(0, 120);
+  attachRemoteNavigation(f.root, { television: true });
+  f.document.activeElement = f.first;
+  f.dispatch(f.event(f.first, 'ArrowDown'));
+  f.dispatch(f.event(f.first, 'ArrowDown'));
+  assert.equal(content.scrollTop, 70);
+  assert.equal(f.document.activeElement, f.first);
+  f.dispatch(f.event(f.first, 'ArrowDown'));
+  assert.equal(f.document.activeElement, f.second);
+});

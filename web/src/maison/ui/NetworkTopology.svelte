@@ -7,6 +7,7 @@
   import TrafficWire from './network/TrafficWire.svelte';
   import TrafficRoutes from './network/TrafficRoutes.svelte';
 
+  let { television = false } = $props();
   let samples = $state.raw([]);
   let now = $state(Date.now() / 1000);
   let hidden = $state(false);
@@ -16,6 +17,7 @@
   let reduced = $state(false);
   let compact = $state(false);
   let sheet;
+  let interfaceSheet = $state();
   let map = $state();
   const continuous = typeof CSS !== 'undefined' && CSS.supports('offset-path', 'path("M0 0 L1 1")');
   let scale = $state.raw({ ceiling: 200, lowerSince: null });
@@ -108,10 +110,11 @@
   function select(id) {
     selected = selected === id ? null : id;
     selectedDevice = null;
+    if (television && selected != null) interfaceSheet.showModal();
   }
 
   function inspect(item) {
-    if (compact) {
+    if (compact && !television) {
       selectedDevice = item.mac;
       sheet.showModal();
     } else {
@@ -168,12 +171,12 @@
         <TrafficWire down={group.logical ? null : groupRate(group, 'down')} up={group.logical ? null : groupRate(group, 'up')} paused={!moving} unknown={group.logical} />
       {/if}
     </div>
-    <button class="node" data-traffic-link={group.id} type="button" aria-expanded={selected === group.id} onclick={() => select(group.id)}>
+    <button class="node" data-traffic-link={group.id} type="button" aria-haspopup={television ? 'dialog' : undefined} aria-expanded={selected === group.id} onclick={() => select(group.id)}>
       <Icon name={group.icon} size={22} />
       <span><b>{group.label}</b><small>{group.active && group.speed && !group.logical ? group.speed : groupState(group)}</small>{@render rates(groupRate(group, 'down'), groupRate(group, 'up'))}</span>
       <span class="node-count num" title={deviceCount(group.devices.length)} aria-label={deviceCount(group.devices.length)}><Icon name="devices" size={15} />{group.devices.length}</span>
     </button>
-    {#if compact && selected === group.id}<div class="inline-detail">{@render devices(group)}</div>{/if}
+    {#if compact && !television && selected === group.id}<div class="inline-detail">{@render devices(group)}</div>{/if}
   </div>
 {/snippet}
 
@@ -223,7 +226,7 @@
             </div>
             {#if continuous}<TrafficRoutes {map} {links} {compact} paused={!moving} />{/if}
           </div>
-          <p class="map-note muted">{t('freebox.unknown_wire')}</p>
+          {#if !television}<p class="map-note muted">{t('freebox.unknown_wire')}</p>{/if}
         </section>
 
         <div class="network-side">
@@ -244,6 +247,9 @@
             {#if !recent.some(sample => sample.down != null || sample.up != null)}<p class="muted">{t('freebox.waiting')}</p>{/if}
           </section>
 
+          {#if television}
+            <p class="map-note muted">{t('freebox.unknown_wire')}</p>
+          {:else}
           <aside class="card supervision">
             <div class="card-head"><h2>{t('freebox.interfaces')}</h2></div>
             {#if current}
@@ -263,11 +269,27 @@
             {/each}
             <p class="map-note muted">{t('freebox.rate_note')}</p>
           </aside>
+          {/if}
         </div>
       </div>
     {/if}
   {/if}
 
+  {#if television}
+    <dialog class="device-sheet" bind:this={interfaceSheet} aria-labelledby="network-interface-title" onclose={() => select(null)}>
+      <header>
+        <h2 id="network-interface-title">{current?.label ?? t('freebox.interfaces')}</h2>
+        <button class="close" type="button" aria-label={t('freebox.close')} onclick={() => interfaceSheet.close()}><Icon name="close" size={22} /></button>
+      </header>
+      {#if current}
+        <p class="map-note muted">{groupNote(current)} · {t('freebox.rate_note')}</p>
+        {@render devices(current)}
+        {@render deviceDetails(current)}
+      {:else}
+        <p role="status">{t('freebox.missing')}</p>
+      {/if}
+    </dialog>
+  {/if}
   <dialog class="device-sheet" bind:this={sheet} aria-labelledby="network-device-title" onclose={() => selectedDevice = null}>
     <header>
       <h2 id="network-device-title">{device ? deviceName(device) : t('freebox.device')}</h2>

@@ -13,9 +13,9 @@
   selon les mesures Freebox, graphique sur 60 secondes, fiche appareil
   mobile et dock hors de la zone défilante.
 - **Prochaine recette.** Sur iPhone réel, ouvrir `#/reseau`, atteindre le
-  bas de la page, puis ouvrir et fermer une fiche appareil. Sur TV réelle,
-  vérifier la lisibilité des flux et la sélection à la télécommande.
-  Les vérifications navigateur et les contrôles locaux sont déjà faits.
+  bas de la page, puis ouvrir et fermer une fiche appareil. Sur Android TV,
+  l’application locale et la navigation de l’accueil au Réseau ont été
+  vérifiées sur Shield avec des touches envoyées par ADB.
 - **So’EAU en pause.** Reprendre après résolution vérifiée de
   [l’incident Home Assistant #190782](https://github.com/home-assistant/core/issues/190782),
   encore ouvert au 12 novembre. Examiner alors séparément l’ouverture de
@@ -27,6 +27,20 @@
   précédent figurent ci-dessous. Avant toute intervention, relire l’état
   Portainer et suivre [le guide d’exploitation](docs/components/exploitation.md).
   Déploiement et retour arrière exigent un accord explicite.
+
+## Application Android TV — 12 novembre 2026
+
+L’[APK Android TV](mobile/tv/README.md) embarque le dashboard et utilise
+l’API de l’instance configurée à la construction. Le lanceur ouvre Moli
+en plein écran. Les flèches déplacent la sélection et OK active l’élément
+sélectionné. L’accueil dispose les cartes en paysage. Sur Réseau, le dock
+reste visible, la topologie et le graphique se partagent la largeur, et
+les détails de chaque interface s’ouvrent dans une fiche. Le contenu qui
+dépasse reste accessible avec les flèches.
+
+Installation et navigation vérifiées sur Shield en lecture seule, à
+1920 × 1080 logiques sur une sortie HDMI 4K. Le serveur en production
+n’a pas été modifié par l’installation de l’APK.
 
 ## Dernier déploiement — Finition Réseau, 12 novembre 2026
 
@@ -488,8 +502,6 @@ capacités d’un protocole, ni leur fonctionnement permanent.
   avant d’annoncer une compatibilité ou d’étendre un pilote.
 - Tablette murale : dashboard paysage, kiosque, nuit, puis faisabilité du réveil caméra
   mesurée sur le matériel ; aucune application dédiée présumée nécessaire.
-- Shield/Android TV : navigation focus/télécommande réutilisant l’API ; le pilote
-  Android TV amont ne constitue pas une application domotique TV livrée.
 - Scénarios personnels et analyse énergétique : après validation des données et commandes,
   en réutilisant le moteur existant. Pas de nouvelle base ni de broker par défaut.
 

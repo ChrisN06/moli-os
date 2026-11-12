@@ -8,6 +8,7 @@
    *  is `tv`), the volume is the speaker's: the TV's own then sets its
    *  silent speakers. By default, the living room's of the layout. */
   let { tv, speaker = null } = $props();
+  let remote;
   const soundbar = $derived(speaker ?? (home.config?.salon?.tv === tv ? home.config?.salon?.speaker : null));
   const sound = $derived(soundbar && value(soundbar, 'source') === 'tv' ? soundbar : null);
   const target = $derived(sound ?? tv);
@@ -186,6 +187,8 @@
   }
 
   function onkey(e) {
+    // On TV these keys navigate Moli; only explicit button clicks operate the equipment.
+    if (remote?.closest('[data-tv]')) return;
     if (e.defaultPrevented || e.target.closest?.('input, textarea, select, button, [contenteditable]')) return;
     const map = { ArrowUp: 'CursorUp', ArrowDown: 'CursorDown', ArrowLeft: 'CursorLeft', ArrowRight: 'CursorRight', Enter: 'Confirm', Backspace: 'Back' };
     if (map[e.key]) {
@@ -197,7 +200,7 @@
 
 <svelte:window onkeydown={onkey} />
 
-<section class="remote" class:on aria-label={t('salon.tele.region')}>
+<section class="remote" class:on bind:this={remote} aria-label={t('salon.tele.region')}>
   <header>
     <div class="modes" role="group" aria-label={t('salon.tele.navigation')}>
       <button aria-pressed={mode === 'keys'} onclick={() => setMode('keys')}>{t('salon.tele.touches')}</button>

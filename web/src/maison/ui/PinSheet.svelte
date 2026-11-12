@@ -107,7 +107,7 @@
   function onkey(e) {
     if (/^[0-9]$/.test(e.key)) press(e.key);
     else if (e.key === 'Backspace') pin = pin.slice(0, -1);
-    else if (e.key === 'Enter') submit();
+    else if (e.key === 'Enter' && !e.target.closest?.('[data-tv] .sheet button')) submit();
     else if (e.key === 'Escape') dismissHeld();
   }
 </script>
