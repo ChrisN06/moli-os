@@ -301,7 +301,7 @@
     --traffic-up: #b33045;
     --traffic-core: #e9ffff;
     display: grid;
-    gap: clamp(12px, 1.1vw, 28px);
+    gap: clamp(12px, 1.1vw, 18px);
     min-width: 0;
   }
   :global([data-theme=night]) .network {
@@ -321,8 +321,8 @@
   }
   .motion { padding: 8px 14px; }
   .metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
-  .metric { display: grid; gap: 5px; align-content: start; padding: clamp(12px, 1vw, 32px); }
-  .metric strong { font-size: clamp(1.05rem, 1.9vw, 3rem); line-height: 1.15; overflow-wrap: anywhere; }
+  .metric { display: grid; gap: 5px; align-content: start; padding: clamp(12px, 1vw, 18px); }
+  .metric strong { font-size: clamp(1.05rem, 1.9vw, 1.9rem); line-height: 1.15; overflow-wrap: anywhere; }
   .metric span, small, .chart-scale { color: var(--ink-2); }
   .metric i { display: inline-block; width: .45em; height: .45em; margin-inline-end: .35em; vertical-align: .14em; border-radius: 50%; background: var(--ink-3); }
   .metric .online i { background: var(--traffic-down); }
@@ -335,11 +335,11 @@
   .graph { grid-area: map; min-width: 0; }
   .chart, .supervision { min-width: 0; }
   .map { position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; }
-  .origin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(40px, 1.15fr) minmax(0, 1fr) clamp(14px, 2.5vw, 76px); align-items: center; }
+  .origin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(40px, 1.15fr) minmax(0, 1fr) clamp(14px, 2.5vw, 40px); align-items: center; }
   .anchor { min-height: 88px; display: grid; align-content: center; justify-items: center; gap: 5px; padding: 8px 4px; color: var(--cool); border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); text-align: center; overflow-wrap: anywhere; }
   .anchor b { color: var(--ink); }
-  .branch { display: grid; grid-template-columns: clamp(38px, 8vw, 285px) minmax(0, 1fr); align-items: center; margin-block: 8px; }
-  .child { margin-inline-start: clamp(28px, 4vw, 140px); }
+  .branch { display: grid; grid-template-columns: clamp(38px, 8vw, 128px) minmax(0, 1fr); align-items: center; margin-block: 8px; }
+  .child { margin-inline-start: clamp(28px, 4vw, 64px); }
   .node { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-width: 0; text-align: start; padding: 10px; }
   .node { grid-column: 2; }
   .node.dim:not(:hover, :focus-visible) { opacity: .6; }
@@ -351,7 +351,7 @@
   .node b, .interface b, .devices b { overflow-wrap: anywhere; }
   .node small, .interface small, .devices small { display: block; }
   .map-note { margin: 12px 0 0; font-size: .85em; }
-  .traffic-chart { display: block; width: 100%; height: clamp(96px, 9vw, 310px); }
+  .traffic-chart { display: block; width: 100%; height: clamp(96px, 9vw, 144px); }
   .grid-lines { stroke: var(--line); fill: none; vector-effect: non-scaling-stroke; }
   .line { stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; vector-effect: non-scaling-stroke; }
   .plot { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 9px; }
@@ -400,12 +400,13 @@
     .metric:nth-child(2), .metric:nth-child(3) { grid-row: 2; }
     .metric { padding: 10px; }
     .map { grid-template-columns: minmax(0, 1fr); }
-    .origin { grid-template-columns: minmax(0, 1fr); justify-items: start; padding: 0 0 12px 16px; }
+    .origin { grid-template-columns: minmax(0, 1fr); justify-items: start; padding-block-end: 12px; }
     .anchor { display: flex; justify-content: start; align-items: center; gap: 9px; width: 100%; min-height: 48px; padding: 8px; font-size: inherit; }
     .wan-gap { height: 44px; }
-    .branch { grid-template-columns: clamp(34px, 11vw, 68px) minmax(0, 1fr); margin-block: 6px; }
+    .branch { grid-template-columns: 68px minmax(0, 1fr); margin-block: 6px; }
     .node { padding: 7px 8px; }
     .node .rates { font-size: .9em; }
+    .node .rates span { white-space: normal; }
     .device-sheet { width: 100%; max-width: none; margin: auto 0 0; border-radius: 22px 22px 0 0; }
     .inline-detail .devices { max-height: 16rem; overflow: auto; overscroll-behavior: contain; padding: 4px; }
     .child { margin-inline-start: 16px; }

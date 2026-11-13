@@ -1,5 +1,23 @@
 # Moli OS — état du fork et reprise
 
+## Suivi Réseau V4 et grand écran — 13 novembre 2026
+
+Le retour sur iPhone 17 confirme que la page fonctionne. Le raccord vertical
+des ports et du Wi-Fi Pop vers la Freebox restait neutre. Les voies mobiles
+relient maintenant chaque interface à la passerelle avec ses propres débits.
+La liaison des répéteurs reste neutre faute de mesure dédiée.
+
+La limite de 1 600 px de l’accueil s’applique aux pages Maison sur le web.
+Le rendu TV garde sa mise en page dédiée. Les tracés mobiles ont été vérifiés
+en jour et nuit de 320 à 760 px sur des données fictives. Les 17 routes Maison
+ont été ouvertes à 3 840 × 1 080 et 3 840 × 2 160 sans débordement horizontal
+du contenu.
+
+L’APK 1.2 a été reconstruit avec le dashboard V4 et installé sur la Shield
+avec le même certificat. L’ouverture de Réseau depuis le dock TV et les
+flux affichés ont été vérifiés en lecture seule. Les corrections web attendent
+leur déploiement. Le raccord corrigé reste à vérifier sur Safari iPhone.
+
 ## Réseau V4 et accueil grand écran — 13 novembre 2026
 
 L’accueil plafonne sa largeur à 1 600 px sur le web et conserve une horloge
@@ -14,7 +32,7 @@ dégradation sous charge et indisponibilité vérifiés. Accueil vérifié à
 3 840 × 1 080 et 3 840 × 2 160. Sur cinq secondes, environ 59 images/s
 dans Chrome sur MacBook Air M1 à 1 440 × 900, et environ 60 images/s
 dans le navigateur de la Shield sur une sortie 4K. Le mode TV a aussi été
-vérifié dans Chrome à 1 920 × 1 080. L’iPhone 17 reste à tester sur appareil.
+vérifié dans Chrome à 1 920 × 1 080. Le retour sur iPhone 17 figure ci-dessus.
 
 Les contrôles Rust, les 59 tests web, le build, les traductions et le contrôle
 PWA réussissent. Les workflows [check](https://github.com/ChrisN06/moli-os/actions/runs/43411140471),
@@ -41,10 +59,9 @@ du journal. L’image du 12 novembre est la référence précédente.
   coucher du soleil avec moyenne. Page Réseau jour/nuit avec flux continus
   selon les mesures Freebox, graphique sur 60 secondes, fiche appareil
   mobile et dock hors de la zone défilante.
-- **Prochaine recette.** Sur iPhone réel, ouvrir `#/reseau`, atteindre le
-  bas de la page, puis ouvrir et fermer une fiche appareil. Sur Android TV,
-  l’application locale et la navigation de l’accueil au Réseau ont été
-  vérifiées sur Shield avec des touches envoyées par ADB.
+- **Prochaine recette.** Après déploiement du correctif web, vérifier
+  sur Safari iPhone que les flux rejoignent la Freebox sur la portion verticale.
+  L’APK 1.2 affiche déjà le Réseau V4 sur Shield.
 - **So’EAU en pause.** Reprendre après résolution vérifiée de
   [l’incident Home Assistant #190782](https://github.com/home-assistant/core/issues/190782),
   encore ouvert au 12 novembre. Examiner alors séparément l’ouverture de

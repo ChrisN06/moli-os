@@ -5,7 +5,7 @@
   let geometry = $state.raw(null);
   let visible = $state(false);
   let slow = $state(false);
-  const topology = $derived(JSON.stringify(links.map(({ id, parent }) => [id, parent])));
+  const topology = $derived(JSON.stringify(links.map(({ id, parent, logical }) => [id, parent, !!logical])));
   const moving = $derived(visible && !paused && !slow);
   const highlighted = $derived(new Set(selected == null ? [] : [
     selected, links.find(link => link.id === selected)?.parent,
@@ -33,10 +33,10 @@
       const wan = box(internet);
       const hub = box(gateway);
       const paths = new Map();
-      const lanes = (start, end, mode) => ({
+      const lanes = (start, end, mode, offset = 6) => ({
         rail: flowRoute(start, end, mode),
-        down: flowRoute(start, end, mode, -6),
-        up: flowRoute(start, end, mode, 6),
+        down: flowRoute(start, end, mode, -offset),
+        up: flowRoute(start, end, mode, offset),
       });
       paths.set('internet', vertical
         ? lanes([hub.x + 21, wan.bottom], [hub.x + 21, hub.y], 'vertical')
@@ -45,17 +45,22 @@
       const ends = new Map([...targets].map(([id, node]) => [id, box(node)]));
       const direct = definitions.filter(([id, parent]) => id !== 'internet' && parent == null && ends.has(String(id)))
         .sort(([a], [b]) => ends.get(String(a)).cy - ends.get(String(b)).cy);
-      const spineX = hub.x - 5;
-      const spineY = hub.bottom + 6;
-      const spine = vertical && direct.length
-        ? `M${hub.x + 21} ${hub.bottom} V${spineY} H${spineX} V${ends.get(String(direct.at(-1)[0])).cy}`
-        : null;
-      direct.forEach(([id], index) => {
+      const known = direct.filter(([, , logical]) => !logical);
+      const gutter = known.length ? ends.get(String(known[0][0])).x - hub.x : 68;
+      direct.forEach(([id, , logical], index) => {
         const end = ends.get(String(id));
         const startY = hub.y + hub.height * (index + 1) / (direct.length + 1);
-        paths.set(id, vertical
-          ? lanes([spineX, end.cy], [end.x, end.cy], 'tap')
-          : lanes([hub.right, startY], [end.x, end.cy], 'fan'));
+        if (vertical) {
+          // Each interface has its own lane back to the gateway. Earlier turns
+          // use the rightmost lanes so they never cross later branches.
+          const rank = known.findIndex(([key]) => key === id);
+          const x = hub.x + (logical ? 4 : gutter - 12 - rank * (gutter - 24) / Math.max(1, known.length - 1));
+          const start = [x, hub.bottom];
+          const finish = [end.x, end.cy];
+          paths.set(id, logical ? { rail: flowRoute(start, finish, 'elbow') } : lanes(start, finish, 'elbow', 3.5));
+        } else {
+          paths.set(id, lanes([hub.right, startY], [end.x, end.cy], 'fan'));
+        }
       });
       for (const [id, parent] of definitions) {
         if (parent == null) continue;
@@ -65,10 +70,7 @@
           paths.set(id, { rail: flowRoute([source.x + 12, source.bottom], [end.x, end.cy], 'child') });
         }
       }
-      const trunks = new Map(direct.map(([id]) => [id,
-        `M${hub.x + 21} ${hub.bottom} V${spineY} H${spineX} V${ends.get(String(id)).cy}`,
-      ]));
-      geometry = { paths, spine, trunks };
+      geometry = paths;
     };
     measure();
     const resize = new ResizeObserver(measure);
@@ -104,20 +106,16 @@
 
 {#if geometry}
   <svg aria-hidden="true" class:quiet={!moving}>
-    {#if geometry.spine}
-      {@const trunk = links.find(link => highlighted.has(link.id) && link.parent == null && !link.logical)}
-      <path class="rail" class:dim={selected != null} d={geometry.spine} />
-      {#if trunk}<path class="rail focus" d={geometry.trunks.get(trunk.id)} />{/if}
-    {/if}
     {#each links as link (link.id)}
-      {@const path = geometry.paths.get(link.id)}
+      {@const path = geometry.get(link.id)}
       {#if path}
         {@const focus = highlighted.has(link.id)}
         {@const dim = selected != null && !focus}
         <g class:dim>
           <path class="rail" class:focus class:unknown={link.logical} d={path.rail} />
           {#each ['down', 'up'] as direction (direction)}
-            {@const width = flowWidth(link[direction])}
+            {@const measured = flowWidth(link[direction])}
+            {@const width = compact && link.id !== 'internet' && measured > 0 ? 1.5 + (measured - 1.5) * .58 : measured}
             {#if path[direction]}
               <path class="flow" class:upload={direction === 'up'} d={path[direction]} style:stroke-width={width} />
               {#if width && animated.includes(link.id)}

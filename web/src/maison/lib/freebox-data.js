@@ -93,11 +93,9 @@ export function trafficScale(previous, peak, now) {
 /** Both lanes reuse the same geometry with a fixed gap between their centers. */
 export function flowRoute([x, y], [endX, endY], mode, lane = 0) {
   if (mode === 'vertical') return `M${x + lane} ${y} V${endY}`;
-  if (mode === 'tap') {
-    // The neutral spine joins the center of each pair of measured lanes.
-    return lane === 0
-      ? `M${x} ${y} H${endX}`
-      : `M${x} ${y} Q${x + 8} ${y + lane} ${x + 16} ${y + lane} H${endX}`;
+  if (mode === 'elbow') {
+    const radius = 8 + lane;
+    return `M${x - lane} ${y} V${endY - 8} Q${x - lane} ${endY + lane} ${x - lane + radius} ${endY + lane} H${endX}`;
   }
   if (mode === 'child') {
     const mid = (y + endY) / 2;

@@ -60,6 +60,7 @@ test('traffic axis grows to fit and waits before shrinking', () => {
 test('adaptive routes keep direction lanes apart and connect mobile and child branches', () => {
   assert.equal(flowRoute([10, 30], [90, 110], 'fan', -6), 'M10 24 C54.4 24 57.6 104 90 104');
   assert.equal(flowRoute([30, 10], [30, 60], 'vertical', 6), 'M36 10 V60');
-  assert.equal(flowRoute([10, 40], [60, 40], 'tap', -6), 'M10 40 Q18 34 26 34 H60');
+  assert.equal(flowRoute([12, 40], [68, 100], 'elbow', -3.5), 'M15.5 40 V92 Q15.5 96.5 20 96.5 H68');
+  assert.equal(flowRoute([12, 40], [68, 100], 'elbow', 3.5), 'M8.5 40 V92 Q8.5 103.5 20 103.5 H68');
   assert.equal(flowRoute([50, 40], [60, 80], 'child'), 'M50 40 C50 60 50 80 60 80');
 });
