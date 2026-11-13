@@ -25,8 +25,8 @@ Les workflows [check](https://github.com/ChrisN06/moli-os/actions/runs/434310849
 Sauvegarde native vérifiée avant remplacement (manifeste et tailles de neuf
 fichiers). Après redémarrage, Moli et le relais étaient actifs avec 10 pilotes
 sur 10, 35 appareils, 244 points et zéro échec du journal. L’image de
-`b0ce829` est la référence précédente. Le raccord corrigé reste à vérifier
-sur Safari iPhone.
+`b0ce829` est la référence précédente. Le propriétaire a confirmé après
+déploiement que le raccord des flux fonctionne sur iPhone 17.
 
 ## Réseau V4 et accueil grand écran — 13 novembre 2026
 
@@ -69,9 +69,8 @@ du journal. L’image du 12 novembre est la référence précédente.
   coucher du soleil avec moyenne. Page Réseau jour/nuit avec flux continus
   selon les mesures Freebox, graphique sur 60 secondes, fiche appareil
   mobile et dock hors de la zone défilante.
-- **Prochaine recette.** Vérifier sur Safari iPhone que les flux rejoignent
-  la Freebox sur la portion verticale.
-  L’APK 1.2 affiche déjà le Réseau V4 sur Shield.
+- **Recette Réseau.** Le propriétaire a validé le raccord des flux sur
+  iPhone 17 après déploiement. L’APK 1.2 affiche le Réseau V4 sur Shield.
 - **So’EAU en pause.** Reprendre après résolution vérifiée de
   [l’incident Home Assistant #190782](https://github.com/home-assistant/core/issues/190782),
   encore ouvert au 12 novembre. Examiner alors séparément l’ouverture de
