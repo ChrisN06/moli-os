@@ -15,8 +15,18 @@ du contenu.
 
 L’APK 1.2 a été reconstruit avec le dashboard V4 et installé sur la Shield
 avec le même certificat. L’ouverture de Réseau depuis le dock TV et les
-flux affichés ont été vérifiés en lecture seule. Les corrections web attendent
-leur déploiement. Le raccord corrigé reste à vérifier sur Safari iPhone.
+flux affichés ont été vérifiés en lecture seule.
+
+Correctifs web déployés le 13 novembre, commit `d50d589`. Image Linux amd64
+active : `ghcr.io/chrisn06/moli-os@sha256:3ad71c22fe7cffb4b54034c212813acf7008e858b4fd686fa32190e4b60faa23`.
+Les workflows [check](https://github.com/ChrisN06/moli-os/actions/runs/43431084913),
+[audit](https://github.com/ChrisN06/moli-os/actions/runs/43431085021) et
+[image](https://github.com/ChrisN06/moli-os/actions/runs/43431084982) ont réussi.
+Sauvegarde native vérifiée avant remplacement (manifeste et tailles de neuf
+fichiers). Après redémarrage, Moli et le relais étaient actifs avec 10 pilotes
+sur 10, 35 appareils, 244 points et zéro échec du journal. L’image de
+`b0ce829` est la référence précédente. Le raccord corrigé reste à vérifier
+sur Safari iPhone.
 
 ## Réseau V4 et accueil grand écran — 13 novembre 2026
 
@@ -39,7 +49,7 @@ PWA réussissent. Les workflows [check](https://github.com/ChrisN06/moli-os/acti
 [audit](https://github.com/ChrisN06/moli-os/actions/runs/43411140473) et
 [image](https://github.com/ChrisN06/moli-os/actions/runs/43411140482) ont réussi.
 
-Déploiement du commit `b0ce829` le 13 novembre. Image Linux amd64 active :
+Premier déploiement V4 le 13 novembre, commit `b0ce829`. Image Linux amd64 :
 `ghcr.io/chrisn06/moli-os@sha256:388d6bd99e3f9b76ebe3b79271fc04aef7a8bf090d57549ac82cd72bfdedc24e`.
 Sauvegarde native vérifiée avant le remplacement (manifeste et tailles de neuf
 fichiers). Le script Portainer a vérifié le Compose, le montage de données,
@@ -50,7 +60,7 @@ du journal. L’image du 12 novembre est la référence précédente.
 ## Point de reprise — 13 novembre 2026
 
 - **Base de travail.** Repartir du checkout existant sur `main`. Le code
-  actuellement en production est `b0ce829`. Les trois workflows du commit
+  actuellement en production est `d50d589`. Les trois workflows du commit
   déployé sont verts.
   Relecture de `/api/health` pour ce bilan : 10 pilotes actifs sur 10,
   35 appareils, 244 points et zéro échec journal.
@@ -59,8 +69,8 @@ du journal. L’image du 12 novembre est la référence précédente.
   coucher du soleil avec moyenne. Page Réseau jour/nuit avec flux continus
   selon les mesures Freebox, graphique sur 60 secondes, fiche appareil
   mobile et dock hors de la zone défilante.
-- **Prochaine recette.** Après déploiement du correctif web, vérifier
-  sur Safari iPhone que les flux rejoignent la Freebox sur la portion verticale.
+- **Prochaine recette.** Vérifier sur Safari iPhone que les flux rejoignent
+  la Freebox sur la portion verticale.
   L’APK 1.2 affiche déjà le Réseau V4 sur Shield.
 - **So’EAU en pause.** Reprendre après résolution vérifiée de
   [l’incident Home Assistant #190782](https://github.com/home-assistant/core/issues/190782),
@@ -69,8 +79,8 @@ du journal. L’image du 12 novembre est la référence précédente.
   lorsqu’un nouveau relevé rejoint l’historique existant et qu’un cycle
   automatique de douze heures réussit. Conserver les relevés actuels,
   sans import CSV ni lecture locale du compteur.
-- **Exploitation.** Le digest actif, la sauvegarde native et le digest
-  précédent figurent ci-dessous. Avant toute intervention, relire l’état
+- **Exploitation.** Le digest actif, la vérification de la sauvegarde et le
+  digest précédent sont indiqués dans le suivi des déploiements. Avant toute intervention, relire l’état
   Portainer et suivre [le guide d’exploitation](docs/components/exploitation.md).
   Déploiement et retour arrière exigent un accord explicite.
 
