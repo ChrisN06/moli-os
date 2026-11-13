@@ -144,7 +144,7 @@
 .maison.orbite[data-tv] .network .anchor { min-height: 52px; gap: 2px; }
 .maison.orbite[data-tv] .network :is(.node, .motion) { min-height: 32px; padding: 3px 7px; }
 .maison.orbite[data-tv] .network .node { line-height: 1.2; }
-.maison.orbite[data-tv] .network .node small { display: none; }
+.maison.orbite[data-tv] .network .node small:not(.scope) { display: none; }
 .maison.orbite[data-tv] .network .map-note { margin-top: 5px; }
 .maison.orbite[data-tv] .network .device-sheet { width: min(38rem, 90%); margin: auto; }
 .maison.orbite[data-tv] .network .device-sheet .devices { margin-top: 8px; }

@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {appendTraffic, flowProfile, flowRoute, normalizeFreebox, rateText, stationRate, trafficPath, trafficScale} from './freebox-data.js';
+import {appendTraffic, flowWidth, flowRoute, normalizeFreebox, rateText, stationRate, trafficPath, trafficScale} from './freebox-data.js';
 const repeater='aa:bb:cc:dd:ee:01',client='aa:bb:cc:dd:ee:02';
 function fixture(){return {timestamp:10000,connection:{rate_down:100,rate_up:50},ports:[{id:2,link:'up',speed:'1000',mac_list:[{mac:repeater},{mac:client}]}],stats:{2:{tx_bytes_rate:100}},radios:[[],[]],hosts:[{active:true,host_type:'freebox_wifi',l2ident:{id:repeater},primary_name:'Repeater',access_point:{connectivity_type:'ethernet',ethernet_information:{speed:1000}}},{active:true,l2ident:{id:client},primary_name:'Camera',l3connectivities:[{af:'ipv4',active:true,addr:'192.168.1.10'}],access_point:{type:'repeater',mac:repeater,connectivity_type:'wifi',rx_rate:20,tx_rate:30,wifi_information:{signal:-50,band:'5g',phy_tx_rate:8667,phy_rx_rate:1733}}}]}}
 test('repeater clients attach to Ethernet parent with PHY units and no duplicates',()=>{const d=normalizeFreebox(fixture());assert.equal(d.repeaters[0].port,2);assert.equal(d.repeaters[0].stations[0].ip,'192.168.1.10');assert.equal(d.repeaters[0].stations[0].link_down,866.7);assert.equal(d.ports[0].mac_list.length,1);assert.equal(d.timestamp,10)});
@@ -24,6 +24,7 @@ test('rates distinguish zero, missing measurements and decimal units', () => {
   assert.equal(rateText(0, 'en'), '0 kbit/s');
   assert.equal(rateText(19_787.5, 'en'), '158.3 kbit/s');
   assert.equal(rateText(125_000_000, 'en'), '1 Gbit/s');
+  assert.equal(stationRate([], 'tx_rate'), null);
   assert.equal(stationRate([{ tx_rate: 1 }, { tx_rate: null }], 'tx_rate'), null);
   assert.equal(stationRate([{ tx_rate: 1 }, { tx_rate: 2 }], 'tx_rate'), 3);
 });
@@ -39,12 +40,12 @@ test('traffic keeps only distinct samples and leaves outages blank', () => {
 });
 
 
-test('only measured positive traffic animates, with bounded speed and density', () => {
-  for (const rate of [null, undefined, -1, 0]) assert.equal(flowProfile(rate).count, 0);
-  const quiet = flowProfile(500);
-  const busy = flowProfile(1_000_000);
-  assert.ok(busy.count > quiet.count && busy.speed > quiet.speed);
-  assert.deepEqual(flowProfile(1_000_000_000), { count: 8, speed: 1.6 });
+test('adaptive widths distinguish 0, 1, 10, 100 and 1,000 Mbit/s', () => {
+  for (const value of [null, undefined, -1, NaN, 0]) assert.equal(flowWidth(value), 0);
+  const widths = [0, 1, 10, 100, 1000].map(mbps => flowWidth(mbps * 125_000));
+  assert.ok(widths.every((width, i) => i === 0 || width > widths[i - 1]));
+  assert.ok(widths[1] > 2 && widths[4] === 9);
+  assert.equal(flowWidth(1_000_000_000), 9);
 });
 
 test('traffic axis grows to fit and waits before shrinking', () => {
@@ -56,11 +57,9 @@ test('traffic axis grows to fit and waits before shrinking', () => {
   assert.deepEqual(trafficScale(waiting, 120_000, 54), large);
 });
 
-test('branch trajectory spans the junction, with reversed upload and straight zero-length turns', () => {
-  assert.deepEqual(flowRoute(10, 30, 40, [90, 80], 0), {
-    path: 'M10 30 L28 30 Q40 30 40 42 L40 68 Q40 80 52 80 L90 80',
-    length: 130,
-  });
-  assert.match(flowRoute(10, 30, 40, [90, 80], 4, true).path, /^M90 84 .* L10 34$/);
-  assert.doesNotMatch(flowRoute(40, 30, 40, [90, 30], 0).path, /NaN|Infinity/);
+test('adaptive routes keep direction lanes apart and connect mobile and child branches', () => {
+  assert.equal(flowRoute([10, 30], [90, 110], 'fan', -6), 'M10 24 C54.4 24 57.6 104 90 104');
+  assert.equal(flowRoute([30, 10], [30, 60], 'vertical', 6), 'M36 10 V60');
+  assert.equal(flowRoute([10, 40], [60, 40], 'tap', -6), 'M10 40 Q18 34 26 34 H60');
+  assert.equal(flowRoute([50, 40], [60, 80], 'child'), 'M50 40 C50 60 50 80 60 80');
 });

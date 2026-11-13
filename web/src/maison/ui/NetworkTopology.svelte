@@ -4,7 +4,6 @@
   import { appendTraffic, rate, rateText, stationRate, trafficPath, trafficScale, TRAFFIC_WINDOW } from '../lib/freebox-data.js';
   import { t, locale } from '../../lib/i18n.svelte.js';
   import Icon from './Icon.svelte';
-  import TrafficWire from './network/TrafficWire.svelte';
   import TrafficRoutes from './network/TrafficRoutes.svelte';
 
   let { television = false } = $props();
@@ -19,7 +18,6 @@
   let sheet;
   let interfaceSheet = $state();
   let map = $state();
-  const continuous = typeof CSS !== 'undefined' && CSS.supports('offset-path', 'path("M0 0 L1 1")');
   let scale = $state.raw({ ceiling: 200, lowerSince: null });
 
   onMount(() => {
@@ -59,8 +57,8 @@
   const fresh = $derived(!!data && !stale);
   const connected = $derived(data?.connection?.state === 'up');
   const lineState = $derived(stale ? 'stale' : freebox.failed ? 'failed' : data ? (connected ? 'connected' : 'disconnected') : 'waiting');
-  const down = $derived(fresh ? rate(data.connection?.rate_down) : null);
-  const up = $derived(fresh ? rate(data.connection?.rate_up) : null);
+  const down = $derived(fresh && connected ? rate(data.connection?.rate_down) : null);
+  const up = $derived(fresh && connected ? rate(data.connection?.rate_up) : null);
   const moving = $derived(!paused && !hidden && !reduced && fresh);
 
   const orderDevices = devices => [...devices].sort((a, b) => String(a.mac).localeCompare(String(b.mac)));
@@ -79,6 +77,7 @@
     const parent = ports.find(port => port.id === repeater.port && port.active);
     return wireless(repeater.id, repeater.hostname || t('freebox.repeater'), repeater.stations, {
       parent: parent?.id,
+      backhaul: true,
       logical: !parent,
       active: true,
       speed: repeater.connection === 'ethernet' && repeater.speed > 0 ? `${repeater.speed} Mbit/s` : null,
@@ -96,14 +95,18 @@
   const chartMax = $derived(scale.ceiling);
   const displayRate = value => rateText(value, locale());
   const groupRate = (group, direction) => fresh && group.active ? group[direction] : null;
-  const links = $derived(interfaces.map(group => ({
-    id: group.id, parent: group.parent, logical: group.logical,
-    down: groupRate(group, 'down'), up: groupRate(group, 'up'),
-  })));
-  const traffic = group => (groupRate(group, 'down') ?? 0) + (groupRate(group, 'up') ?? 0);
-  const busiest = $derived(Math.max(0, ...interfaces.filter(group => !group.logical).map(traffic)));
+  const links = $derived([
+    { id: 'internet', down, up },
+    ...interfaces.map(group => ({
+      id: group.id, parent: group.parent, logical: group.logical,
+      // Station totals describe the Wi-Fi clients, not the repeater backhaul.
+      down: group.backhaul ? null : groupRate(group, 'down'),
+      up: group.backhaul ? null : groupRate(group, 'up'),
+    })),
+  ]);
   const groupState = group => t(group.logical ? 'freebox.unknown_link' : group.active ? 'freebox.connected' : 'freebox.disconnected');
   const groupNote = group => [groupState(group), group.active ? group.speed : null, group.active ? group.duplex : null].filter(Boolean).join(' · ');
+  const rateScope = group => t(group.icon === 'lan' ? 'freebox.port_traffic' : 'freebox.station_traffic');
   const deviceName = item => item.hostname || item.mac || t('freebox.device');
   const deviceCount = count => t(count === 1 ? 'freebox.one_device' : 'freebox.device_count', { count });
 
@@ -165,15 +168,10 @@
 {/snippet}
 
 {#snippet branch(group)}
-  <div class="branch" class:busy={!group.logical && busiest > 0 && traffic(group) >= busiest * .7}>
-    <div class="branch-wire">
-      {#if !continuous}
-        <TrafficWire down={group.logical ? null : groupRate(group, 'down')} up={group.logical ? null : groupRate(group, 'up')} paused={!moving} unknown={group.logical} />
-      {/if}
-    </div>
-    <button class="node" data-traffic-link={group.id} type="button" aria-haspopup={television ? 'dialog' : undefined} aria-expanded={selected === group.id} onclick={() => select(group.id)}>
+  <div class="branch">
+    <button class="node" class:dim={current && current.id !== group.id && current.parent !== group.id} class:on-path={current?.parent === group.id} data-traffic-link={group.id} type="button" aria-haspopup={television ? 'dialog' : undefined} aria-expanded={selected === group.id} onclick={() => select(group.id)}>
       <Icon name={group.icon} size={22} />
-      <span><b>{group.label}</b><small>{group.active && group.speed && !group.logical ? group.speed : groupState(group)}</small>{@render rates(groupRate(group, 'down'), groupRate(group, 'up'))}</span>
+      <span><b>{group.label}</b><small>{group.active && group.speed && !group.logical ? group.speed : groupState(group)}</small>{@render rates(groupRate(group, 'down'), groupRate(group, 'up'))}<small class="scope">{rateScope(group)}</small></span>
       <span class="node-count num" title={deviceCount(group.devices.length)} aria-label={deviceCount(group.devices.length)}><Icon name="devices" size={15} />{group.devices.length}</span>
     </button>
     {#if compact && !television && selected === group.id}<div class="inline-detail">{@render devices(group)}</div>{/if}
@@ -208,9 +206,9 @@
           <div class="card-head"><h2>{t('freebox.topology')}</h2></div>
           <div class="map" bind:this={map}>
             <div class="origin">
-              <div class="anchor"><Icon name="internet" size={26} /><b>{t('freebox.internet')}</b><small>{data.connection?.media?.toUpperCase() ?? ''}</small></div>
-              <TrafficWire down={connected ? down : null} up={connected ? up : null} paused={!moving} vertical />
-              <div class="anchor gateway"><Icon name="router" size={26} /><b>Freebox</b><small>{t('freebox.gateway')}</small></div>
+              <div class="anchor internet"><Icon name="internet" size={26} /><b>{t('freebox.internet')}</b><small>{data.connection?.media?.toUpperCase() ?? ''}</small></div>
+              <div class="wan-gap"></div>
+              <div class="anchor gateway" style:min-height={compact ? undefined : `${Math.max(88, (ports.length + repeaters.filter(repeater => repeater.logical).length + 2) * 22)}px`}><Icon name="router" size={26} /><b>Freebox</b><small>{t('freebox.gateway')}</small></div>
             </div>
             <div class="branches">
               {#each ports as port (port.id)}
@@ -224,9 +222,9 @@
                 {@render branch(repeater)}
               {/each}
             </div>
-            {#if continuous}<TrafficRoutes {map} {links} {compact} paused={!moving} />{/if}
+            <TrafficRoutes {map} {links} {compact} paused={!moving} selected={current?.id} />
           </div>
-          {#if !television}<p class="map-note muted">{t('freebox.unknown_wire')}</p>{/if}
+          <p class="map-note muted">{t('freebox.unknown_wire')}</p>
         </section>
 
         <div class="network-side">
@@ -247,9 +245,7 @@
             {#if !recent.some(sample => sample.down != null || sample.up != null)}<p class="muted">{t('freebox.waiting')}</p>{/if}
           </section>
 
-          {#if television}
-            <p class="map-note muted">{t('freebox.unknown_wire')}</p>
-          {:else}
+          {#if !television}
           <aside class="card supervision">
             <div class="card-head"><h2>{t('freebox.interfaces')}</h2></div>
             {#if current}
@@ -267,7 +263,6 @@
                 {@render rates(groupRate(group, 'down'), groupRate(group, 'up'))}
               </button>
             {/each}
-            <p class="map-note muted">{t('freebox.rate_note')}</p>
           </aside>
           {/if}
         </div>
@@ -282,7 +277,8 @@
         <button class="close" type="button" aria-label={t('freebox.close')} onclick={() => interfaceSheet.close()}><Icon name="close" size={22} /></button>
       </header>
       {#if current}
-        <p class="map-note muted">{groupNote(current)} · {t('freebox.rate_note')}</p>
+        <p class="map-note muted">{groupNote(current)} · {rateScope(current)}</p>
+        {@render rates(groupRate(current, 'down'), groupRate(current, 'up'))}
         {@render devices(current)}
         {@render deviceDetails(current)}
       {:else}
@@ -303,7 +299,6 @@
   .network {
     --traffic-down: #14724d;
     --traffic-up: #b33045;
-    --traffic-glow: #47748870;
     --traffic-core: #e9ffff;
     display: grid;
     gap: clamp(12px, 1.1vw, 28px);
@@ -312,7 +307,6 @@
   :global([data-theme=night]) .network {
     --traffic-down: #55e5a4;
     --traffic-up: #ff7d87;
-    --traffic-glow: #b9ffefcf;
     --traffic-core: #f6ffff;
   }
   .network-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
@@ -342,15 +336,15 @@
   .chart, .supervision { min-width: 0; }
   .map { position: relative; display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); align-items: center; }
   .origin { display: grid; grid-template-columns: minmax(0, 1fr) minmax(40px, 1.15fr) minmax(0, 1fr) clamp(14px, 2.5vw, 76px); align-items: center; }
-  .origin::after { content: ''; border-block-start: 1px solid var(--line); }
   .anchor { min-height: 88px; display: grid; align-content: center; justify-items: center; gap: 5px; padding: 8px 4px; color: var(--cool); border: 1px solid var(--line); border-radius: 14px; background: var(--surface-2); text-align: center; overflow-wrap: anywhere; }
   .anchor b { color: var(--ink); }
-  .branches { border-inline-start: 1px solid var(--line); }
   .branch { display: grid; grid-template-columns: clamp(38px, 8vw, 285px) minmax(0, 1fr); align-items: center; margin-block: 8px; }
-  .busy .node { border-color: color-mix(in srgb, var(--traffic-down) 42%, var(--line)); }
-  .child { position: relative; margin-inline-start: clamp(28px, 4vw, 140px); border-inline-start: 1px solid var(--line); }
-  .child::before { position: absolute; content: ''; inset-block-start: -8px; inset-inline-start: -1px; height: 8px; border-inline-start: 1px solid var(--line); }
+  .child { margin-inline-start: clamp(28px, 4vw, 140px); }
   .node { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; width: 100%; min-width: 0; text-align: start; padding: 10px; }
+  .node { grid-column: 2; }
+  .node.dim:not(:hover, :focus-visible) { opacity: .6; }
+  .node.on-path { border-color: var(--cool); }
+  .scope { font-size: .72em; }
   .node > :global(svg) { color: var(--cool); }
   .node[aria-expanded=true], .interface[aria-pressed=true], .devices button[aria-pressed=true] { border-color: var(--cool); background: var(--cool-soft); }
   .node-count { display: inline-flex; align-items: center; gap: 4px; color: var(--ink-2); font-size: .8em; }
@@ -391,10 +385,6 @@
   .device-info { display: grid; grid-template-columns: minmax(0, auto) minmax(0, 1fr); gap: 6px 10px; margin-bottom: 0; }
   dt { color: var(--ink-2); }
   dd { margin: 0; overflow-wrap: anywhere; }
-  @supports (offset-path: path("M0 0 L1 1")) {
-    .branch-wire { visibility: hidden; }
-    .branches, .child, .origin::after, .child::before { border-color: transparent; }
-  }
   @media (max-width: 1100px) {
     .workspace { grid-template-columns: minmax(0, 2.25fr) minmax(220px, 1fr); }
     .map { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
@@ -410,10 +400,9 @@
     .metric:nth-child(2), .metric:nth-child(3) { grid-row: 2; }
     .metric { padding: 10px; }
     .map { grid-template-columns: minmax(0, 1fr); }
-    .origin { grid-template-columns: minmax(0, 1fr); justify-items: start; padding-inline-start: 16px; }
+    .origin { grid-template-columns: minmax(0, 1fr); justify-items: start; padding: 0 0 12px 16px; }
     .anchor { display: flex; justify-content: start; align-items: center; gap: 9px; width: 100%; min-height: 48px; padding: 8px; font-size: inherit; }
-    .origin::after { width: 16px; height: 12px; border-inline-start: 1px solid var(--line); margin-inline-start: -16px; }
-    .branches { margin-top: -1px; }
+    .wan-gap { height: 44px; }
     .branch { grid-template-columns: clamp(34px, 11vw, 68px) minmax(0, 1fr); margin-block: 6px; }
     .node { padding: 7px 8px; }
     .node .rates { font-size: .9em; }

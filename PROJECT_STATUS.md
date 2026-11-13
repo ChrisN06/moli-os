@@ -1,5 +1,24 @@
 # Moli OS — état du fork et reprise
 
+## Réseau V4 et accueil grand écran — 13 novembre 2026
+
+L’accueil plafonne sa largeur à 1 600 px sur le web et conserve une horloge
+de 120 px au maximum. La page Réseau affiche deux flux SVG dont l’épaisseur
+suit le débit mesuré. La sélection conserve le trajet local connu, avec des
+liaisons neutres pour les débits de liaison indisponibles. Les impulsions
+s’arrêtent en cas de ralentissement soutenu.
+
+Recette isolée en jour et nuit, de 320 à 3 840 px, avec des débits fictifs de
+0, 1, 10, 100 et 1 000 Mbit/s. Sélection, fiches, pause, mouvement réduit,
+dégradation sous charge et indisponibilité vérifiés. Accueil vérifié à
+3 840 × 1 080 et 3 840 × 2 160. Sur cinq secondes, environ 59 images/s
+dans Chrome sur MacBook Air M1 à 1 440 × 900, et environ 60 images/s
+dans le navigateur de la Shield sur une sortie 4K. Le mode TV a aussi été
+vérifié dans Chrome à 1 920 × 1 080. L’iPhone 17 reste à tester sur appareil.
+
+Les contrôles Rust, les 59 tests web, le build, les traductions et le contrôle
+PWA réussissent. La production n’a pas été modifiée.
+
 ## Point de reprise — 12 novembre 2026
 
 - **Base de travail.** Repartir du checkout existant sur `main`. Le code

@@ -35,7 +35,7 @@ export function rateText(bytes, language) {
 }
 
 export function stationRate(stations, key) {
-  return stations.every(station => rate(station[key]) != null)
+  return stations.length && stations.every(station => rate(station[key]) != null)
     ? stations.reduce((sum, station) => sum + station[key], 0)
     : null;
 }
@@ -69,11 +69,10 @@ export function trafficPath(samples, direction, now, max, width, height) {
   }).join(' ');
 }
 
-/** Counts and speed stay bounded even on multi-gigabit links. */
-export function flowProfile(bytes) {
-  if (rate(bytes) == null || bytes === 0) return { count: 0, speed: 1 };
-  const strength = Math.log10(1 + bytes / 125);
-  return { count: Math.min(8, 1 + Math.floor(strength * 1.35)), speed: Math.min(1.6, 1 + strength * 0.13) };
+/** A logarithmic stroke in CSS pixels, capped at 1 Gbit/s. */
+export function flowWidth(bytes) {
+  if (rate(bytes) == null || bytes === 0) return 0;
+  return Math.min(9, 1.5 + 2.5 * Math.log10(1 + bytes / 125_000));
 }
 
 /** Fit peaks immediately. Shrink only after 15 seconds well below the ceiling. */
@@ -91,29 +90,21 @@ export function trafficScale(previous, peak, now) {
   return previous.lowerSince == null ? { ceiling: previous.ceiling, lowerSince } : previous;
 }
 
-/** Route one measured interface through its junction. Reverse the same curve for upload. */
-export function flowRoute(x, y, trunk, [endX, endY], lane, reverse = false) {
-  const side = endY < y ? -1 : 1;
-  const points = [[x, y + lane], [trunk - lane * side, y + lane],
-    [trunk - lane * side, endY + lane], [endX, endY + lane]]
-    .filter(([x, y], i, points) => i === 0 || x !== points[i - 1][0] || y !== points[i - 1][1]);
-  if (reverse) points.reverse();
-  const distance = ([ax, ay], [bx, by]) => Math.hypot(bx - ax, by - ay);
-  const toward = ([x, y], [toX, toY], amount) => [x + (toX - x) * amount, y + (toY - y) * amount].join(' ');
-  let path = `M${points[0].join(' ')}`;
-  let length = 0;
-  for (let i = 1; i < points.length; i++) {
-    const point = points[i];
-    const incoming = distance(point, points[i - 1]);
-    length += incoming;
-    const next = points[i + 1];
-    if (!next) {
-      path += ` L${point.join(' ')}`;
-      break;
-    }
-    const outgoing = distance(point, next);
-    const radius = Math.min(12, incoming / 2, outgoing / 2);
-    path += ` L${toward(point, points[i - 1], radius / incoming)} Q${point.join(' ')} ${toward(point, next, radius / outgoing)}`;
+/** Both lanes reuse the same geometry with a fixed gap between their centers. */
+export function flowRoute([x, y], [endX, endY], mode, lane = 0) {
+  if (mode === 'vertical') return `M${x + lane} ${y} V${endY}`;
+  if (mode === 'tap') {
+    // The neutral spine joins the center of each pair of measured lanes.
+    return lane === 0
+      ? `M${x} ${y} H${endX}`
+      : `M${x} ${y} Q${x + 8} ${y + lane} ${x + 16} ${y + lane} H${endX}`;
   }
-  return { path, length };
+  if (mode === 'child') {
+    const mid = (y + endY) / 2;
+    return `M${x} ${y} C${x} ${mid} ${x} ${endY} ${endX} ${endY}`;
+  }
+  const span = (endX - x) * .48;
+  // Separate the lanes sideways as well on steep bends.
+  const shift = lane * Math.max(-1, Math.min(1, (endY - y) / Math.max(1, endX - x)));
+  return `M${x} ${y + lane} C${x + span - shift} ${y + lane} ${endX - span - shift} ${endY + lane} ${endX} ${endY + lane}`;
 }
