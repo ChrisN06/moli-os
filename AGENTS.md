@@ -28,7 +28,7 @@ Construire, lancer, sauvegarder, revenir en arrière : `docs/components/exploita
 - Privilégier le plugin GitHub pour les issues, les pull requests et la CI quand il couvre l’opération. Utiliser `gh` en repli, notamment pour les releases si le plugin ne les couvre pas. Vérifier le dépôt et la branche avant chaque opération.
 - Administrer et déployer les stacks via l’API REST HTTPS de Portainer. Prendre l’URL et la référence du coffre 1Password dans les consignes privées de l’installation. Pour chaque appel à l’API Portainer, utiliser `curl --cacert "$HOME/.config/portainer/cert.pem"`. Ne jamais utiliser `-k` ni `--insecure`. Identifier l’environnement et la stack par des requêtes `GET` avant toute action.
 - Résoudre la référence `op://…` via `op run`, uniquement pour le processus qui envoie l’en-tête `X-API-Key` à Portainer. Passer cet en-tête à `curl -H @-` via l’entrée standard. Garder la clé hors des arguments de commande, des fichiers et des journaux. Désactiver les traces shell et les sorties HTTP verbeuses.
-- Vérifier en lecture seule les workflows et les releases avec l’outil GitHub adapté, et l’accès à Portainer avec `GET /api/stacks`. Demander une confirmation explicite avant toute modification en production, déploiement et rollback compris. Suivre les procédures de sauvegarde, de déploiement et de retour arrière de `docs/components/exploitation.md`.
+- Vérifier en lecture seule les workflows et les releases avec l’outil GitHub adapté, et l’accès à Portainer avec `GET /api/stacks`. Le propriétaire autorise le déploiement de Moli après la fin des modifications et la réussite des contrôles préalables (CI, image amd64 épinglée, compatibilité, stack et image actives). Reporter le déploiement si des modifications restent à faire ou si un contrôle échoue. Un retour arrière ou une autre intervention en production exige un accord explicite. Suivre les procédures de sauvegarde, de déploiement et de retour arrière de `docs/components/exploitation.md`.
 
 ## Piloter une instance
 
@@ -142,4 +142,4 @@ Les échecs connus et les résultats effectivement observés sont dans `PROJECT_
   Les adresses, comptes, configurations et preuves privées restent dans `../moli-maison/`.
 - Après une étape importante, actualiser `PROJECT_STATUS.md` si le résultat ou les preuves utiles à la reprise ont changé.
 - **projet-termine** est réservé à une demande de clôture définitive avec archivage.
-- Les commits et pushes documentaires suivent les mêmes règles de périmètre, vérification et confidentialité. Ils n’autorisent jamais un déploiement, rollback ou changement de données en production, qui exige une confirmation explicite.
+- Les commits et pushes documentaires suivent les mêmes règles de périmètre, vérification et confidentialité. Un changement uniquement documentaire ne déclenche pas de déploiement.

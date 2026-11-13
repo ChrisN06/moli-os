@@ -81,7 +81,8 @@ du journal. L’image du 12 novembre est la référence précédente.
 - **Exploitation.** Le digest actif, la vérification de la sauvegarde et le
   digest précédent sont indiqués dans le suivi des déploiements. Avant toute intervention, relire l’état
   Portainer et suivre [le guide d’exploitation](docs/components/exploitation.md).
-  Déploiement et retour arrière exigent un accord explicite.
+  Déployer la version terminée après réussite des contrôles préalables.
+  Un retour arrière exige un accord distinct.
 
 ## Application Android TV — 12 novembre 2026
 
