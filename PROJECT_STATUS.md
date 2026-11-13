@@ -17,13 +17,23 @@ dans le navigateur de la Shield sur une sortie 4K. Le mode TV a aussi été
 vérifié dans Chrome à 1 920 × 1 080. L’iPhone 17 reste à tester sur appareil.
 
 Les contrôles Rust, les 59 tests web, le build, les traductions et le contrôle
-PWA réussissent. La production n’a pas été modifiée.
+PWA réussissent. Les workflows [check](https://github.com/ChrisN06/moli-os/actions/runs/43411140471),
+[audit](https://github.com/ChrisN06/moli-os/actions/runs/43411140473) et
+[image](https://github.com/ChrisN06/moli-os/actions/runs/43411140482) ont réussi.
 
-## Point de reprise — 12 novembre 2026
+Déploiement du commit `b0ce829` le 13 novembre. Image Linux amd64 active :
+`ghcr.io/chrisn06/moli-os@sha256:388d6bd99e3f9b76ebe3b79271fc04aef7a8bf090d57549ac82cd72bfdedc24e`.
+Sauvegarde native vérifiée avant le remplacement (manifeste et tailles de neuf
+fichiers). Le script Portainer a vérifié le Compose, le montage de données,
+l’utilisateur et la limite mémoire. Après redémarrage, Moli et le relais
+étaient actifs, avec 10 pilotes sur 10, 35 appareils, 244 points et zéro échec
+du journal. L’image du 12 novembre est la référence précédente.
+
+## Point de reprise — 13 novembre 2026
 
 - **Base de travail.** Repartir du checkout existant sur `main`. Le code
-  actuellement en production est `81898c6`, suivi du compte rendu
-  documentaire `3712006`. Les trois workflows du commit déployé sont verts.
+  actuellement en production est `b0ce829`. Les trois workflows du commit
+  déployé sont verts.
   Relecture de `/api/health` pour ce bilan : 10 pilotes actifs sur 10,
   35 appareils, 244 points et zéro échec journal.
 - **Livré.** Accueil avec cadrans eau et électricité et objectif d’eau de
@@ -65,7 +75,7 @@ APK 1.1 : Android WebView utilise hls.js pour les caméras et autorise
 la lecture automatique des vignettes muettes. Trois décodeurs vidéo
 actifs observés sur la Shield, libérés au retour à l’accueil.
 
-## Dernier déploiement — Finition Réseau, 12 novembre 2026
+## Déploiement précédent — Finition Réseau, 12 novembre 2026
 
 Commit déployé : `81898c68a16b707dc0e48eb27e3d206721b53a69`. Image amd64
 épinglée : `ghcr.io/chrisn06/moli-os@sha256:ac6df386f5bcd3d1c1601ed316ae416947ea7fb5d9a7dc630e529f8c5f336a52`.
